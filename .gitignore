@@ -2,7 +2,7 @@ public
 suite
 target
 test-output
-/src
+
 
 # Gradle files
 .gradle/
