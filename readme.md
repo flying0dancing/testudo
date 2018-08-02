@@ -2,22 +2,22 @@ usage
 ===
 	java -jar testudo_xxx.jar -Dconf="d:\abc\foo\testudo.json" -Did="bbb" -Dproc="2" -Dbuildvar="bXXX" 
 
-*[conf]
-    >conf is defined for full path of configuration file(format is json).
-    >get "testudo.json" under same folder by default if no provided.
+* [conf]
+	* conf is defined for full path of configuration file(format is json).
+	* get "testudo.json" under same folder by default if no provided.
     
-*[id]
-    >id is the key(ID) of [conf], get the 1st by default if no provided.
+* [id]
+	* id is the key(ID) of [conf], get the 1st by default if no provided.
 
-*[proc]
-    >"1" generates metadata files.
-    "2" package the files you want.
-    "all" does the "1" and then "2".
-    choose "2"  by default if no provided.
+* [proc]
+	* "1" generates metadata files.
+	* "2" package the files you want.
+	* "all" does the "1" and then "2".
+	* choose "2"  by default if no provided.
     
-*[buildvar]
-	>this is the internal build numbers in product's manifest.xml. For example, here is 1.12.0.b005 in manifest.xml, b005 is the internal build numbers.
-	set "b000" by default if no provided.
+* [buildvar]
+	* this is the internal build numbers in product's manifest.xml. For example, here is 1.12.0.b005 in manifest.xml, b005 is the internal build numbers.
+	* set "b000" by default if no provided.
 
 
 
