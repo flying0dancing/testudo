@@ -1,6 +1,8 @@
 usage 
 ===
-	java -jar testudo_xxx.jar -Dconf="d:\abc\foo\testudo.json" -Did="bbb" -Dproc="2" -Dbuildvar="bXXX" 
+testudo can generates metadata files from compliance product's system database, and then compress necessary files into package(zip and lrm).
+------
+	java -jar testudo.jar -Dconf="d:\abc\foo\testudo.json" -Did="bbb" -Dproc="2" -Dbuildvar="bXXX" 
 
 * [conf]
 	* conf is defined for full path of configuration file(format is json).
