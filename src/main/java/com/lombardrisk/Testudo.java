@@ -1,7 +1,5 @@
 package com.lombardrisk;
 
-import java.io.IOException;
-import java.io.InputStream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -26,6 +24,7 @@ public class Testudo implements IComFolder
     	long end=begin;
 		logger.info("total time(sec):"+(end-begin)/1000.00F);
 		logger.info("start:");
+		@SuppressWarnings("unused")
 		Boolean flag=false;
 		//read args from command-line
 		if(args.length>0){
@@ -65,22 +64,28 @@ public class Testudo implements IComFolder
 				DBInfo db=new DBInfo();
 				db.setDbHelper(arSetting.getDatabaseServer());
 				
-				String iniFullName=arSetting.getMetadataPath()+System.getProperty("file.separator")+arSetting.getMetadataStruct();
+				String iniFullName=Helper.reviseFilePath(arSetting.getMetadataPath()+System.getProperty("file.separator")+arSetting.getMetadataStruct());
 				FileUtil.createNew(iniFullName);
 				db.exportToDivides(arSetting.getPrefix(),arSetting.getRequiredTables().getDividedByReturnIds(),arSetting.getMetadataPath(),arSetting.getMetadataStruct());
 				db.exportToSingle(arSetting.getPrefix(),arSetting.getRequiredTables().getSingles(),arSetting.getMetadataPath(),arSetting.getMetadataStruct());
 				
 				
 			}else if(proc.equals("2")){
-				ARPPack azipFile=new ARPPack();
-				flag=azipFile.importMetadataToDpm(arSetting.getZipSettings().getDpmFullPath(),arSetting.getMetadataPath(),arSetting.getZipSettings().getRequiredMetadata(),arSetting.getMetadataPath()+System.getProperty("file.separator")+arSetting.getMetadataStruct());
-				flag=azipFile.packageARProduct(arSetting.getSrcPath(), arSetting.getZipSettings().getZipFiles(), arSetting.getZipSettings().getProductProperties(), Helper.getParentPath(arSetting.getSrcPath()), arpbuild);
+				String iniFullName=Helper.reviseFilePath(arSetting.getMetadataPath()+System.getProperty("file.separator")+arSetting.getMetadataStruct());
+				if(FileUtil.exists(iniFullName)){
+					ARPPack azipFile=new ARPPack();
+					flag=azipFile.importMetadataToDpm(arSetting.getZipSettings().getDpmFullPath(),arSetting.getMetadataPath(),arSetting.getZipSettings().getRequiredMetadata(),arSetting.getMetadataPath()+System.getProperty("file.separator")+arSetting.getMetadataStruct());
+					flag=azipFile.packageARProduct(arSetting.getSrcPath(), arSetting.getZipSettings().getZipFiles(), arSetting.getZipSettings().getProductProperties(), Helper.getParentPath(arSetting.getSrcPath()), arpbuild);
+				}else{
+					logger.error("error: invalid file["+iniFullName+"]");
+				}
+				
 				
 			}else if(proc.equalsIgnoreCase("all")){
 				DBInfo db=new DBInfo();
 				db.setDbHelper(arSetting.getDatabaseServer());
 				
-				String iniFullName=arSetting.getMetadataPath()+System.getProperty("file.separator")+arSetting.getMetadataStruct();
+				String iniFullName=Helper.reviseFilePath(arSetting.getMetadataPath()+System.getProperty("file.separator")+arSetting.getMetadataStruct());
 				FileUtil.createNew(iniFullName);
 				db.exportToDivides(arSetting.getPrefix(),arSetting.getRequiredTables().getDividedByReturnIds(),arSetting.getMetadataPath(),arSetting.getMetadataStruct());
 				db.exportToSingle(arSetting.getPrefix(),arSetting.getRequiredTables().getSingles(),arSetting.getMetadataPath(),arSetting.getMetadataStruct());

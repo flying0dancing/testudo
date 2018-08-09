@@ -3,9 +3,8 @@ package com.lombardrisk.Utils;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
+
 
 import org.dom4j.Attribute;
 import org.dom4j.Document;
@@ -70,10 +69,10 @@ public class Dom4jUtil {
 			foundflag=true;
 			return;
 		}
+		@SuppressWarnings("unchecked")
 		Iterator<Attribute> attr=parentEle.attributeIterator();
 		while(attr.hasNext())
 		{
-			List<String> test=new ArrayList<String>();
 			Attribute attrNext= (Attribute)attr.next();
 			if(elementOrAttribute.equalsIgnoreCase(attrNext.getName())){
 				attrNext.setValue(newValue);
@@ -83,21 +82,11 @@ public class Dom4jUtil {
 		}
 		
 		if(!foundflag){
+			@SuppressWarnings("unchecked")
 			Iterator<Element> it=parentEle.elementIterator();
 			while(it.hasNext())
 			{
 				Element elementNext = (Element) it.next(); 
-				/*if(elementOrAttribute.equalsIgnoreCase(elementNext.getName())){
-					if(elementOrAttribute.equalsIgnoreCase("implementationVersion"))
-					{
-						String value=elementNext.getTextTrim();
-						value.replaceAll("((?:\\d+[\\.\\-]){3}).*", "$1-"+newValue);
-					}else{
-						elementNext.setText(newValue);
-					}
-					
-					
-				}*/
 				readSubElementAndUpdate(elementNext,elementOrAttribute, newValue);
 			}
 		}

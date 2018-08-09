@@ -22,7 +22,7 @@ public class ARPPack implements IComFolder {
 	public Boolean createNewDpm(DBInfo db)
 	{
 		Boolean flag=false;
-		db.createAccessDB();
+		flag=db.createAccessDB();
 		return flag;
 	}
 	/***

@@ -36,6 +36,7 @@ public class PropHelper {
 			logger.error(file, e);
 		}
 	}
+	@SuppressWarnings("unused")
 	public static void loading(String file){
 		try(InputStream is=new FileInputStream(file)){
 			if(is !=null){
@@ -88,6 +89,7 @@ public class PropHelper {
 		return value;
 	}
 	
+	@SuppressWarnings("unused")
 	@Deprecated
 	private static String getScriptGenProdPath(String value)
 	{
