@@ -1,12 +1,16 @@
 usage 
 ===
-testudo can generates metadata files from compliance product's system database, and then compress necessary files into package(zip and lrm).
+testudo can generates metadata files from many databases, and then compress necessary files into package(zip and lrm).
 ------
-	java -jar testudo.jar -Dconf="d:\abc\foo\testudo.json" -Did="bbb" -Dproc="2" -Dbuildvar="bXXX" 
+	java -jar testudo.jar -Dprefix="fed" -Dconf="d:\abc\foo\testudo.json" -Did="bbb" -Dproc="2" -Dbuildvar="bXXX" 
+
+* [prefix]
+	* prefix is the folder name of product
+	* get "testudo.json" under this folder.
 
 * [conf]
-	* conf is defined for full path of configuration file(format is json).
-	* get "testudo.json" under the same folder if no provided.
+	* conf is defined for full path of configuration file(format is json). `Highest priority`.
+	* get "testudo.json" under the same folder if both [prefix] and [conf] are not provided.
     
 * [id]
 	* id is the key(ID) of [conf]. get the 1st if no provided.
@@ -35,7 +39,7 @@ json instruction
   
   "metadataPath": "[optional] the location of this product's meta-data folder, and which is followed product folder structure, i.e. E:\\ComplianceProduct\\fed\\src\\Metadata",
   
-  "metadataStruct": "the meta-data structure which in under "metadataPath", i.e.FED_FORM_META.ini",
+  "metadataStruct": "[optional] the meta-data structure which in under "metadataPath", i.e.FED_FORM_META.ini",
   
   "databaseServer": {
     "name": "its Name",

@@ -109,6 +109,22 @@ public class FileUtil {
 		if(StringUtils.isNotBlank(fileFullName)){
 			try {
 				File file=new File(fileFullName);
+				if(!file.exists())
+				{
+					file.createNewFile();
+				}
+			} catch (IOException e) {
+				logger.error("error: failed to create new file.");
+				logger.error(e.getMessage(),e);
+			}
+		}
+	}
+	
+	public static void createNewDelExisted(String fileFullName)
+	{
+		if(StringUtils.isNotBlank(fileFullName)){
+			try {
+				File file=new File(fileFullName);
 				if(file.exists())
 				{
 					file.delete();
@@ -120,7 +136,6 @@ public class FileUtil {
 			}
 		}
 	}
-	
 	
 	public static void createDirectories(String folderPath)
 	{
@@ -210,7 +225,7 @@ public class FileUtil {
 			}
 			int lastSlash=filePath.lastIndexOf("\\")==-1?filePath.lastIndexOf("/"):filePath.lastIndexOf("\\");
 			String fileName=filePath.substring(lastSlash+1);
-			File parentPath=new File(filePath.substring(0,lastSlash));
+			File parentPath=new File(filePath.substring(0,lastSlash));//TODO maybe contains risk, for example see Helper.getParentPath
 			if(parentPath.isDirectory())
 			{
 				File[] files=filterFilesAndSubFolders(parentPath,fileName);
@@ -237,7 +252,7 @@ public class FileUtil {
 				}
 				for(String filter:fileters)
 				{
-					if(!name.contains(filter)) {
+					if(!name.toLowerCase().contains(filter.toLowerCase())) {
 						flag=false;
 						break;
 						}
@@ -255,6 +270,10 @@ public class FileUtil {
 	 */
 	public static String getFileNameWithoutSuffix(String fileFullName)
 	{
+		fileFullName=fileFullName.replace("\"", "");
+		if(fileFullName.endsWith("/") || fileFullName.endsWith("\\")){
+			fileFullName=fileFullName.substring(0,fileFullName.length()-1);
+		}
 		int lastDot=fileFullName.lastIndexOf(".");
 		int lastSlash=fileFullName.lastIndexOf("\\")==-1?fileFullName.lastIndexOf("/"):fileFullName.lastIndexOf("\\");
 		String fileName=fileFullName.substring(lastSlash+1,lastDot);
@@ -267,6 +286,10 @@ public class FileUtil {
 	 */
 	public static String getFileNameWithSuffix(String fileFullName)
 	{
+		fileFullName=fileFullName.replace("\"", "");
+		if(fileFullName.endsWith("/") || fileFullName.endsWith("\\")){
+			fileFullName=fileFullName.substring(0,fileFullName.length()-1);
+		}
 		int lastSlash=fileFullName.lastIndexOf("\\")==-1?fileFullName.lastIndexOf("/"):fileFullName.lastIndexOf("\\");
 		String fileName=fileFullName.substring(lastSlash+1);
 		return fileName;

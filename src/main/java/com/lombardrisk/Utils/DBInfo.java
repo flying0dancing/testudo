@@ -79,6 +79,7 @@ public class DBInfo {
 				//logger.debug(" Sql Statement:"+SQL);
 			}
 		}
+		dbHelper.close();
 	}
 	
 	public void exportToDivides(String prefix,List<String> tableList,String exportPath,String iNIName)
@@ -132,6 +133,7 @@ public class DBInfo {
 				//logger.debug(" Sql Statement:"+SQL);
 			}
 		}
+		dbHelper.close();
 	}
 	
 	public void exportToCsv()
@@ -146,39 +148,50 @@ public class DBInfo {
 		dbHelper.close();
 	}
 	
+	/**
+	 * create a accessDatabase, no need to create a new one if existed.
+	 * @return
+	 */
 	public Boolean createAccessDB()
 	{
 		Boolean flag=false;
 		String dbFullName=dbHelper.getDatabaseServer().getSchema();
-		if(new File(dbFullName).exists())
-		{new File(dbFullName).delete();}
-		dbHelper.createAccessDB(dbHelper.getDatabaseServer().getSchema());
+		/*if(new File(dbFullName).exists())
+		{new File(dbFullName).delete();}*/
+		if(!new File(dbFullName).exists()){
+			dbHelper.createAccessDB(dbHelper.getDatabaseServer().getSchema());
+		}
 		return flag;
 	}
-	
-	public Boolean ImportCsvToAccess(String tableName, String csvPath, String schemaFullName,String aaa)
+	/***
+	 * according to returnId, search its return name and version in Rets table.
+	 * this function works on access database.
+	 * @param tableName
+	 * @param returnId
+	 * @return returnName_returnVersion, return "" if error occurs.
+	 */
+	public String getReturnAndVersion(String returnId)
 	{
-		Boolean flag=false;
+		String returnAndVer="";
 		if(dbHelper.getDatabaseServer().getDriver().startsWith("access"))
 		{
 			dbHelper.connect();
-			flag=FileUtil.search(schemaFullName, "["+tableName+"]");
-			if(flag)
+			if(!dbHelper.accessTableExistence("Rets"))
 			{
-				if(!dbHelper.accessTableExistence(tableName))
-				{
-					//create table
-				}
-				//import table
+				logger.error("cannot found Rets");
+			}else{
+				String SQL="SELECT Return & \"_v\" & Version AS Expr1 from [Rets] WHERE ReturnId="+returnId;
+				returnAndVer=dbHelper.query(SQL);
 			}
 			
 			dbHelper.close();
 		}else
 		{
-			logger.error("this method works on access database.");
+			logger.error("this function works on access database.");
 		}
+		if(returnAndVer==null)returnAndVer="";
 		
-		return flag;
+		return returnAndVer;
 	}
 	/**
 	 * create table by schemaFullName which defined tableName, and import data which in csvPath to table.

@@ -100,17 +100,21 @@ public class Helper {
 		}
 		return path;
 	}
-    
+    /***
+     * get parent path, if it is the top folder, return itself
+     * @param path
+     * @return
+     */
     public static String getParentPath(String path){
     	if(StringUtils.isNotBlank(path)){
     		path=removeLastSlash(path);
     		int lastSlash=path.lastIndexOf("\\")==-1?path.lastIndexOf("/"):path.lastIndexOf("\\");//get parent path
     		if(lastSlash>0)
     		{
-    			path=path.substring(0,lastSlash)+"/";
+    			path=path.substring(0,lastSlash)+System.getProperty("file.separator");
     		}else
     		{
-    			path=path+"/";
+    			path=path+System.getProperty("file.separator");
     		}
     		
     	}

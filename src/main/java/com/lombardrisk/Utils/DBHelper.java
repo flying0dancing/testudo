@@ -43,7 +43,7 @@ public class DBHelper {
 	protected DBHelper(DatabaseServer databaseServer)
 	{
 		this.databaseServer=databaseServer;
-		if(!StringUtils.isBlank(this.databaseServer.getPassword())){
+		if(StringUtils.isBlank(this.databaseServer.getPassword())){
 			this.databaseServer.setPassword("password");
 		}
 		
@@ -415,6 +415,7 @@ public class DBHelper {
 		super.finalize();
 	}
 	
+	@Deprecated
 	protected void tset(String dbFullName,String tableName)
 	{
 		try {
@@ -440,6 +441,12 @@ public class DBHelper {
 		}
 		
 	}
+	
+	/***
+	 * existence of access table
+	 * @param tableName
+	 * @return
+	 */
 	protected Boolean accessTableExistence(String tableName)
 	{
 		Boolean flag=false;
@@ -461,6 +468,12 @@ public class DBHelper {
 		return flag;
 	}
 	
+	/***
+	 * import csv to access table
+	 * @param tableName
+	 * @param importCsvFullName
+	 * @return
+	 */
 	protected Boolean importCsvToAccessDB(String tableName,String importCsvFullName)
 	{
 		Boolean flag=false;
@@ -485,6 +498,10 @@ public class DBHelper {
 		return flag;
 	}
 	
+	/**
+	 * create access db
+	 * @param dbFullName
+	 */
 	protected void createAccessDB(String dbFullName)
 	{
 		try {
@@ -496,7 +513,11 @@ public class DBHelper {
 		} 
 	}
 	
-	
+	/***
+	 * create access table
+	 * @param tableName
+	 * @param tableDefinition
+	 */
 	protected void createAccessTable(String tableName,List<String> tableDefinition)
 	{
 		try {

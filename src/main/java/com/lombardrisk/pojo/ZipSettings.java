@@ -9,11 +9,13 @@ import com.google.gson.GsonBuilder;
 
 public class ZipSettings {
 	private static final Logger logger = LoggerFactory.getLogger(ZipSettings.class);
-	private String notes;
+	
 	private List<String> requiredMetadata;
 	private String dpmFullPath;
+	private List<String> execSQLs;
 	private String productProperties;
 	private List<String> zipFiles;
+	private String notes;
 	public String getNotes() {
 		return notes;
 	}
@@ -62,5 +64,13 @@ public class ZipSettings {
 			logger.error(e.getMessage());
 			return "";
 		}
+	}
+
+	public List<String> getExecSQLs() {
+		return execSQLs;
+	}
+
+	public void setExecSQLs(List<String> execSQLs) {
+		this.execSQLs = execSQLs;
 	}
 }

@@ -1,16 +1,28 @@
 package com.lombardrisk;
 
+import org.apache.commons.lang3.StringUtils;
+
 public interface IComFolder {
 	
+	//command-line arguments key
+	String CMDL_ARPPRODUCTPREFIX="prefix";
+	String CMDL_ARPCICONFG="conf";
+	String CMDL_ARPRODUCTID="id";
+	String CMDL_ARPCIPROC="proc";
+	String CMDL_ARPBUILD="buildvar";
+		
 	//String JSON_PATH="src/main/resources/exportSettings.json";
-	String JSON_PATH="testudo.json";
+	String JSON_PATH=StringUtils.isBlank(System.getProperty(CMDL_ARPPRODUCTPREFIX))?"testudo.json":System.getProperty(CMDL_ARPPRODUCTPREFIX)+System.getProperty("file.separator")+"testudo.json";
+	
 	//test data folders
-	String SOURCE_FOLDER="src/";
-	String DPM_PATH="dpm/";
-	String META_PATH="Metadata/";
-	String FORMS_PATH="forms/";
-	String TRANS_PATH="transforms/";
+	String SOURCE_FOLDER="src"+System.getProperty("file.separator");
+	String DPM_PATH="dpm"+System.getProperty("file.separator");
+	String META_PATH="Metadata"+System.getProperty("file.separator");
+	String FORMS_PATH="forms"+System.getProperty("file.separator");
+	String TRANS_PATH="transforms"+System.getProperty("file.separator");
+	String SQLS_PATH="sqls"+System.getProperty("file.separator");
 	String MANIFEST_FILE="manifest.xml";
+	String INI_FILE_SUFFIX="_FORM_META.ini";
 	String DPM_FILE_SUFFIX="_FORM_META.accdb";
 	String PRODUCT_PROP_FILE="package.properties";
 	
@@ -26,10 +38,6 @@ public interface IComFolder {
 	String IMP_VERSION="implementationVersion";
 	String MAPPING_VERSION="mappingVersion";
 	String ACCESSFILE="accessFile";
-	//command-line arguments key
-	String CMDL_ARPCICONFG="conf";
-	String CMDL_ARPRODUCTID="id";
-	String CMDL_ARPCIPROC="proc";
-	String CMDL_ARPBUILD="buildvar";
+	
 
 }
