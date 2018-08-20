@@ -12,8 +12,8 @@ public class ZipSettings {
 	
 	private List<String> requiredMetadata;
 	private String dpmFullPath;
-	private List<String> execSQLs;
 	private String productProperties;
+	private List<String> sqlFiles;
 	private List<String> zipFiles;
 	private String notes;
 	public String getNotes() {
@@ -66,11 +66,13 @@ public class ZipSettings {
 		}
 	}
 
-	public List<String> getExecSQLs() {
-		return execSQLs;
+	public List<String> getSqlFiles() {
+		return sqlFiles;
 	}
 
-	public void setExecSQLs(List<String> execSQLs) {
-		this.execSQLs = execSQLs;
+	public void setSqlFiles(List<String> sqlFiles) {
+		this.sqlFiles = sqlFiles;
 	}
+
+	
 }

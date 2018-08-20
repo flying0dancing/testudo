@@ -163,6 +163,7 @@ public class DBInfo {
 		}
 		return flag;
 	}
+	
 	/***
 	 * according to returnId, search its return name and version in Rets table.
 	 * this function works on access database.
@@ -193,6 +194,7 @@ public class DBInfo {
 		
 		return returnAndVer;
 	}
+	
 	/**
 	 * create table by schemaFullName which defined tableName, and import data which in csvPath to table.
 	 * @param tableName

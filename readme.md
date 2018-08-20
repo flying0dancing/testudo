@@ -66,6 +66,7 @@ json instruction
      ],
     "dpmFullPath": "[optional] the full name of this product's dpm, i.e. E:\\ComplianceProduct\\fed\\src\\dpm\\FED_FORM_META.accdb",
     "productProperties": "[optional] the full name of this product's properties. i.e. E:\\ComplianceProduct\\fed\\package.properties",
+    "sqlFiles":["the filtered files or all files under filtered folder will be executed in dpmFullPath"],
     "zipFiles": ["the filtered files or all files under filtered folder will be packaged",
     "manifest", 
     "dpm",

@@ -131,14 +131,19 @@ public class ARPPack implements IComFolder {
 		return nameAndVers;
 	}
 	
-	//TODO
-	public Boolean execSQLs(String dbFullName,String sqlPath,List<String> sqlFileNames)
+	
+	public Boolean execSQLs(String dbFullName,String sourcePath,List<String> sqlFileNames)
 	{
 		Boolean flag=true;
-		if(sqlFileNames==null || sqlFileNames.size()<=0) return true;
-		List<String> realFullPaths=getFileFullPaths(sqlPath, sqlFileNames);
+		if(sqlFileNames==null || sqlFileNames.size()<=0) return true;//means testudo.json doesn't provide sqlFiles.
+		List<String> realFullPaths=getFileFullPaths(sourcePath, sqlFileNames);
+		if(realFullPaths==null || realFullPaths.size()<=0) return false;//illegal no files need to execute if it set sqlFiles
+		DBInfo dbInfo=new DBInfo();
+		dbInfo.setDbHelper(new DatabaseServer("accessdb","", dbFullName,"",""));
+		for(String fileFullPath:realFullPaths){
+			//TODO
+		}
 		
-
 		return flag;
 	}
 	
