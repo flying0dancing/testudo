@@ -66,7 +66,14 @@ public class Dom4jUtil {
 			if(elementOrAttribute.equalsIgnoreCase("implementationVersion"))
 			{
 				String value=parentEle.getTextTrim();
-				value=value.replaceAll("((?:\\d+\\.){2}\\d+).*", "$1."+newValue);
+				//if newValue is null, minor build number adds 1, means release version.
+				if(StringUtils.isNotBlank(newValue)){
+					value=value.replaceAll("((?:\\d+\\.){3}\\d+).*", "$1-"+newValue); //like 1.2.3.4-4687613176
+				}else{
+					String minorBuildNumber=value.replaceAll("(?:\\d+\\.){3}(\\d+).*", "$1");
+					int newBuildNumber=Integer.parseInt(minorBuildNumber)+1;
+					value=value.replaceAll("((?:\\d+\\.){3}).*", "$1"+newBuildNumber); //like 1.2.3.5,1.2.3.5-4457897 to 1.2.3.6
+				}
 				parentEle.setText(value);
 			}else{
 				parentEle.setText(newValue);

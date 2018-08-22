@@ -40,7 +40,7 @@ public class DBHelper {
 	private Connection conn = null;
 	private DatabaseServer databaseServer;
 	
-	protected DBHelper(DatabaseServer databaseServer)
+	public DBHelper(DatabaseServer databaseServer)
 	{
 		this.databaseServer=databaseServer;
 		if(StringUtils.isBlank(this.databaseServer.getPassword())){
@@ -89,7 +89,7 @@ public class DBHelper {
 		{
 			dbmsDriver="net.ucanaccess.jdbc.UcanaccessDriver";
 			if(StringUtils.isBlank(this.databaseServer.getUrl())){
-				this.databaseServer.setUrl(String.format("jdbc:ucanaccess://%s;", this.databaseServer.getSchema()));
+				this.databaseServer.setUrl(String.format("jdbc:ucanaccess://%s;memory=false", this.databaseServer.getSchema()));
 			}
 		}
 	}
@@ -101,7 +101,7 @@ public class DBHelper {
 		this.databaseServer = databaseServer;
 	}
 
-	protected Boolean connect()
+	public Boolean connect()
 	{
 		if (getConn() != null) return false;
 		Boolean flag=false;
@@ -123,7 +123,7 @@ public class DBHelper {
 		return flag;
 	}
 
-	protected void close()
+	public void close()
 	{
 		try
 		{
@@ -138,8 +138,10 @@ public class DBHelper {
 			logger.error(e.getMessage(),e);
 		}
 	}
+	
+	
 
-	protected String query(String sql)
+	public String query(String sql)
 	{
 		if (getConn() == null)
 			return null;
@@ -176,7 +178,7 @@ public class DBHelper {
 	}
 	
 
-	protected List<String> queryRecords(String sql)
+	public List<String> queryRecords(String sql)
 	{
 		if (getConn() == null)
 			return null;
@@ -245,7 +247,7 @@ public class DBHelper {
 	}
 	
 
-	protected void exportToINI(String tableName,String sql,String fileFullName)
+	public void exportToINI(String tableName,String sql,String fileFullName)
 	{
 		if (getConn() == null) {connect();}
 		try{
@@ -279,7 +281,12 @@ public class DBHelper {
 		
 	}
 
-	protected void exportToCsv(String sql,String fileFullName)
+	/**
+	 * execute sql and get result into fileFullName(comma limit), if fileFullName exists, overwrite it.
+	 * @param sql
+	 * @param fileFullName
+	 */
+	public void exportToCsv(String sql,String fileFullName)
 	{
 		if (getConn() == null){connect();}
 		FileWriter csvName=null;
@@ -377,11 +384,28 @@ public class DBHelper {
 		
 	}
 	
-	protected int update(String sql)
+	public Boolean addBatch(String sql){
+		if (getConn() == null)
+			return false;
+		try {
+			Statement statement=getConn().createStatement();
+			statement.addBatch(sql);
+			return true;
+		} catch (SQLException e) {
+			logger.error("SQLException in [" + sql + "]");
+			logger.error(e.getMessage(),e);
+			return false;
+		}
+	}
+	/**
+	 * Execute an SQL INSERT, UPDATE, or DELETE query without replacement parameters
+	 * @param sql
+	 * @return The number of rows updated. if error occurs return 0;
+	 */
+	public int update(String sql)
 	{
 		if (getConn() == null)
 			return 0;
-
 		QueryRunner run = new QueryRunner();
 		int result = 0;
 
@@ -398,12 +422,12 @@ public class DBHelper {
 		return result;
 	}
 
-	protected void setConn(Connection conn)
+	public void setConn(Connection conn)
 	{
 		this.conn = conn;
 	}
 	
-	protected Connection getConn()
+	public Connection getConn()
 	{
 		return this.conn;
 	}
@@ -415,216 +439,216 @@ public class DBHelper {
 		super.finalize();
 	}
 	
-	@Deprecated
-	protected void tset(String dbFullName,String tableName)
-	{
-		try {
-			Database db=DatabaseBuilder.open(new File(dbFullName));
-			Table tab=db.getTable(tableName);
-			for(Row row:tab)
-			{
-				for(Column col:tab.getColumns())
+	public class AccessdbHelper{
+		@Deprecated
+		protected void tset(String dbFullName,String tableName)
+		{
+			try {
+				Database db=DatabaseBuilder.open(new File(dbFullName));
+				Table tab=db.getTable(tableName);
+				for(Row row:tab)
 				{
-					String colName=col.getName();
-					Object value=row.get(colName);
-					if(value==null)
+					for(Column col:tab.getColumns())
 					{
-						value="null";
+						String colName=col.getName();
+						Object value=row.get(colName);
+						if(value==null)
+						{
+							value="null";
+						}
+						logger.debug("column "+colName+"("+col.getType()+")"+value+"("+value.getClass()+")");
+						
 					}
-					logger.debug("column "+colName+"("+col.getType()+")"+value+"("+value.getClass()+")");
+				}
+				db.close();
+			} catch (IOException e) {
+				logger.error(e.getMessage(),e);
+			}
+			
+		}
+		
+		/***
+		 * existence of access table
+		 * @param tableName
+		 * @return
+		 */
+		public Boolean accessTableExistence(String tableName)
+		{
+			Boolean flag=false;
+			try {
+				String dbFullName=getDatabaseServer().getSchema();
+				Database db=DatabaseBuilder.open(new File(dbFullName));
+
+				if(db.getTable(tableName)!=null)
+				{
+					logger.debug("accessdb table["+tableName+"] already exists.");
+					flag=true;
+				}
+				db.close();
+				
+			} catch (IOException e) {
+				logger.error(e.getMessage(),e);
+			}
+			
+			return flag;
+		}
+		/***
+		 * import csv to access table
+		 * @param tableName
+		 * @param importCsvFullName
+		 * @return
+		 */
+		public Boolean importCsvToAccessDB(String tableName,String importCsvFullName)
+		{
+			Boolean flag=false;
+			try {
+				Boolean useExistingTable=false;
+				String dbFullName=getDatabaseServer().getSchema();
+				Database db=DatabaseBuilder.open(new File(dbFullName));
+				Builder builder=new ImportUtil.Builder(db, tableName);
+				if(db.getTable(tableName)!=null)
+				{
+					logger.debug("accessdb table["+tableName+"] already exists.");
+					useExistingTable=true;
+				}
+				builder.setUseExistingTable(useExistingTable);
+				builder.setDelimiter(",").setHeader(true).importFile(new File(importCsvFullName));
+				flag=true;
+				db.close();
+				
+			} catch (IOException e) {
+				logger.error(e.getMessage(),e);
+			}
+			return flag;
+		}
+		
+		/**
+		 * create access db
+		 * @param dbFullName
+		 */
+		public void createAccessDB(String dbFullName)
+		{
+			try {
+				Database db=DatabaseBuilder.create(Database.FileFormat.V2010, new File(dbFullName));
+				db.close();
+				
+			} catch (IOException e) {
+				logger.error(e.getMessage(),e);
+			} 
+		}
+		
+		/***
+		 * create access table
+		 * @param tableName
+		 * @param tableDefinition
+		 */
+		public void createAccessTable(String tableName,List<String> tableDefinition)
+		{
+			try {
+				if (getConn() == null){connect();}
+				String dbFullName=getDatabaseServer().getSchema();
+				Database db=DatabaseBuilder.open(new File(dbFullName));
+				if(db.getTable(tableName)!=null)
+				{
+					logger.debug("accessdb table already exists.");
+					return;
+				}
+				TableBuilder table=new TableBuilder(tableName);
+				
+				//table.addColumn(new ColumnBuilder("a").setSQLType(convertTypeStrToInt_AccessDB("INTEGER")).setLength(24).setPrecision(5));
+				//table.addColumn(new ColumnBuilder("b").setSQLType(convertTypeStrToInt_AccessDB("VARCHAR(12)")).setLength(24));
+				ColumnBuilder[] cols=new ColumnBuilder[tableDefinition.size()];
+				for(String colStr : tableDefinition){
+					int colIndex,colSize;
+					String colName,colType,colNullable;
+					Pattern p = Pattern.compile("col(\\d+)\\=([^\\s]+)\\s+([^\\s]+)(.*)", Pattern.CASE_INSENSITIVE);
+					Matcher m = p.matcher(colStr);
+					if(m.find())
+					{
+						//int groupCount=m.groupCount();
+						colIndex=Integer.parseInt(m.group(1))-1;
+						colName=m.group(2);
+						cols[colIndex]=new ColumnBuilder(colName);
+						if(m.group(3).contains("("))
+						{
+							int index=m.group(3).indexOf("(");
+							colType=m.group(3).substring(0,index);
+							colSize=Integer.parseInt(m.group(3).substring(index+1).replace(")", ""));
+							cols[colIndex].setSQLType(convertTypeStrToInt_AccessDB(colType.toUpperCase()));
+							cols[colIndex].setLengthInUnits(colSize);
+						}else
+						{
+							cols[colIndex].setSQLType(convertTypeStrToInt_AccessDB(m.group(3).toUpperCase()));
+						}
+						//TODO to make some column not null
+						colNullable=m.group(4);
+						if(colNullable!=null && colNullable.trim().equalsIgnoreCase("Nullable")){
+							//cols[colIndex].putProperty(PropertyMap.REQUIRED_PROP,false).putProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, true);
+							//PropertyMap a=new PropertyMapImpl();		
+							//PropertyMap.Property prop=PropertyMapImpl.createProperty(PropertyMap.REQUIRED_PROP, null, true);
+							
+						}else
+						{
+							//cols[colIndex].putProperty(PropertyMap.REQUIRED_PROP,true).putProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, false);
+						}
+					}
 					
 				}
-			}
-			db.close();
-		} catch (IOException e) {
-			logger.error(e.getMessage(),e);
-		}
-		
-	}
-	
-	/***
-	 * existence of access table
-	 * @param tableName
-	 * @return
-	 */
-	protected Boolean accessTableExistence(String tableName)
-	{
-		Boolean flag=false;
-		try {
-			String dbFullName=getDatabaseServer().getSchema();
-			Database db=DatabaseBuilder.open(new File(dbFullName));
-
-			if(db.getTable(tableName)!=null)
-			{
-				logger.debug("accessdb table["+tableName+"] already exists.");
-				flag=true;
-			}
-			db.close();
-			
-		} catch (IOException e) {
-			logger.error(e.getMessage(),e);
-		}
-		
-		return flag;
-	}
-	
-	/***
-	 * import csv to access table
-	 * @param tableName
-	 * @param importCsvFullName
-	 * @return
-	 */
-	protected Boolean importCsvToAccessDB(String tableName,String importCsvFullName)
-	{
-		Boolean flag=false;
-		try {
-			Boolean useExistingTable=false;
-			String dbFullName=getDatabaseServer().getSchema();
-			Database db=DatabaseBuilder.open(new File(dbFullName));
-			Builder builder=new ImportUtil.Builder(db, tableName);
-			if(db.getTable(tableName)!=null)
-			{
-				logger.debug("accessdb table["+tableName+"] already exists.");
-				useExistingTable=true;
-			}
-			builder.setUseExistingTable(useExistingTable);
-			builder.setDelimiter(",").setHeader(true).importFile(new File(importCsvFullName));
-			flag=true;
-			db.close();
-			
-		} catch (IOException e) {
-			logger.error(e.getMessage(),e);
-		}
-		return flag;
-	}
-	
-	/**
-	 * create access db
-	 * @param dbFullName
-	 */
-	protected void createAccessDB(String dbFullName)
-	{
-		try {
-			Database db=DatabaseBuilder.create(Database.FileFormat.V2010, new File(dbFullName));
-			db.close();
-			
-		} catch (IOException e) {
-			logger.error(e.getMessage(),e);
-		} 
-	}
-	
-	/***
-	 * create access table
-	 * @param tableName
-	 * @param tableDefinition
-	 */
-	protected void createAccessTable(String tableName,List<String> tableDefinition)
-	{
-		try {
-			if (getConn() == null){connect();}
-			String dbFullName=getDatabaseServer().getSchema();
-			Database db=DatabaseBuilder.open(new File(dbFullName));
-			if(db.getTable(tableName)!=null)
-			{
-				logger.debug("accessdb table already exists.");
-				return;
-			}
-			TableBuilder table=new TableBuilder(tableName);
-			
-			//table.addColumn(new ColumnBuilder("a").setSQLType(convertTypeStrToInt_AccessDB("INTEGER")).setLength(24).setPrecision(5));
-			//table.addColumn(new ColumnBuilder("b").setSQLType(convertTypeStrToInt_AccessDB("VARCHAR(12)")).setLength(24));
-			ColumnBuilder[] cols=new ColumnBuilder[tableDefinition.size()];
-			for(String colStr : tableDefinition){
-				int colIndex,colSize;
-				String colName,colType,colNullable;
-				Pattern p = Pattern.compile("col(\\d+)\\=([^\\s]+)\\s+([^\\s]+)(.*)", Pattern.CASE_INSENSITIVE);
-				Matcher m = p.matcher(colStr);
-				if(m.find())
+				for(int i=0;i<cols.length;i++)
 				{
-					//int groupCount=m.groupCount();
-					colIndex=Integer.parseInt(m.group(1))-1;
-					colName=m.group(2);
-					cols[colIndex]=new ColumnBuilder(colName);
-					if(m.group(3).contains("("))
-					{
-						int index=m.group(3).indexOf("(");
-						colType=m.group(3).substring(0,index);
-						colSize=Integer.parseInt(m.group(3).substring(index+1).replace(")", ""));
-						cols[colIndex].setSQLType(convertTypeStrToInt_AccessDB(colType.toUpperCase()));
-						cols[colIndex].setLengthInUnits(colSize);
-					}else
-					{
-						cols[colIndex].setSQLType(convertTypeStrToInt_AccessDB(m.group(3).toUpperCase()));
-					}
-					//TODO to make some column not null
-					colNullable=m.group(4);
-					if(colNullable!=null && colNullable.trim().equalsIgnoreCase("Nullable")){
-						//cols[colIndex].putProperty(PropertyMap.REQUIRED_PROP,false).putProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, true);
-						//PropertyMap a=new PropertyMapImpl();		
-						//PropertyMap.Property prop=PropertyMapImpl.createProperty(PropertyMap.REQUIRED_PROP, null, true);
-						
-					}else
-					{
-						//cols[colIndex].putProperty(PropertyMap.REQUIRED_PROP,true).putProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, false);
-					}
+					table.addColumn(cols[i]);
+				}
+				table.toTable(db);
+				
+				db.close();
+			} catch (IOException e) {
+				logger.error(e.getMessage(),e);
+			} catch (SQLException e) {
+				logger.error(e.getMessage(),e);
+			}
+		}
+		
+
+		private int convertTypeStrToInt_AccessDB(String type)
+		{
+			if(StringUtils.isNotBlank(type))
+			{
+				if(type.startsWith("VARCHAR"))
+				{
+					return Types.NVARCHAR;
+				}
+				if(type.equalsIgnoreCase("LONGTEXT"))
+				{
+					return Types.NCLOB;
+				}
+				if(type.equalsIgnoreCase("DATE"))
+				{
+					return Types.DATE;
+				}
+				if(type.equalsIgnoreCase("LONG"))
+				{
+					return Types.INTEGER;
+				}
+				if(type.equalsIgnoreCase("INTEGER"))
+				{
+					return Types.INTEGER;
+				}
+				if(type.equalsIgnoreCase("SINGLE"))
+				{
+					return Types.INTEGER;
+				}
+				if(type.equalsIgnoreCase("DOUBLE"))
+				{
+					return Types.DOUBLE;
+				}
+				if(type.equalsIgnoreCase("DECIMAL"))
+				{
+					return Types.DECIMAL;
 				}
 				
 			}
-			for(int i=0;i<cols.length;i++)
-			{
-				table.addColumn(cols[i]);
-			}
-			table.toTable(db);
-			
-			db.close();
-		} catch (IOException e) {
-			logger.error(e.getMessage(),e);
-		} catch (SQLException e) {
-			logger.error(e.getMessage(),e);
+			return Types.NVARCHAR;
 		}
 	}
 	
-	
-	private int convertTypeStrToInt_AccessDB(String type)
-	{
-		if(StringUtils.isNotBlank(type))
-		{
-			if(type.startsWith("VARCHAR"))
-			{
-				return Types.NVARCHAR;
-			}
-			if(type.equalsIgnoreCase("LONGTEXT"))
-			{
-				return Types.NCLOB;
-			}
-			if(type.equalsIgnoreCase("DATE"))
-			{
-				return Types.DATE;
-			}
-			if(type.equalsIgnoreCase("LONG"))
-			{
-				return Types.INTEGER;
-			}
-			if(type.equalsIgnoreCase("INTEGER"))
-			{
-				return Types.INTEGER;
-			}
-			if(type.equalsIgnoreCase("SINGLE"))
-			{
-				return Types.INTEGER;
-			}
-			if(type.equalsIgnoreCase("DOUBLE"))
-			{
-				return Types.DOUBLE;
-			}
-			if(type.equalsIgnoreCase("DECIMAL"))
-			{
-				return Types.DECIMAL;
-			}
-			
-		}
-		return Types.NVARCHAR;
-	}
-	
-
 }

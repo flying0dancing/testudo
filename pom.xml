@@ -60,18 +60,19 @@
     	<dependency>
     		<groupId>net.sf.ucanaccess</groupId>
     		<artifactId>ucanaccess</artifactId>
-    		<version>4.0.1</version>
+    		<version>4.0.4</version>
     	</dependency>
     	<dependency>
     		<groupId>org.hsqldb</groupId>
     		<artifactId>hsqldb</artifactId>
     		<version>2.3.1</version>
 		</dependency>
+		
     <!-- https://mvnrepository.com/artifact/com.healthmarketscience.jackcess/jackcess -->
 	<dependency>
     	<groupId>com.healthmarketscience.jackcess</groupId>
     	<artifactId>jackcess</artifactId>
-    	<version>2.1.6</version>
+    	<version>2.1.12</version>
 	</dependency>
 	<!-- https://mvnrepository.com/artifact/commons-logging/commons-logging 
 	<dependency>

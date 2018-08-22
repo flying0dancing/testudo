@@ -2,15 +2,15 @@ usage
 ===
 testudo can generates metadata files from many databases, and then compress necessary files into package(zip and lrm).
 ------
-	java -jar testudo.jar -Dprefix="fed" -Dconf="d:\abc\foo\testudo.json" -Did="bbb" -Dproc="2" -Dbuildvar="bXXX" 
-
-* [prefix]
-	* prefix is the folder name of product
-	* get "testudo.json" under this folder.
+	java -jar testudo.jar -Dconf="d:\abc\foo\testudo.json" -Dprefix=fed -Did=bbb -Dproc=2 -Drelease 
 
 * [conf]
 	* conf is defined for full path of configuration file(format is json). `Highest priority`.
 	* get "testudo.json" under the same folder if both [prefix] and [conf] are not provided.
+	
+* [prefix]
+	* prefix is the folder name of product
+	* get "testudo.json" under this folder.
     
 * [id]
 	* id is the key(ID) of [conf]. get the 1st if no provided.
@@ -21,9 +21,8 @@ testudo can generates metadata files from many databases, and then compress nece
 	* "all" does the "1" and then "2".
 	* choose "2"  by default if no provided.
     
-* [buildvar]
-	* this is the internal build numbers in product's manifest.xml. For example, here is 1.12.0.1-b005 in manifest.xml, 1-b005 is the internal build numbers.
-	* set "b000" by default if no provided.
+* [release]
+	* set it means release version. 
 
 
 
@@ -35,7 +34,7 @@ json instruction
 {
   "ID": "its ID",
   
-  "prefix": "your product prefix, i.e. FED, ECR, MAS, ...",
+  "prefix": "[optional] your product prefix, i.e. FED, ECR, MAS, ...",
   
   "metadataPath": "[optional] the location of this product's meta-data folder, and which is followed product folder structure, i.e. E:\\ComplianceProduct\\fed\\src\\Metadata",
   

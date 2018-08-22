@@ -321,6 +321,12 @@ public class FileUtil {
 		return flag;
 	}
 	
+	/**
+	 * return table's definition in a INI file
+	 * @param fileFullName
+	 * @param tableName
+	 * @return
+	 */
 	public static List<String> searchTableDefinition(String fileFullName,String tableName)
 	{
 		List<String> tableDefinition=null;
@@ -350,7 +356,14 @@ public class FileUtil {
 		return tableDefinition;
 	}
 
-	public static Boolean updateContent(String fileFullName, String searchStr,String addedContent)
+	/**
+	 * if a file contains tableName, case insensitive, it will rewrite this table's definition at the end.
+	 * @param fileFullName
+	 * @param tableName
+	 * @param addedContent
+	 * @return
+	 */
+	public static Boolean updateContent(String fileFullName, String tableName,String addedContent)
 	{
 		Boolean flag=false;
 		logger.info("update content in text in file: "+fileFullName);
@@ -362,7 +375,7 @@ public class FileUtil {
 			String line=null;
 			while((line=bufReader.readLine())!=null)
 			{	//delete searched string and its sub fields
-				if(line.toLowerCase().contains(searchStr.toLowerCase()))
+				if(line.toLowerCase().contains(tableName.toLowerCase()))
 				{
 					while((line=bufReader.readLine())!=null)
 					{
@@ -390,6 +403,11 @@ public class FileUtil {
 		return flag;
 	}
 	
+	/**
+	 * get file's content, return a list
+	 * @param fileFullName
+	 * @return
+	 */
 	public static List<String> getFileContent(String fileFullName)
 	{
 		List<String> contents=new ArrayList<String>();
@@ -409,6 +427,31 @@ public class FileUtil {
 			logger.error(e.getMessage(),e);
 		}
 		return contents;
+	}
+	
+	/**
+	 * get content of fileFullName, return String
+	 * @param fileFullName
+	 * @return
+	 */
+	public static String getFileContent1(String fileFullName){
+		StringBuffer contents=new StringBuffer();
+		BufferedReader bufReader=null;
+		try{
+			if(StringUtils.isNotBlank(fileFullName)){
+				//
+				bufReader=new BufferedReader(new FileReader(fileFullName));
+				String line=null;
+				while((line=bufReader.readLine())!=null){
+					contents.append(line);
+					System.out.println(line);
+				}
+				bufReader.close();
+			}
+		}catch(Exception e){
+			logger.error(e.getMessage(),e);
+		}
+		return contents.toString();
 	}
 
 }

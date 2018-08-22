@@ -22,6 +22,14 @@ public class DBInfo {
 		this.dbHelper =new DBHelper(databaseServer);
 	}
 	
+	public Boolean executeSQL(String sql){
+		dbHelper.connect();
+		Boolean flag=dbHelper.addBatch(sql);
+		dbHelper.close();
+		
+		return flag;
+	}
+	
 	private String queryRecord(String sql)
 	{
 		dbHelper.connect();
@@ -136,6 +144,7 @@ public class DBInfo {
 		dbHelper.close();
 	}
 	
+	@Deprecated
 	public void exportToCsv()
 	{
 		dbHelper.connect();
@@ -159,7 +168,8 @@ public class DBInfo {
 		/*if(new File(dbFullName).exists())
 		{new File(dbFullName).delete();}*/
 		if(!new File(dbFullName).exists()){
-			dbHelper.createAccessDB(dbHelper.getDatabaseServer().getSchema());
+			DBHelper.AccessdbHelper accdb=dbHelper.new AccessdbHelper();
+			accdb.createAccessDB(dbHelper.getDatabaseServer().getSchema());
 		}
 		return flag;
 	}
@@ -174,14 +184,16 @@ public class DBInfo {
 	public String getReturnAndVersion(String returnId)
 	{
 		String returnAndVer="";
+		String tableName="Rets";
 		if(dbHelper.getDatabaseServer().getDriver().startsWith("access"))
 		{
 			dbHelper.connect();
-			if(!dbHelper.accessTableExistence("Rets"))
+			DBHelper.AccessdbHelper accdb=dbHelper.new AccessdbHelper();
+			if(!accdb.accessTableExistence(tableName))
 			{
-				logger.error("cannot found Rets");
+				logger.error("cannot found "+tableName);
 			}else{
-				String SQL="SELECT Return & \"_v\" & Version AS Expr1 from [Rets] WHERE ReturnId="+returnId;
+				String SQL="SELECT Return & \"_v\" & Version AS Expr1 from ["+tableName+"] WHERE ReturnId="+returnId;
 				returnAndVer=dbHelper.query(SQL);
 			}
 			
@@ -214,8 +226,9 @@ public class DBInfo {
 				List<String> columns=FileUtil.searchTableDefinition(schemaFullName,tableName);
 				if(columns!=null && columns.size()>0)
 				{
-					dbHelper.createAccessTable(tableName,columns);
-					flag=dbHelper.importCsvToAccessDB(tableName,csvPath);
+					DBHelper.AccessdbHelper accdb=dbHelper.new AccessdbHelper();
+					accdb.createAccessTable(tableName,columns);
+					flag=accdb.importCsvToAccessDB(tableName,csvPath);
 				}else{logger.error("error: invalid table definition ["+tableName+"]");}
 			}
 			

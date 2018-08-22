@@ -29,21 +29,27 @@ public class Testudo implements IComFolder
 		//read args from command-line
 		if(args.length>0){
 			for(String s:args){
-				String[] argKeyValue=s.split("=");
-				argKeyValue[0]=argKeyValue[0].replaceAll("^\\-D?(.*)$", "$1");
-				System.setProperty(argKeyValue[0], argKeyValue[1]);
+				if(s.contains("=")){
+					String[] argKeyValue=s.split("=");
+					argKeyValue[0]=argKeyValue[0].replaceAll("^\\-D?(.*)$", "$1");
+					System.setProperty(argKeyValue[0], argKeyValue[1]);
+				}else{
+					s=s.replaceAll("^\\-D?(.*)$", "$1");
+					System.setProperty(s,"true");
+				}
+				
 			}
 			
 		}
 		
 		String iDinJoson=System.getProperty(CMDL_ARPRODUCTID);
 		String proc=System.getProperty(CMDL_ARPCIPROC);
-		String arpbuild=System.getProperty(CMDL_ARPBUILD,"b000");
-		System.out.println("productFolder"+System.getProperty(CMDL_ARPPRODUCTPREFIX));
-		System.out.println("productID"+System.getProperty(CMDL_ARPRODUCTID));
-		System.out.println("proc"+proc);
-		System.out.println("Var:"+arpbuild);
-
+		String arpbuildtype=System.getProperty(CMDL_ARPBUILDTYPE);
+		System.out.println("product Folder"+System.getProperty(CMDL_ARPPRODUCTPREFIX));
+		System.out.println("product ID"+System.getProperty(CMDL_ARPRODUCTID));
+		System.out.println("process"+proc);
+		System.out.println("build type:"+arpbuildtype);
+		
 		if(StringUtils.isBlank(iDinJoson)){
 			logger.warn("argument productPrefix is not setted, get the fist one by default.");
 		}
@@ -114,8 +120,11 @@ public class Testudo implements IComFolder
 					arSetting.getZipSettings().getZipFiles().addAll(returnNameVers);
 				}
 			}
-				
-			azipFile.packageARProduct(arSetting.getSrcPath(), arSetting.getZipSettings().getZipFiles(), arSetting.getZipSettings().getProductProperties(), Helper.getParentPath(arSetting.getSrcPath()), System.getProperty(CMDL_ARPBUILD,"b000"));
+			Boolean status=azipFile.execSQLs(arSetting.getZipSettings().getDpmFullPath(),arSetting.getSrcPath(),arSetting.getZipSettings().getSqlFiles());
+			if(status){
+				azipFile.packageARProduct(arSetting.getSrcPath(), arSetting.getZipSettings().getZipFiles(), arSetting.getZipSettings().getProductProperties(), Helper.getParentPath(arSetting.getSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
+			}	
+			
 		}else{
 			logger.error("error: invalid file["+iniFullName+"]");
 		}

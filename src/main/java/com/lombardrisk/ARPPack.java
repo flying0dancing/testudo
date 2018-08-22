@@ -137,11 +137,32 @@ public class ARPPack implements IComFolder {
 		Boolean flag=true;
 		if(sqlFileNames==null || sqlFileNames.size()<=0) return true;//means testudo.json doesn't provide sqlFiles.
 		List<String> realFullPaths=getFileFullPaths(sourcePath, sqlFileNames);
-		if(realFullPaths==null || realFullPaths.size()<=0) return false;//illegal no files need to execute if it set sqlFiles
+		if(realFullPaths==null || realFullPaths.size()<=0) {
+			logger.error("error: sqlFiles are invalid files or filters.");
+			return false;//illegal no files need to execute if it set sqlFiles
+		}
 		DBInfo dbInfo=new DBInfo();
 		dbInfo.setDbHelper(new DatabaseServer("accessdb","", dbFullName,"",""));
 		for(String fileFullPath:realFullPaths){
-			//TODO
+			String fileContent=FileUtil.getFileContent1(fileFullPath);
+			if(fileContent.contains(";")){
+				String[] sqlStatements=fileContent.split(";");
+				for(String sql:sqlStatements){
+					logger.info("execute sql:"+sql);
+					Boolean status=dbInfo.executeSQL(sql);
+					if(!status){
+						logger.error("execute failed.");
+						flag=false;
+					}
+				}
+			}else{
+				logger.info("execute sql:"+fileContent);
+				Boolean status=dbInfo.executeSQL(fileContent);
+				if(!status){
+					logger.error("execute failed.");
+					flag=false;
+				}
+			}
 		}
 		
 		return flag;
@@ -153,21 +174,26 @@ public class ARPPack implements IComFolder {
 	 * @param packFileNames the file names which need to be packaged
 	 * @param propFullPath the full path of package.properties, it should be get value from <I>json file</I>->"zipSettings"-> "productProperties"
 	 * @param zipPath the path of package(.zip, .lrm)
-	 * @param jenkinsVariable
+	 * @param buildType blank(null) represents it is internal build, true represents it is release build
 	 * @return
 	 */
-	public Boolean packageARProduct(String sourcePath,List<String> packFileNames, String propFullPath, String zipPath, String jenkinsVariable){
+	public Boolean packageARProduct(String sourcePath,List<String> packFileNames, String propFullPath, String zipPath, String buildType){
 		if(StringUtils.isBlank(sourcePath)){return false;}
-		//execSQLs
-		//TODO
+		
 		//get all packaged files
 		String productPrefix=FileUtil.getFileNameWithSuffix(Helper.getParentPath(sourcePath)).toUpperCase();
 		Boolean flag=true;
 		List<String> realFullPaths=getFileFullPaths(sourcePath, packFileNames);
-		if(realFullPaths==null) return false;
-		
+		if(realFullPaths==null){
+			logger.error("error: zipFiles are invalid files or filters.");
+			return false;
+		}
+		String arpbuild=null;
+		if(StringUtils.isBlank(buildType)){
+			arpbuild=String.valueOf(System.currentTimeMillis());
+		}
 		//modify manifest.xml
-		String packageVersion=Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE, IMP_VERSION, jenkinsVariable);
+		String packageVersion=Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE, IMP_VERSION, arpbuild);
 		List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+"/"+DPM_PATH+"*"+DPM_FILE_SUFFIX));
 		if(accdbfiles.size()>0)
 		{
@@ -202,7 +228,7 @@ public class ARPPack implements IComFolder {
 		
 		if(flag)
 		{
-			logger.info("package named: "+zipFullPathWithoutSuffix+".zip/.lrm");
+			logger.info("package named: "+zipFullPathWithoutSuffix+".zip and \n"+zipFullPathWithoutSuffix+".lrm");
 			FileUtil.renameTo(zipFullPathWithoutSuffix+"_sign.lrm", zipFullPathWithoutSuffix+".lrm");
 			logger.info("package sucessfully.");
 		}else{

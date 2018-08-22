@@ -9,7 +9,7 @@ public interface IComFolder {
 	String CMDL_ARPCICONFG="conf";
 	String CMDL_ARPRODUCTID="id";
 	String CMDL_ARPCIPROC="proc";
-	String CMDL_ARPBUILD="buildvar";
+	String CMDL_ARPBUILDTYPE="release";
 		
 	//String JSON_PATH="src/main/resources/exportSettings.json";
 	String JSON_PATH=StringUtils.isBlank(System.getProperty(CMDL_ARPPRODUCTPREFIX))?"testudo.json":System.getProperty(CMDL_ARPPRODUCTPREFIX)+System.getProperty("file.separator")+"testudo.json";
