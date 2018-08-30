@@ -43,9 +43,6 @@ public class DBHelper {
 	public DBHelper(DatabaseServer databaseServer)
 	{
 		this.databaseServer=databaseServer;
-		if(StringUtils.isBlank(this.databaseServer.getPassword())){
-			this.databaseServer.setPassword("password");
-		}
 		
 		String dbms=this.databaseServer.getDriver().toLowerCase();
 		
@@ -64,6 +61,9 @@ public class DBHelper {
 			if(StringUtils.isBlank(this.databaseServer.getUsername())){
 				this.databaseServer.setUsername("sa");
 			}
+			if(StringUtils.isBlank(this.databaseServer.getPassword())){
+				this.databaseServer.setPassword("password");
+			}
 			if(StringUtils.isBlank(this.databaseServer.getUrl())){
 				if(hostsid.length==2){
 					this.databaseServer.setUrl(String.format("jdbc:jtds:sqlserver://%s:%s/%s;instance=%s", host, "1433", this.databaseServer.getSchema(),sid));
@@ -80,16 +80,19 @@ public class DBHelper {
 			if(StringUtils.isBlank(this.databaseServer.getUsername())){
 				this.databaseServer.setUsername(this.databaseServer.getSchema());
 			}
+			if(StringUtils.isBlank(this.databaseServer.getPassword())){
+				this.databaseServer.setPassword("password");
+			}
 			if(StringUtils.isBlank(this.databaseServer.getUrl())){
 				this.databaseServer.setUrl(String.format("jdbc:oracle:thin:@%s:%s:%s", host, "1521", sid));
 			}
 		}
-		//oracle database
+		//access database
 		if(StringUtils.isNotBlank(dbms) && dbms.startsWith("access"))
 		{
 			dbmsDriver="net.ucanaccess.jdbc.UcanaccessDriver";
 			if(StringUtils.isBlank(this.databaseServer.getUrl())){
-				this.databaseServer.setUrl(String.format("jdbc:ucanaccess://%s;memory=false", this.databaseServer.getSchema()));
+				this.databaseServer.setUrl(String.format("jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE", this.databaseServer.getSchema()));
 			}
 		}
 	}
@@ -106,18 +109,20 @@ public class DBHelper {
 		if (getConn() != null) return false;
 		Boolean flag=false;
 		flag=DbUtils.loadDriver(dbmsDriver);
-		if(flag)
+		try
 		{
-			try
-			{
+			if(StringUtils.isNoneBlank( this.databaseServer.getUsername(),this.databaseServer.getPassword())){
 				setConn(DriverManager.getConnection(this.databaseServer.getUrl(), this.databaseServer.getUsername(), this.databaseServer.getPassword()));
+			}else{
+				setConn(DriverManager.getConnection(this.databaseServer.getUrl()));
 			}
-			catch (SQLException e)
-			{
-				logger.error("Database connection failed!");
-				logger.error(e.getMessage(),e);
-				flag=false;
-			}
+			
+		}
+		catch (SQLException e)
+		{
+			logger.error("Database connection failed!");
+			logger.error(e.getMessage(),e);
+			flag=false;
 		}
 		
 		return flag;
@@ -150,7 +155,7 @@ public class DBHelper {
 		try
 		{
 			ResultSet rs = null;
-			Statement stmt = getConn().createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+			Statement stmt = getConn().createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);//
 			rs = stmt.executeQuery(sql);
 			if(rs.getRow()>=0)
 			{
@@ -223,24 +228,25 @@ public class DBHelper {
 	{
 		String type=null;
 		columnTypeName=columnTypeName.toUpperCase();
-		if(this.databaseServer.getDriver().startsWith("ora"))
-		{
-			if(columnTypeName.contains("LOB")){
-				type=" LONGTEXT";
-			}else if(columnTypeName.contains("DATE") || columnTypeName.contains("TIMESTAMP")){
-				type=" DATE";
-			}else if(columnTypeName.contains("NUMBER")){
-				if(scale==0){
-					type=" LONG";
-				}else if(scale<=10){
-					type=" DOUBLE";
-				}else{
-					type=" DECIMAL";
-				}
-				
+		if(columnTypeName.contains("LOB")){
+			type=" LONGTEXT";
+		}else if(columnTypeName.contains("DATE") || columnTypeName.contains("TIMESTAMP")){
+			type=" DATE";
+		}else if(columnTypeName.contains("TEXT")){
+			type=" LONGTEXT";
+		}else if(columnTypeName.contains("BIT")){
+			type=" BOOLEAN";
+		}else  if(columnTypeName.contains("NUMBER") || columnTypeName.contains("INT")){
+			if(scale==0){
+				type=" LONG";
+			}else if(scale<=10){
+				type=" DOUBLE";
 			}else{
-				type=" VARCHAR("+String.valueOf(precision)+")";
+				type=" DECIMAL";
 			}
+			
+		}else{
+			type=" VARCHAR("+String.valueOf(precision)+")";
 		}
 		
 		return type;
@@ -313,52 +319,40 @@ public class DBHelper {
 			//csv data
 			String value=null;
 			while(rest.next()){
-				for(col=1;col<rsmd.getColumnCount();col++)
+				for(col=1;col<=rsmd.getColumnCount();col++)
 				{
-					//logger.info(rest.getString(col));
-					if(rsmd.getColumnClassName(col).contains("Blob"))
+					//logger.info(rsmd.getColumnName(col)+" : "+rsmd.getColumnClassName(col));
+					String classvar=rsmd.getColumnClassName(col);
+					@SuppressWarnings("unused")
+					String colTypevar=rsmd.getColumnTypeName(col);
+					if(classvar.contains("Blob"))
 					{
 						value=Helper.convertBlobToStr(rest.getBlob(col));
 					}else
 					{
-						value=rest.getNString(col);
+						value=StringUtils.isBlank(rest.getString(col))?"":rest.getString(col);
 					}
 					if(value!=null)
 					{
-						if(rsmd.getColumnClassName(col).contains("Timestamp"))
+						if(classvar.contains("Timestamp"))
 						{
-							bufOutFile.append(value.replaceAll("([\"])", "\"$1").replaceAll("\\.*", ""));
-						}else if(rsmd.getColumnClassName(col).contains("Decimal")){
-							bufOutFile.append(value.replaceAll("([\"])", "\"$1"));
-						}else{
+							value=value.replaceAll("([\"])", "\"$1").replaceAll("\\.*", "");
+							bufOutFile.append(value);
+						}else if(classvar.contains("Decimal") || classvar.contains("Int")){
+							value=value.replaceAll("([\"])", "\"$1");
+							bufOutFile.append(value);
+						}else {
 							bufOutFile.append("\"");
 							bufOutFile.append(value.replaceAll("([\"])", "\"$1"));
 							bufOutFile.append("\"");
 						}
 					}
-					bufOutFile.append(",");
-				}
-				//last column
-				if(rsmd.getColumnClassName(col).contains("Blob"))
-				{
-					value=Helper.convertBlobToStr(rest.getBlob(col));
-				}else
-				{
-					value=rest.getNString(col);
-				}
-				if(value!=null)
-				{
-					if(rsmd.getColumnClassName(col).contains("Timestamp"))
+					if(col!=rsmd.getColumnCount())
 					{
-						bufOutFile.append(value.replaceAll("([\"])", "\"$1").replaceAll("\\.*", ""));
-					}else if(rsmd.getColumnClassName(col).contains("Decimal")){
-						bufOutFile.append(value.replaceAll("([\"])", "\"$1"));
-					}else{
-						bufOutFile.append("\"");
-						bufOutFile.append(value.replaceAll("([\"])", "\"$1"));
-						bufOutFile.append("\"");
+						bufOutFile.append(",");
 					}
 				}
+				
 				bufOutFile.append(System.getProperty("line.separator"));
 				bufOutFile.flush();
 			}
@@ -388,8 +382,14 @@ public class DBHelper {
 		if (getConn() == null)
 			return false;
 		try {
+			getConn().setAutoCommit(false);
 			Statement statement=getConn().createStatement();
-			statement.addBatch(sql);
+			if(sql.toLowerCase().startsWith("update")){
+				statement.executeUpdate(sql);
+			}else{
+				statement.execute(sql);
+			}
+			getConn().commit();
 			return true;
 		} catch (SQLException e) {
 			logger.error("SQLException in [" + sql + "]");
@@ -644,6 +644,10 @@ public class DBHelper {
 				if(type.equalsIgnoreCase("DECIMAL"))
 				{
 					return Types.DECIMAL;
+				}
+				if(type.equalsIgnoreCase("BOOLEAN"))
+				{
+					return Types.BOOLEAN;
 				}
 				
 			}

@@ -17,6 +17,7 @@ public class ARPCISetting {
     private ZipSettings zipSettings;
     private String notes;
     private transient String srcPath;
+    private transient String targetSrcPath;
     
     public String getID() {
 		return ID;
@@ -81,6 +82,14 @@ public class ARPCISetting {
 	public void setSrcPath(String srcPath) {
 		this.srcPath = srcPath;
 	}
+
+	public String getTargetSrcPath() {
+		return targetSrcPath;
+	}
+
+	public void setTargetSrcPath(String targetSrcPath) {
+		this.targetSrcPath = targetSrcPath;
+	}
 	
 	@Override
     public String toString() {
@@ -93,4 +102,5 @@ public class ARPCISetting {
 		}
 		
     }
+
 }

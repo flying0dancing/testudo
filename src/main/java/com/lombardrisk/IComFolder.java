@@ -10,6 +10,7 @@ public interface IComFolder {
 	String CMDL_ARPRODUCTID="id";
 	String CMDL_ARPCIPROC="proc";
 	String CMDL_ARPBUILDTYPE="release";
+	String CMDL_ARPRUNONJENKINS="runOnJenkins";
 		
 	//String JSON_PATH="src/main/resources/exportSettings.json";
 	String JSON_PATH=StringUtils.isBlank(System.getProperty(CMDL_ARPPRODUCTPREFIX))?"testudo.json":System.getProperty(CMDL_ARPPRODUCTPREFIX)+System.getProperty("file.separator")+"testudo.json";
@@ -38,6 +39,10 @@ public interface IComFolder {
 	String IMP_VERSION="implementationVersion";
 	String MAPPING_VERSION="mappingVersion";
 	String ACCESSFILE="accessFile";
+	
+	//package things
+	String PACKAGE_SUFFIX=".zip";
+	String PACKAGE_LRM_SUFFIX=".lrm";
 	
 
 }

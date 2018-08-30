@@ -1,12 +1,16 @@
 usage 
 ===
-testudo can generates metadata files from compliance product's system database, and then compress necessary files into package(zip and lrm).
+testudo can generates metadata files from many databases, and then compress necessary files into package(zip and lrm).
 ------
-	java -jar testudo.jar -Dconf="d:\abc\foo\testudo.json" -Did="bbb" -Dproc="2" -Dbuildvar="bXXX" 
+	java -jar testudo.jar -Dconf="d:\abc\foo\testudo.json" -Dprefix=fed -Did=bbb -Dproc=2 -Drelease -DrunOnJenkins
 
 * [conf]
-	* conf is defined for full path of configuration file(format is json).
-	* get "testudo.json" under the same folder if no provided.
+	* conf is defined for full path of configuration file(format is json). `Highest priority`.
+	* get "testudo.json" under the same folder if both [prefix] and [conf] are not provided.
+	
+* [prefix]
+	* prefix is the folder name of product
+	* get "testudo.json" under this folder.
     
 * [id]
 	* id is the key(ID) of [conf]. get the 1st if no provided.
@@ -17,11 +21,11 @@ testudo can generates metadata files from compliance product's system database, 
 	* "all" does the "1" and then "2".
 	* choose "2"  by default if no provided.
     
-* [buildvar]
-	* this is the internal build numbers in product's manifest.xml. For example, here is 1.12.0.1-b005 in manifest.xml, 1-b005 is the internal build numbers.
-	* set "b000" by default if no provided.
+* [release]
+	* set it means release version. 
 
-
+* [runOnJenkins]
+	* set it means run on jenkins. 
 
 json instruction
 -------------------------------------------
@@ -31,11 +35,11 @@ json instruction
 {
   "ID": "its ID",
   
-  "prefix": "your product prefix, i.e. FED, ECR, MAS, ...",
+  "prefix": "[optional] your product prefix, i.e. FED, ECR, MAS, ...",
   
   "metadataPath": "[optional] the location of this product's meta-data folder, and which is followed product folder structure, i.e. E:\\ComplianceProduct\\fed\\src\\Metadata",
   
-  "metadataStruct": "the meta-data structure which in under "metadataPath", i.e.FED_FORM_META.ini",
+  "metadataStruct": "[optional] the meta-data structure which in under "metadataPath", i.e.FED_FORM_META.ini",
   
   "databaseServer": {
     "name": "its Name",
@@ -62,6 +66,7 @@ json instruction
      ],
     "dpmFullPath": "[optional] the full name of this product's dpm, i.e. E:\\ComplianceProduct\\fed\\src\\dpm\\FED_FORM_META.accdb",
     "productProperties": "[optional] the full name of this product's properties. i.e. E:\\ComplianceProduct\\fed\\package.properties",
+    "sqlFiles":["the filtered files or all files under filtered folder will be executed in dpmFullPath"],
     "zipFiles": ["the filtered files or all files under filtered folder will be packaged",
     "manifest", 
     "dpm",
@@ -103,14 +108,14 @@ json instruction
       "GridRef\\009.csv",
       "Rets"
     ],
+    "sqlFiles":["sqls/New Text Document.sql","sqls/test.sql"],
     "dpmFullPath": "E:\\ComplianceProduct\\ecr\\src\\dpm\\ECR_FORM_META.accdb",
     "productProperties": "E:\\ComplianceProduct\\ecr\\package.properties",
     "zipFiles": [
       "manifest.xml",
       "transforms",
       "forms",
-      "dpm",
-      "GridRef_360*.csv"
+      "dpm"
     ]
   }
 }

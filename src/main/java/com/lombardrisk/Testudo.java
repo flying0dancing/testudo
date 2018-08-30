@@ -15,7 +15,7 @@ import com.lombardrisk.pojo.DBAndTables;
 
 
 /**
- * Hello world!
+ * start from this
  *
  */
 public class Testudo implements IComFolder
@@ -44,14 +44,14 @@ public class Testudo implements IComFolder
 		
 		String iDinJoson=System.getProperty(CMDL_ARPRODUCTID);
 		String proc=System.getProperty(CMDL_ARPCIPROC);
-		String arpbuildtype=System.getProperty(CMDL_ARPBUILDTYPE);
+		/*String arpbuildtype=System.getProperty(CMDL_ARPBUILDTYPE);
 		System.out.println("product Folder"+System.getProperty(CMDL_ARPPRODUCTPREFIX));
 		System.out.println("product ID"+System.getProperty(CMDL_ARPRODUCTID));
 		System.out.println("process"+proc);
-		System.out.println("build type:"+arpbuildtype);
+		System.out.println("build type:"+arpbuildtype);*/
 		
 		if(StringUtils.isBlank(iDinJoson)){
-			logger.warn("argument productPrefix is not setted, get the fist one by default.");
+			logger.warn("argument id is not setted, get the fist by default in json.");
 		}
 		
 		ARPCISetting arSetting=ARPCISettingManager.getARPCISetting(iDinJoson);
@@ -95,12 +95,11 @@ public class Testudo implements IComFolder
     private static void readDBToMetadata(ARPCISetting arSetting)
     {
     	String iniFullName=Helper.reviseFilePath(arSetting.getMetadataPath()+System.getProperty("file.separator")+arSetting.getMetadataStruct());
-		FileUtil.createNew(iniFullName);
+    	FileUtil.createNew(iniFullName);
 		List<DBAndTables> dbAndTables=arSetting.getDatabaseServerAndTables();
 		if(dbAndTables!=null && dbAndTables.size()>0){
 			for(DBAndTables dbAndTable:dbAndTables){
-				DBInfo db=new DBInfo();
-				db.setDbHelper(dbAndTable.getDatabaseServer());
+				DBInfo db=new DBInfo(dbAndTable.getDatabaseServer());
 				db.exportToDivides(arSetting.getPrefix(),dbAndTable.getRequiredTables().getDividedByReturnIds(),arSetting.getMetadataPath(),arSetting.getMetadataStruct());
 				db.exportToSingle(arSetting.getPrefix(),dbAndTable.getRequiredTables().getSingles(),arSetting.getMetadataPath(),arSetting.getMetadataStruct());
 				
@@ -120,9 +119,9 @@ public class Testudo implements IComFolder
 					arSetting.getZipSettings().getZipFiles().addAll(returnNameVers);
 				}
 			}
-			Boolean status=azipFile.execSQLs(arSetting.getZipSettings().getDpmFullPath(),arSetting.getSrcPath(),arSetting.getZipSettings().getSqlFiles());
+			Boolean status=azipFile.execSQLs(arSetting.getZipSettings().getDpmFullPath(),arSetting.getTargetSrcPath(),arSetting.getZipSettings().getSqlFiles());
 			if(status){
-				azipFile.packageARProduct(arSetting.getSrcPath(), arSetting.getZipSettings().getZipFiles(), arSetting.getZipSettings().getProductProperties(), Helper.getParentPath(arSetting.getSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
+				azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings().getZipFiles(), arSetting.getZipSettings().getProductProperties(), Helper.getParentPath(arSetting.getTargetSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
 			}	
 			
 		}else{

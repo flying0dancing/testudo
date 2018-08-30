@@ -2,7 +2,7 @@ usage
 ===
 testudo can generates metadata files from many databases, and then compress necessary files into package(zip and lrm).
 ------
-	java -jar testudo.jar -Dconf="d:\abc\foo\testudo.json" -Dprefix=fed -Did=bbb -Dproc=2 -Drelease 
+	java -jar testudo.jar -Dconf="d:\abc\foo\testudo.json" -Dprefix=fed -Did=bbb -Dproc=2 -Drelease -DrunOnJenkins
 
 * [conf]
 	* conf is defined for full path of configuration file(format is json). `Highest priority`.
@@ -24,7 +24,8 @@ testudo can generates metadata files from many databases, and then compress nece
 * [release]
 	* set it means release version. 
 
-
+* [runOnJenkins]
+	* set it means run on jenkins. 
 
 json instruction
 -------------------------------------------
@@ -107,14 +108,14 @@ json instruction
       "GridRef\\009.csv",
       "Rets"
     ],
+    "sqlFiles":["sqls/New Text Document.sql","sqls/test.sql"],
     "dpmFullPath": "E:\\ComplianceProduct\\ecr\\src\\dpm\\ECR_FORM_META.accdb",
     "productProperties": "E:\\ComplianceProduct\\ecr\\package.properties",
     "zipFiles": [
       "manifest.xml",
       "transforms",
       "forms",
-      "dpm",
-      "GridRef_360*.csv"
+      "dpm"
     ]
   }
 }

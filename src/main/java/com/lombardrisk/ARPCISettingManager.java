@@ -99,23 +99,41 @@ public class ARPCISettingManager implements IComFolder {
 				}else
 				{
 					productPrefix=System.getProperty(CMDL_ARPPRODUCTPREFIX).toUpperCase();
+					arCIConfg.setPrefix(productPrefix);
 				}
 			}
-			arCIConfg.setPrefix(productPrefix);
 			
 			//revise "metadataPath"
 			String metadataPath=arCIConfg.getMetadataPath();
-			String commonFolder=null;
+			String productPath=null;
+			String targetProductPath=null;
+			String targetSrcPath=null;
+			String sourcePath=null;
 			if(StringUtils.isNotBlank(metadataPath)){
 				metadataPath=Helper.reviseFilePath(metadataPath);
-				commonFolder=Helper.reviseFilePath(Helper.getParentPath(metadataPath)); //src/
+				sourcePath=Helper.getParentPath(metadataPath); //src/
+				productPath=Helper.removeLastSlash(Helper.getParentPath(sourcePath));
 			}else{
-				commonFolder=Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+arCIConfg.getPrefix()+"/"+SOURCE_FOLDER); //src/
-				metadataPath=commonFolder+META_PATH;
+				sourcePath=Helper.getParentPath(System.getProperty("user.dir"))+arCIConfg.getPrefix()+System.getProperty("file.separator")+SOURCE_FOLDER; //src/	
+				metadataPath=sourcePath+META_PATH;
+				productPath=Helper.getParentPath(System.getProperty("user.dir"))+arCIConfg.getPrefix();
 			}
-			FileUtil.createDirectories(arCIConfg.getMetadataPath());
+			if(StringUtils.isBlank(System.getProperty(CMDL_ARPRUNONJENKINS))){
+				//run on local machine
+				//get target product path
+				targetProductPath=FileUtil.createNewFileWithSuffix(productPath,null,null);
+				targetSrcPath=targetProductPath+System.getProperty("file.separator")+SOURCE_FOLDER;//target source path
+				metadataPath=targetSrcPath+META_PATH; //target metadata path
+				FileUtil.copyDirectory(sourcePath, targetSrcPath);
+			}else{
+				//run on Jenkins server
+				targetSrcPath=sourcePath;
+			}
+			
 			arCIConfg.setMetadataPath(metadataPath);
-			arCIConfg.setSrcPath(commonFolder);
+			arCIConfg.setSrcPath(sourcePath);
+			arCIConfg.setTargetSrcPath(targetSrcPath);
+			FileUtil.createDirectories(arCIConfg.getMetadataPath());
 			
 			//revise "metadataStruct"
 			String metadataStruct=arCIConfg.getMetadataStruct();
@@ -126,22 +144,25 @@ public class ARPCISettingManager implements IComFolder {
 			//revise "zipSettings"->"dpmFullPath"
 			String dpmFullName=arCIConfg.getZipSettings().getDpmFullPath();
 			if(StringUtils.isNotBlank(dpmFullName)){
+				FileUtil.createDirectories(targetSrcPath+DPM_PATH);
 				if(!dpmFullName.contains("/") && !dpmFullName.contains("\\")){
-					FileUtil.createDirectories(commonFolder+DPM_PATH);//FileUtil.createDirectories(Helper.reviseFilePath(commonFolder+DPM_PATH));
-					dpmFullName=commonFolder+DPM_PATH+dpmFullName;
+					//dpmFullName just a file name without path
+					dpmFullName=targetSrcPath+DPM_PATH+dpmFullName;
 				}else{
 					dpmFullName=Helper.reviseFilePath(dpmFullName);
-					FileUtil.createDirectories(Helper.getParentPath(dpmFullName));
+					String dpmPathTemp=Helper.getParentPath(dpmFullName);
+					String dpmName=dpmFullName.replace(dpmPathTemp, "");
+					dpmFullName=targetSrcPath+DPM_PATH+dpmName;//remap its dpmFullName to target folder
 				}
 			}else{
-				FileUtil.createDirectories(commonFolder+DPM_PATH);//FileUtil.createDirectories(Helper.reviseFilePath(commonFolder+DPM_PATH));
-				dpmFullName=Helper.reviseFilePath(commonFolder+DPM_PATH+arCIConfg.getPrefix()+DPM_FILE_SUFFIX);
+				FileUtil.createDirectories(targetSrcPath+DPM_PATH);//FileUtil.createDirectories(Helper.reviseFilePath(commonFolder+DPM_PATH));
+				dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+arCIConfg.getPrefix()+DPM_FILE_SUFFIX);
 			}
 			arCIConfg.getZipSettings().setDpmFullPath(dpmFullName);
 			
 			//revise "zipSettings"->"productProperties"
 			String productPropsPath=arCIConfg.getZipSettings().getProductProperties();
-			String upperComFolder=Helper.getParentPath(commonFolder);
+			String upperComFolder=Helper.getParentPath(sourcePath);
 			if(StringUtils.isNotBlank(productPropsPath)){
 				if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
 					productPropsPath=Helper.reviseFilePath(upperComFolder+productPropsPath);

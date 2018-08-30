@@ -15,12 +15,13 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class FileUtil {
+public class FileUtil extends FileUtils{
 
 	private final static Logger logger = LoggerFactory.getLogger(FileUtil.class);
 	
@@ -452,6 +453,72 @@ public class FileUtil {
 			logger.error(e.getMessage(),e);
 		}
 		return contents.toString();
+	}
+	
+	/***
+	 * support folder and file, generate a new file name with path.
+	 * @param fileFullName
+	 * @param suffix can be null
+	 * @param newFilePath can be null, get fileFullName's parent path
+	 * @return new file full path with name
+	 */
+	public static String createNewFileWithSuffix(String fileFullName,String suffix,String newFilePath)
+	{
+		String newFileFullName=null;
+		File file=new File(fileFullName);
+		if(file.exists())
+		{
+			String fileName=file.getName();
+			int count=1;
+			String namePrefix=fileName, nameSuffix="";
+			if(file.isFile() && fileName.contains(".")){
+				namePrefix=fileName.substring(0, fileName.lastIndexOf("."));
+				nameSuffix=fileName.replace(namePrefix, "");
+			}
+			//target newFilePath is null
+			if(StringUtils.isBlank(newFilePath))
+			{newFilePath=file.getPath().replace(namePrefix+nameSuffix, "");}
+			if(StringUtils.isBlank(suffix))
+			{
+				newFileFullName=namePrefix+"("+String.valueOf(count)+")"+nameSuffix;
+				while(new File(newFilePath+newFileFullName).exists())
+				{
+					count++;
+					newFileFullName=namePrefix+"("+String.valueOf(count)+")"+nameSuffix;
+				}
+			}else
+			{
+				newFileFullName=namePrefix+suffix+nameSuffix;
+				while(new File(newFilePath+newFileFullName).exists())
+				{
+					newFileFullName=namePrefix+suffix+"("+String.valueOf(count)+")"+nameSuffix;
+					count++;
+				}
+			}
+			newFileFullName=newFilePath+newFileFullName;
+			logger.info("new file name is {}.",newFileFullName);
+		}else
+		{
+			logger.error("argument:fileFullName[{}] doesn't exist.",fileFullName);
+		}
+		
+		return newFileFullName;
+	}
+	
+	public static void copyDirectory(String sourcePath, String destPath)
+	{
+		try
+		{
+			if(sourcePath!=null && destPath!=null)
+			{
+				File sourceFile=new File(sourcePath);
+				File destFile=new File(destPath);
+				copyDirectory(sourceFile,destFile);
+			}
+		
+		}catch(Exception e)
+		{logger.error(e.getMessage(),e);}
+
 	}
 
 }

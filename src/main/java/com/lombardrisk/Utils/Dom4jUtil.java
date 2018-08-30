@@ -7,15 +7,10 @@ import java.util.Iterator;
 
 
 
-
-
-import java.util.List;
-
 import org.apache.commons.lang3.StringUtils;
 import org.dom4j.Attribute;
 import org.dom4j.Document;
 import org.dom4j.Element;
-import org.dom4j.Node;
 import org.dom4j.io.OutputFormat;
 import org.dom4j.io.SAXReader;
 import org.dom4j.io.XMLWriter;
@@ -56,8 +51,7 @@ public class Dom4jUtil {
 	    return value;
 	}
 	
-	
-	//not tested
+
 	private static String readSubElementAndUpdate(Element parentEle,String elementOrAttribute, String newValue)
 	{
 		boolean foundflag=false;

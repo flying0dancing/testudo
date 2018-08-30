@@ -13,12 +13,25 @@ import com.lombardrisk.pojo.DatabaseServer;
 public class DBInfo {
 	private final static Logger logger = LoggerFactory.getLogger(DBInfo.class);
 	private DBHelper dbHelper;
+	private DBDriverType dbDriverFlag;
+	public enum DBDriverType{ORACLE,SQLSERVER,ACCESSDB;}
+	
+	public DBInfo(DatabaseServer databaseServer){
+		setDbHelper(databaseServer);
+		if(dbHelper.getDatabaseServer().getDriver().startsWith("ora")){
+			setDbDriverFlag(DBDriverType.ORACLE);
+		}else if(dbHelper.getDatabaseServer().getDriver().startsWith("sql")){
+			setDbDriverFlag(DBDriverType.SQLSERVER);
+		}else if(dbHelper.getDatabaseServer().getDriver().startsWith("access")){
+			setDbDriverFlag(DBDriverType.ACCESSDB);
+		}
+	}
 	
 	public DBHelper getDbHelper() {
 		return dbHelper;
 	}
 
-	public void setDbHelper(DatabaseServer databaseServer) {
+	private void setDbHelper(DatabaseServer databaseServer) {
 		this.dbHelper =new DBHelper(databaseServer);
 	}
 	
@@ -46,6 +59,7 @@ public class DBInfo {
 		return rst;
 	}
 	
+	@SuppressWarnings("unused")
 	private int update(String sql)
 	{
 		dbHelper.connect();
@@ -60,10 +74,15 @@ public class DBInfo {
 		if(StringUtils.isBlank(prefix)){prefix="";}
 		//else{prefix=prefix.toLowerCase();}
 		
-		logger.info("export single tables.");
+		logger.info("================= export single tables =================");
 		for(String tab:tableList)
 		{
 			String SQL="select unique t.table_name from user_tab_cols t where lower(t.table_name)='"+tab.replace("#", prefix).toLowerCase()+"'";
+			if(getDbDriverFlag()==DBDriverType.SQLSERVER){
+				SQL="select name from sysobjects where xtype='u' and lower(name)=lower('"+tab.replace("#", prefix).toLowerCase()+"')";
+			}else if(getDbDriverFlag()==DBDriverType.ACCESSDB){
+				SQL="SELECT Name FROM sys.MSysObjects WHERE LCase(Name)='"+tab.replace("#", prefix).toLowerCase()+"'";
+			}
 			String tableName=queryRecord(SQL);
 			if(StringUtils.isNotBlank(tableName))
 			{
@@ -74,11 +93,14 @@ public class DBInfo {
 					logger.warn("warn: duplicated ["+tab+"] in configuration file, overwriting existed one.");
 					//continue;
 				}
-				logger.debug("table["+tableName+"] is found. export metadata struct to "+iNIName);
-				SQL="select * from \""+tableName+"\" where rownum=1";
+				logger.info("table["+tableName+"] is found. export metadata struct to "+iNIName);
+				
+				SQL="select * from \""+tableName+"\"";// 
+				if(getDbDriverFlag()==DBDriverType.SQLSERVER || getDbDriverFlag()==DBDriverType.ACCESSDB){
+					SQL="select * from "+tableName;
+				}
 				dbHelper.exportToINI(tab,SQL, new File(exportPath).getPath()+System.getProperty("file.separator")+iNIName);
 				logger.info("metadata exports to:"+tab+".csv");
-				SQL="select * from \""+tableName+"\"";
 				dbHelper.exportToCsv(SQL, exportFullPath);
 				
 			}else
@@ -95,13 +117,16 @@ public class DBInfo {
 		//Boolean flag=false;
 		if(tableList==null || StringUtils.isBlank(exportPath)) return;
 		if(StringUtils.isBlank(prefix)){prefix="";}
-		//else{prefix=prefix.toLowerCase();}
 		
-		logger.info("export tables divided by field [ReturnId].");
-		
+		logger.info("================= export tables need to be divided by ReturnId =================");
 		for(String tab:tableList)
 		{
 			String SQL="select unique t.table_name from user_tab_cols t where lower(t.table_name)='"+tab.replace("#", prefix).toLowerCase()+"'";
+			if(getDbDriverFlag()==DBDriverType.SQLSERVER){
+				SQL="select name from sysobjects where xtype='u' and lower(name)=lower('"+tab.replace("#", prefix).toLowerCase()+"')";
+			}else if(getDbDriverFlag()==DBDriverType.ACCESSDB){
+				SQL="SELECT Name FROM sys.MSysObjects WHERE LCase(Name)='"+tab.replace("#", prefix).toLowerCase()+"'";
+			}
 			String tableName=queryRecord(SQL);
 			if(StringUtils.isNotBlank(tableName))
 			{
@@ -109,13 +134,21 @@ public class DBInfo {
 				String subPath=new File(exportPath).getPath()+System.getProperty("file.separator")+tab;
 				if(new File(subPath).exists())
 				{
-					logger.warn("warn: duplicated ["+tab+"] in json, overwrite existed one.");
+					logger.warn("warn: duplicated ["+tab+"], overwrite existed one.");
 					//continue;
 				}
-				logger.debug("table["+tableName+"] is found. export metadata struct to "+iNIName);
-				SQL="select * from \""+tableName+"\" where rownum=1";
+				logger.info("table["+tableName+"] is found. export metadata struct to "+iNIName);
+				SQL="select * from \""+tableName+"\" where rownum=1";// 
+				if(getDbDriverFlag()==DBDriverType.SQLSERVER || getDbDriverFlag()==DBDriverType.ACCESSDB){
+					SQL="select top 1 * from "+tableName;
+				}
 				dbHelper.exportToINI(tab,SQL, new File(exportPath).getPath()+System.getProperty("file.separator")+iNIName);
 				SQL="select unique \"ReturnId\" from \""+tableName+"\"";
+				if(getDbDriverFlag()==DBDriverType.SQLSERVER){
+					SQL="select distinct \"ReturnId\" from \""+tableName+"\"";
+				}else if(getDbDriverFlag()==DBDriverType.ACCESSDB){
+					SQL="SELECT distinct ReturnId FROM "+tableName;
+				}
 				List<String> returnIds=queryRecords(SQL);
 				if(returnIds!=null)
 				{
@@ -125,7 +158,12 @@ public class DBInfo {
 						if(StringUtils.isNotBlank(returnId) && returnId!="null")
 						{
 							logger.info("metadata exports to:"+tab+"_"+returnId+".csv");
-							SQL="select unique * from \""+tableName+"\" where \"ReturnId\"='"+returnId+"'";
+							SQL="select * from \""+tableName+"\" where \"ReturnId\"='"+returnId+"'";
+							if(getDbDriverFlag()==DBDriverType.SQLSERVER){
+								SQL="select * from \""+tableName+"\" where \"ReturnId\"='"+returnId+"'";
+							}else if(getDbDriverFlag()==DBDriverType.ACCESSDB){
+								SQL="select * from "+tableName+" where CStr(ReturnId)=CStr('"+returnId+"')";
+							}
 							dbHelper.exportToCsv(SQL, subPath+System.getProperty("file.separator")+tab+"_"+returnId+".csv");
 						}
 					}
@@ -185,7 +223,7 @@ public class DBInfo {
 	{
 		String returnAndVer="";
 		String tableName="Rets";
-		if(dbHelper.getDatabaseServer().getDriver().startsWith("access"))
+		if(getDbDriverFlag()==DBDriverType.ACCESSDB)
 		{
 			dbHelper.connect();
 			DBHelper.AccessdbHelper accdb=dbHelper.new AccessdbHelper();
@@ -240,69 +278,14 @@ public class DBInfo {
 		
 		return flag;
 	}
-	
-	/**
-	 * get Regulator DESCRIPTION list
-	 * @return
-	 */
-	public List<String> getRegulatorDescription()
-	{
-		String SQL="SELECT \"DESCRIPTION\" FROM \"CFG_INSTALLED_CONFIGURATIONS\" WHERE \"STATUS\"='A' ";
-		return queryRecords(SQL);
-	}
-	
-	/**
-	 * get Regulator Prefix like HKMA/FED/MAS
-	 * @author kun shen
-	 * @param regulator
-	 * @return
-	 */
-	public String getRegulatorPrefix(String regulator)
-	{
-		String SQL = "SELECT \"PREFIX\" FROM \"CFG_INSTALLED_CONFIGURATIONS\" WHERE lower(\"DESCRIPTION\")='" + regulator.toLowerCase() + "'  AND \"STATUS\"='A' ";
-		return queryRecord(SQL);
 
-	}
-	
-	
-	/**
-	 * get Regulator IDRange Start
-	 * 
-	 * @param regulator
-	 * @return IDRangeStart
-	 */
-	public String getRegulatorIDRangeStart(String regulator)
-	{
-		String SQL = "SELECT \"ID_RANGE_START\" FROM \"CFG_INSTALLED_CONFIGURATIONS\" WHERE lower(\"DESCRIPTION\")='" + regulator.toLowerCase() + "'  AND \"STATUS\"='A' ";
-		return queryRecord(SQL);
-
-	}
-	
-	/**
-	 * get Regulator IDRange End
-	 * 
-	 * @param Regulator
-	 * @return IDRangeEnd
-	 */
-	public String getRegulatorIDRangEnd(String regulator)
-	{
-		String SQL = "SELECT \"ID_RANGE_END\" FROM \"CFG_INSTALLED_CONFIGURATIONS\" WHERE lower(\"DESCRIPTION\")='" + regulator.toLowerCase() + "' AND \"STATUS\"='A'  ";
-		return queryRecord(SQL);
-	}
-	
-
-	
-	
-	public void resetDeActivateDate()
-	{
-		//String ID_Start = getRegulatorIDRangeStart(regulator);
-		//String ID_End = getRegulatorIDRangEnd(regulator);
-		//String SQL="update \"CFG_RPT_Rets\" set \"DeActivateDate\" =null where ID BETWEEN "+ID_Start+" and "+ID_End+" and \"DeActivateDate\" is not null ";
-		String SQL="update \"CFG_RPT_Rets\" set \"DeActivateDate\" =null where \"DeActivateDate\" is not null ";
-		update(SQL);
+	public DBDriverType getDbDriverFlag() {
+		return dbDriverFlag;
 	}
 
+	public void setDbDriverFlag(DBDriverType dbDriverFlag) {
+		this.dbDriverFlag = dbDriverFlag;
+	}
 	
-
 
 }

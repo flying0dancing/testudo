@@ -115,12 +115,12 @@ public class ARPPack implements IComFolder {
 		if(csvFullPaths==null || csvFullPaths.size()<=0) return null;
 		List<String> nameAndVers=new ArrayList<String>();
 		
-		DBInfo dbInfo=new DBInfo();
-		dbInfo.setDbHelper(new DatabaseServer("accessdb","", dbFullName,"",""));
+		DBInfo dbInfo=new DBInfo(new DatabaseServer("accessdb","", dbFullName,"",""));
 		for(String csvPath : csvFullPaths){
 			String csvName=FileUtil.getFileNameWithoutSuffix(csvPath);
 			if(!csvName.contains("_"))continue;
 			String[] nameParts=csvName.split("_");
+			if(!nameParts[1].matches("/d+"))continue;
 			String returnId=nameParts[1];
 			String returnNameVer=dbInfo.getReturnAndVersion(returnId);
 			if(!returnNameVer.equals("") && !nameAndVers.contains(returnNameVer)){
@@ -139,29 +139,30 @@ public class ARPPack implements IComFolder {
 		List<String> realFullPaths=getFileFullPaths(sourcePath, sqlFileNames);
 		if(realFullPaths==null || realFullPaths.size()<=0) {
 			logger.error("error: sqlFiles are invalid files or filters.");
-			return false;//illegal no files need to execute if it set sqlFiles
+			return false;//illegal, no invalid files need to execute if it set sqlFiles
 		}
-		DBInfo dbInfo=new DBInfo();
-		dbInfo.setDbHelper(new DatabaseServer("accessdb","", dbFullName,"",""));
+		DBInfo dbInfo=new DBInfo(new DatabaseServer("accessdb","", dbFullName,"",""));
 		for(String fileFullPath:realFullPaths){
 			String fileContent=FileUtil.getFileContent1(fileFullPath);
 			if(fileContent.contains(";")){
 				String[] sqlStatements=fileContent.split(";");
 				for(String sql:sqlStatements){
-					logger.info("execute sql:"+sql);
-					Boolean status=dbInfo.executeSQL(sql);
-					if(!status){
-						logger.error("execute failed.");
-						flag=false;
+					if(StringUtils.isNotBlank(sql)){
+						logger.info("execute sql:"+sql);
+						Boolean status=dbInfo.executeSQL(sql.trim());
+						if(!status){
+							logger.error("execute failed.");
+							flag=false;
+						}else{logger.info("execute OK.");}
 					}
 				}
-			}else{
+			}else if(StringUtils.isNotBlank(fileContent)){
 				logger.info("execute sql:"+fileContent);
-				Boolean status=dbInfo.executeSQL(fileContent);
+				Boolean status=dbInfo.executeSQL(fileContent.trim());
 				if(!status){
 					logger.error("execute failed.");
 					flag=false;
-				}
+				}else{logger.info("execute OK.");}
 			}
 		}
 		
@@ -181,7 +182,7 @@ public class ARPPack implements IComFolder {
 		if(StringUtils.isBlank(sourcePath)){return false;}
 		
 		//get all packaged files
-		String productPrefix=FileUtil.getFileNameWithSuffix(Helper.getParentPath(sourcePath)).toUpperCase();
+		String productPrefix=FileUtil.getFileNameWithSuffix(Helper.getParentPath(sourcePath)).toUpperCase().replaceAll("\\(\\d+\\)", "");
 		Boolean flag=true;
 		List<String> realFullPaths=getFileFullPaths(sourcePath, packFileNames);
 		if(realFullPaths==null){
@@ -218,9 +219,9 @@ public class ARPPack implements IComFolder {
 		String zipFileNameWithoutSuffix=packageNamePrefix+"v"+packageVersion+packageNameSuffix;
 		String zipFullPathWithoutSuffix=Helper.reviseFilePath(zipPath+"/"+zipFileNameWithoutSuffix);
 		if(StringUtils.isNotBlank(zipFileNameWithoutSuffix)){
-			flag=FileUtil.ZipFiles(sourcePath, realFullPaths,Helper.reviseFilePath(zipFullPathWithoutSuffix+".zip"));
+			flag=FileUtil.ZipFiles(sourcePath, realFullPaths,Helper.reviseFilePath(zipFullPathWithoutSuffix+PACKAGE_SUFFIX));
 			if(!flag) return flag;
-			String[] commons={"java","-jar",PropHelper.SCRIPT_LRM_PRODUCT,Helper.reviseFilePath(zipFullPathWithoutSuffix+".zip")};
+			String[] commons={"java","-jar",PropHelper.SCRIPT_LRM_PRODUCT,Helper.reviseFilePath(zipFullPathWithoutSuffix+PACKAGE_SUFFIX)};
 			flag=runCmdCommand(commons); 
 		}else{
 			flag=false;
@@ -228,9 +229,10 @@ public class ARPPack implements IComFolder {
 		
 		if(flag)
 		{
-			logger.info("package named: "+zipFullPathWithoutSuffix+".zip and \n"+zipFullPathWithoutSuffix+".lrm");
-			FileUtil.renameTo(zipFullPathWithoutSuffix+"_sign.lrm", zipFullPathWithoutSuffix+".lrm");
-			logger.info("package sucessfully.");
+			logger.info("package named: "+zipFullPathWithoutSuffix+PACKAGE_SUFFIX);
+			logger.info("package named: "+zipFullPathWithoutSuffix+PACKAGE_LRM_SUFFIX);
+			FileUtil.renameTo(zipFullPathWithoutSuffix+"_sign.lrm", zipFullPathWithoutSuffix+PACKAGE_LRM_SUFFIX);
+			logger.info("package successfully.");
 		}else{
 			logger.error("error: package with failures.");
 		}
@@ -252,7 +254,7 @@ public class ARPPack implements IComFolder {
 		List<String> realFilePaths=new ArrayList<String>();
 		for(String filter:filters){
 			
-			List<String> realFullPathsTmp=FileUtil.getFilesByFilter(sourcePath+filter);
+			List<String> realFullPathsTmp=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+filter));
 			if(realFullPathsTmp.size()<=0)
 			{
 				logger.error("error: cannot search ["+filter+"] under path ["+sourcePath+"]");
@@ -283,7 +285,7 @@ public class ARPPack implements IComFolder {
 			logger.debug("Here is the standard output of the command:");
 			while((str=stdInput.readLine())!=null)
 			{
-				logger.info(str);
+				logger.debug(str);
 				if(str.toLowerCase().contains("error")) 
 				{
 					flag=false;
@@ -305,6 +307,11 @@ public class ARPPack implements IComFolder {
 			flag=false;
 			logger.error(e.getMessage(),e);
 		} 
+		if(flag){
+			logger.info("cmd run OK.");
+		}else{
+			logger.error("cmd run failed.");
+		}
 		return flag;
 	}
 }
