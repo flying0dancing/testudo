@@ -70,7 +70,8 @@ public class DBInfo {
 	
 	public void exportToSingle(String prefix,List<String> tableList,String exportPath,String iNIName)
 	{
-		if(tableList==null) return;
+		if(StringUtils.isBlank(exportPath)) return;
+		if(tableList==null || tableList.size()<=0) return;
 		if(StringUtils.isBlank(prefix)){prefix="";}
 		//else{prefix=prefix.toLowerCase();}
 		
@@ -115,7 +116,8 @@ public class DBInfo {
 	public void exportToDivides(String prefix,List<String> tableList,String exportPath,String iNIName)
 	{
 		//Boolean flag=false;
-		if(tableList==null || StringUtils.isBlank(exportPath)) return;
+		if(StringUtils.isBlank(exportPath)) return;
+		if(tableList==null || tableList.size()<=0) return;
 		if(StringUtils.isBlank(prefix)){prefix="";}
 		
 		logger.info("================= export tables need to be divided by ReturnId =================");

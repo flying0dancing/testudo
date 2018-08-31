@@ -92,7 +92,7 @@ public class DBHelper {
 		{
 			dbmsDriver="net.ucanaccess.jdbc.UcanaccessDriver";
 			if(StringUtils.isBlank(this.databaseServer.getUrl())){
-				this.databaseServer.setUrl(String.format("jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE", this.databaseServer.getSchema()));
+				this.databaseServer.setUrl(String.format("jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY", this.databaseServer.getSchema()));
 			}
 		}
 	}
@@ -226,30 +226,38 @@ public class DBHelper {
 	
 	public String convertTypeStr(String columnTypeName, int precision, int scale)
 	{
-		String type=null;
+		//String type=null;
 		columnTypeName=columnTypeName.toUpperCase();
 		if(columnTypeName.contains("LOB")){
-			type=" LONGTEXT";
-		}else if(columnTypeName.contains("DATE") || columnTypeName.contains("TIMESTAMP")){
-			type=" DATE";
-		}else if(columnTypeName.contains("TEXT")){
-			type=" LONGTEXT";
-		}else if(columnTypeName.contains("BIT")){
-			type=" BOOLEAN";
-		}else  if(columnTypeName.contains("NUMBER") || columnTypeName.contains("INT")){
+			return " LONGTEXT";
+		}
+		if(columnTypeName.contains("DATE") || columnTypeName.contains("TIMESTAMP")){
+			return " DATE";
+		}
+		if(columnTypeName.contains("TEXT")){
+			return " LONGTEXT";
+		}
+		if(columnTypeName.contains("BIT") ||columnTypeName.contains("BOOLEAN") ){
+			return " BOOLEAN";
+		}
+		if(columnTypeName.contains("NUMBER") || columnTypeName.contains("INT")){
 			if(scale==0){
-				type=" LONG";
+				return " LONG";
 			}else if(scale<=10){
-				type=" DOUBLE";
+				return " DOUBLE";
 			}else{
-				type=" DECIMAL";
+				return " DECIMAL";
 			}
 			
 		}else{
-			type=" VARCHAR("+String.valueOf(precision)+")";
+			if(precision>255){
+				return " LONGTEXT";
+			}else{
+				return " VARCHAR("+String.valueOf(precision)+")";
+			}
+			
 		}
 		
-		return type;
 	}
 	
 
@@ -338,7 +346,7 @@ public class DBHelper {
 						{
 							value=value.replaceAll("([\"])", "\"$1").replaceAll("\\.*", "");
 							bufOutFile.append(value);
-						}else if(classvar.contains("Decimal") || classvar.contains("Int")){
+						}else if(classvar.contains("Decimal") || classvar.contains("Int") || classvar.contains("Boolean")){
 							value=value.replaceAll("([\"])", "\"$1");
 							bufOutFile.append(value);
 						}else {
