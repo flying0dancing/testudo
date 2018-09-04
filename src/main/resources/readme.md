@@ -5,6 +5,7 @@ testudo can generates metadata files from many databases, and then compress nece
 	java -jar testudo.jar -Dconf="d:\abc\foo\testudo.json" -Dprefix=fed -Did=bbb -Dproc=2 -Drelease -DrunOnJenkins
 
 * [conf]
+	* optional
 	* conf is defined for full path of configuration file(format is json). `Highest priority`.
 	* get "testudo.json" under the same folder if both [prefix] and [conf] are not provided.
 	
@@ -13,6 +14,7 @@ testudo can generates metadata files from many databases, and then compress nece
 	* get "testudo.json" under this folder.
     
 * [id]
+	* optional
 	* id is the key(ID) of [conf]. get the 1st if no provided.
 
 * [proc]
@@ -22,9 +24,11 @@ testudo can generates metadata files from many databases, and then compress nece
 	* choose "2"  by default if no provided.
     
 * [release]
+	* optional
 	* set it means release version. 
 
 * [runOnJenkins]
+	* optional
 	* set it means run on jenkins. 
 
 json instruction
