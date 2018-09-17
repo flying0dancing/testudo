@@ -13,6 +13,11 @@ pipeline{
 			}
 		}
 		stage('Deploy'){
+			when{
+				expression{
+					currentBuild.result==null||currentBuild.result=='SUCCESS'
+				}
+			}
 			steps{
 				echo currentBuild.displayName
 			}
@@ -29,7 +34,9 @@ node{
 		echo 'Test...'
 	}
 	stage('Deploy'){
-		echo 'Deploy...'
+		if(currentBuild.result==null||currentBuild.result=='SUCCESS'){
+			echo 'Deploy...'
+		}
 	}
 	
 }
