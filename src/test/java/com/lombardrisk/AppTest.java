@@ -1,5 +1,8 @@
 package com.lombardrisk;
 
+import com.lombardrisk.Utils.DBInfo;
+import com.lombardrisk.pojo.DatabaseServer;
+
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
@@ -31,8 +34,29 @@ public class AppTest
     /**
      * Rigourous Test :-)
      */
-    public void testApp()
+    public void testApp(){
+    	
+    }
+   /*
+    public void testApp1()
     {
+    	String dbpath="E:\\ComplianceProduct\\PRA(2)\\src\\dpm\\PRA_FORM_META.accdb";
+    	DBInfo dbInfo=new DBInfo(new DatabaseServer("accessdb","",dbpath,"",""));
+    	String tableName="Ref";
+    	String csvPath="E:\\ComplianceProduct\\PRA(2)\\src\\Metadata\\Ref\\Ref_440003.csv";
+    	String schemaFullName="E:\\ComplianceProduct\\PRA(2)\\src\\Metadata\\PRA_FORM_META.ini";
+    	dbInfo.importCsvToAccess(tableName, csvPath, schemaFullName);
         assertTrue( true );
     }
+   @Deprecated
+    public void testApp2()
+    {
+    	String dbpath="E:\\ComplianceProduct\\PRA(2)\\src\\dpm\\PRA_FORM_META.accdb";
+    	DBInfo dbInfo=new DBInfo(new DatabaseServer("accessdb","",dbpath,"",""));
+    	String tableName="Rets";
+    	String csvPath="E:\\ComplianceProduct\\PRA(2)\\src\\Metadata\\Rets.csv";
+    	String schemaFullName="E:\\ComplianceProduct\\PRA(2)\\src\\Metadata\\PRA_FORM_META.ini";
+    	dbInfo.importCsvToAccess(tableName, csvPath, schemaFullName);
+        assertTrue( true );
+    }*/
 }

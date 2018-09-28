@@ -11,7 +11,9 @@ import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -299,8 +301,7 @@ public class FileUtil extends FileUtils{
 	public static Boolean search(String fileFullName, String searchStr)
 	{
 		Boolean flag=false;
-		logger.info("search content of ["+searchStr+"] in text");
-		logger.info("in: "+fileFullName);
+		logger.info("search "+searchStr+" in "+fileFullName);
 		
 		BufferedReader bufReader=null;
 		try {
@@ -310,6 +311,7 @@ public class FileUtil extends FileUtils{
 				if(line.toLowerCase().equals(searchStr.toLowerCase()))
 				{
 					flag=true;
+					logger.info("found "+searchStr);
 					break;
 				}
 			}
@@ -318,6 +320,12 @@ public class FileUtil extends FileUtils{
 			logger.error(e.getMessage(),e);
 		} catch (IOException e) {
 			logger.error(e.getMessage(),e);
+		}finally{
+			try {
+				bufReader.close();
+			} catch (IOException e) {
+				logger.error(e.getMessage(),e);
+			}
 		}
 		return flag;
 	}
@@ -421,6 +429,33 @@ public class FileUtil extends FileUtils{
 				while((line=bufReader.readLine())!=null){
 					contents.add(line);
 					System.out.println(line);
+				}
+				bufReader.close();
+			}
+		}catch(Exception e){
+			logger.error(e.getMessage(),e);
+		}
+		return contents;
+	}
+	/**
+	 * return a map, key is tablename, value is a List<noscript><</noscript>String> is definition of this table.
+	 * @param fileFullName
+	 * @return
+	 */
+	public static Map<String,List<String>> getAllTableDefinitions(String fileFullName){
+		Map<String,List<String>> contents=new HashMap<String,List<String>>();
+		BufferedReader bufReader=null;
+		try{
+			if(StringUtils.isNotBlank(fileFullName)){
+				bufReader=new BufferedReader(new FileReader(fileFullName));
+				String line=null;
+				while((line=bufReader.readLine())!=null){
+					line=line.trim();
+					if(line.startsWith("[") && line.endsWith("]") ){
+						String tableName=line.replaceAll("\\[|\\]", "");
+						List<String> tableDefinition=searchTableDefinition(fileFullName,tableName);
+						contents.put(tableName, tableDefinition);
+					}
 				}
 				bufReader.close();
 			}

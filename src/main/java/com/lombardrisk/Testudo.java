@@ -112,6 +112,11 @@ public class Testudo implements IComFolder
     	String iniFullName=Helper.reviseFilePath(arSetting.getMetadataPath()+System.getProperty("file.separator")+arSetting.getMetadataStruct());
 		if(FileUtil.exists(iniFullName)){
 			ARPPack azipFile=new ARPPack();
+			Boolean flag=azipFile.createNewDpm(arSetting.getZipSettings().getDpmFullPath());
+			if(!flag){
+				logger.error("error: create access database unsuccessful.");
+				return;
+			}
 			List<String> metadataPaths=azipFile.importMetadataToDpm(arSetting.getZipSettings().getDpmFullPath(),arSetting.getMetadataPath(),arSetting.getZipSettings().getRequiredMetadata(),arSetting.getMetadataPath()+System.getProperty("file.separator")+arSetting.getMetadataStruct());
 			if(metadataPaths!=null){
 				List<String> returnNameVers=azipFile.getReturnNameAndVersions(arSetting.getZipSettings().getDpmFullPath(), metadataPaths);

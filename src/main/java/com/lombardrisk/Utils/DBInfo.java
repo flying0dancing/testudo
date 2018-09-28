@@ -2,6 +2,7 @@ package com.lombardrisk.Utils;
 
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -209,14 +210,14 @@ public class DBInfo {
 		{new File(dbFullName).delete();}*/
 		if(!new File(dbFullName).exists()){
 			DBHelper.AccessdbHelper accdb=dbHelper.new AccessdbHelper();
-			accdb.createAccessDB(dbHelper.getDatabaseServer().getSchema());
-		}
+			flag=accdb.createAccessDB(dbHelper.getDatabaseServer().getSchema());
+		}else{flag=true;}
 		return flag;
 	}
 	
 	/***
 	 * according to returnId, search its return name and version in Rets table.
-	 * this function works on access database.
+	 * this function should be worked on access database.
 	 * @param tableName
 	 * @param returnId
 	 * @return returnName_returnVersion, return "" if error occurs.
@@ -240,13 +241,32 @@ public class DBInfo {
 			dbHelper.close();
 		}else
 		{
-			logger.error("this function works on access database.");
+			logger.error("this function should be worked on access database.");
 		}
 		if(returnAndVer==null)returnAndVer="";
 		
 		return returnAndVer;
 	}
 	
+	public Boolean createAccessTables(String schemaFullName){
+		Boolean flag=true;
+		if(dbHelper.getDatabaseServer().getDriver().startsWith("access"))
+		{
+			dbHelper.connect();
+			DBHelper.AccessdbHelper accdb=dbHelper.new AccessdbHelper();
+			Map<String,List<String>> allTableDefs=FileUtil.getAllTableDefinitions(schemaFullName);
+			for(String key:allTableDefs.keySet()){
+				Boolean flagT=accdb.createAccessDBTable(key, allTableDefs.get(key));
+				if(!flagT){flag=false;logger.error("error: fail to create table ["+key+"]");}
+			}
+			dbHelper.close();
+		}else
+		{
+			logger.error("this method should be worked on access database.");
+			flag=false;
+		}
+		return flag;
+	} 
 	/**
 	 * create table by schemaFullName which defined tableName, and import data which in csvPath to table.
 	 * @param tableName
@@ -254,7 +274,7 @@ public class DBInfo {
 	 * @param schemaFullName
 	 * @return
 	 */
-	public Boolean ImportCsvToAccess(String tableName, String csvPath, String schemaFullName)
+	public Boolean importCsvToAccess(String tableName, String csvPath, String schemaFullName)
 	{
 		Boolean flag=false;
 		if(dbHelper.getDatabaseServer().getDriver().startsWith("access"))
@@ -267,15 +287,19 @@ public class DBInfo {
 				if(columns!=null && columns.size()>0)
 				{
 					DBHelper.AccessdbHelper accdb=dbHelper.new AccessdbHelper();
-					accdb.createAccessTable(tableName,columns);
-					flag=accdb.importCsvToAccessDB(tableName,csvPath);
+					
+					flag=accdb.createAccessDBTable(tableName, columns);
+					if(flag){
+						flag=accdb.importCsvToAccessDB(tableName,csvPath);
+						
+					}else{logger.error("error: fail to create table ["+tableName+"]");}
 				}else{logger.error("error: invalid table definition ["+tableName+"]");}
 			}
 			
 			dbHelper.close();
 		}else
 		{
-			logger.error("this method works on access database.");
+			logger.error("this method should be worked on access database.");
 		}
 		
 		return flag;

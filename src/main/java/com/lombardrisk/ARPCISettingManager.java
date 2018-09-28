@@ -98,9 +98,11 @@ public class ARPCISettingManager implements IComFolder {
 					throw new JsonSyntaxException("error: prefix is null, please set it value");
 				}else
 				{
-					productPrefix=System.getProperty(CMDL_ARPPRODUCTPREFIX).toUpperCase();
+					productPrefix=System.getProperty(CMDL_ARPPRODUCTPREFIX).toLowerCase();
 					arCIConfg.setPrefix(productPrefix);
 				}
+			}else{
+				arCIConfg.setPrefix(productPrefix.toLowerCase());
 			}
 			
 			//revise "metadataPath"
@@ -138,41 +140,44 @@ public class ARPCISettingManager implements IComFolder {
 			//revise "metadataStruct"
 			String metadataStruct=arCIConfg.getMetadataStruct();
 			if(StringUtils.isBlank(metadataStruct)){
-				arCIConfg.setMetadataStruct(arCIConfg.getPrefix()+INI_FILE_SUFFIX);
+				//arCIConfg.setMetadataStruct(arCIConfg.getPrefix()+INI_FILE_SUFFIX);
+				arCIConfg.setMetadataStruct(arCIConfg.getPrefix().toUpperCase()+INI_FILE_SUFFIX);
 			}
-			
-			//revise "zipSettings"->"dpmFullPath"
-			String dpmFullName=arCIConfg.getZipSettings().getDpmFullPath();
-			if(StringUtils.isNotBlank(dpmFullName)){
-				FileUtil.createDirectories(targetSrcPath+DPM_PATH);
-				if(!dpmFullName.contains("/") && !dpmFullName.contains("\\")){
-					//dpmFullName just a file name without path
-					dpmFullName=targetSrcPath+DPM_PATH+dpmFullName;
+			if(arCIConfg.getZipSettings()!=null){
+				//revise "zipSettings"->"dpmFullPath"
+				String dpmFullName=arCIConfg.getZipSettings().getDpmFullPath();
+				if(StringUtils.isNotBlank(dpmFullName)){
+					FileUtil.createDirectories(targetSrcPath+DPM_PATH);
+					if(!dpmFullName.contains("/") && !dpmFullName.contains("\\")){
+						//dpmFullName just a file name without path
+						dpmFullName=targetSrcPath+DPM_PATH+dpmFullName;
+					}else{
+						dpmFullName=Helper.reviseFilePath(dpmFullName);
+						String dpmPathTemp=Helper.getParentPath(dpmFullName);
+						String dpmName=dpmFullName.replace(dpmPathTemp, "");
+						dpmFullName=targetSrcPath+DPM_PATH+dpmName;//remap its dpmFullName to target folder
+					}
 				}else{
-					dpmFullName=Helper.reviseFilePath(dpmFullName);
-					String dpmPathTemp=Helper.getParentPath(dpmFullName);
-					String dpmName=dpmFullName.replace(dpmPathTemp, "");
-					dpmFullName=targetSrcPath+DPM_PATH+dpmName;//remap its dpmFullName to target folder
+					FileUtil.createDirectories(targetSrcPath+DPM_PATH);//FileUtil.createDirectories(Helper.reviseFilePath(commonFolder+DPM_PATH));
+					//dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+arCIConfg.getPrefix()+DPM_FILE_SUFFIX);
+					dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+arCIConfg.getPrefix().toUpperCase()+DPM_FILE_SUFFIX);
 				}
-			}else{
-				FileUtil.createDirectories(targetSrcPath+DPM_PATH);//FileUtil.createDirectories(Helper.reviseFilePath(commonFolder+DPM_PATH));
-				dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+arCIConfg.getPrefix()+DPM_FILE_SUFFIX);
-			}
-			arCIConfg.getZipSettings().setDpmFullPath(dpmFullName);
-			
-			//revise "zipSettings"->"productProperties"
-			String productPropsPath=arCIConfg.getZipSettings().getProductProperties();
-			String upperComFolder=Helper.getParentPath(sourcePath);
-			if(StringUtils.isNotBlank(productPropsPath)){
-				if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
-					productPropsPath=Helper.reviseFilePath(upperComFolder+productPropsPath);
+				arCIConfg.getZipSettings().setDpmFullPath(dpmFullName);
+				
+				//revise "zipSettings"->"productProperties"
+				String productPropsPath=arCIConfg.getZipSettings().getProductProperties();
+				String upperComFolder=Helper.getParentPath(sourcePath);
+				if(StringUtils.isNotBlank(productPropsPath)){
+					if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
+						productPropsPath=Helper.reviseFilePath(upperComFolder+productPropsPath);
+					}else{
+						productPropsPath=Helper.reviseFilePath(productPropsPath);
+					}
 				}else{
-					productPropsPath=Helper.reviseFilePath(productPropsPath);
+					productPropsPath=Helper.reviseFilePath(upperComFolder+PRODUCT_PROP_FILE);
 				}
-			}else{
-				productPropsPath=Helper.reviseFilePath(upperComFolder+PRODUCT_PROP_FILE);
+				arCIConfg.getZipSettings().setProductProperties(productPropsPath);
 			}
-			arCIConfg.getZipSettings().setProductProperties(productPropsPath);
 			
 		}
 		return arCIConfg;

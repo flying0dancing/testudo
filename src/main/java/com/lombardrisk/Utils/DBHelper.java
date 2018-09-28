@@ -1,9 +1,12 @@
 package com.lombardrisk.Utils;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Reader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -224,40 +227,79 @@ public class DBHelper {
 		return rst;
 	}
 	
+	/**
+	 * convert database's data type into ini's data type
+	 * @param columnTypeName
+	 * @param precision number
+	 * @param scale
+	 * @return
+	 */
 	public String convertTypeStr(String columnTypeName, int precision, int scale)
 	{
-		//String type=null;
+		String type=null;
 		columnTypeName=columnTypeName.toUpperCase();
-		if(columnTypeName.contains("LOB")){
-			return " LONGTEXT";
-		}
-		if(columnTypeName.contains("DATE") || columnTypeName.contains("TIMESTAMP")){
-			return " DATE";
-		}
-		if(columnTypeName.contains("TEXT")){
-			return " LONGTEXT";
-		}
-		if(columnTypeName.contains("BIT") ||columnTypeName.contains("BOOLEAN") ){
-			return " BOOLEAN";
-		}
-		if(columnTypeName.contains("NUMBER") || columnTypeName.contains("INT")){
-			if(scale==0){
-				return " LONG";
-			}else if(scale<=10){
-				return " DOUBLE";
+		if(columnTypeName.contains("VARCHAR")){
+			if(precision>255){
+				type=" LONGTEXT";
 			}else{
-				return " DECIMAL";
+				type=" VARCHAR("+String.valueOf(precision)+")";
+			}
+		}else 
+		if(columnTypeName.contains("CLOB") || columnTypeName.contains("TEXT") || columnTypeName.contains("MEMO") || columnTypeName.contains("HYPERLINK")){
+			type=" LONGTEXT";
+		}else 
+		if(columnTypeName.contains("DATE") || columnTypeName.contains("TIME")){
+			type=" DATE";
+		}else 
+		if(columnTypeName.contains("BIT") ||columnTypeName.contains("BOOLEAN")){//|| (columnTypeName.contains("NUMBER") && precision==1 && scale==0) in oracle is bit
+			type=" BOOLEAN";
+		}else 
+		if(columnTypeName.contains("INT")){
+			type=" LONG";
+			/*if(precision<=16){
+				type=" INTEGER";
+			}else{
+				type=" LONG";
+			}*/
+		}else 
+		if(columnTypeName.contains("NUMBER")){
+			if(scale==0){
+				/*if(1==precision){
+					type=" BOOLEAN";
+				}else if(1<precision && precision<=38){
+					type=" INTEGER";
+				}else{
+					type=" LONG";
+				}*/
+				if(1==precision){
+					type=" BOOLEAN";
+				}else{
+					type=" LONG";
+				}
+			}else if(scale<10){
+				type=" DOUBLE";
+			}else{
+				type=" NUMERIC("+String.valueOf(precision)+","+String.valueOf(scale)+")";
 			}
 			
+		}else 
+		if(columnTypeName.contains("REAL") ||columnTypeName.contains("SINGLE")){
+			type=" SINGLE";
+		}else 
+		if(columnTypeName.contains("FLOAT") ||columnTypeName.contains("DOUBLE")){
+			type=" DOUBLE";
+		}else 
+		if(columnTypeName.contains("DECIMAL") || columnTypeName.contains("NUMERIC")){
+			type=" NUMERIC("+String.valueOf(precision)+","+String.valueOf(scale)+")";
 		}else{
 			if(precision>255){
-				return " LONGTEXT";
+				type=" LONGTEXT";
 			}else{
-				return " VARCHAR("+String.valueOf(precision)+")";
+				type=" VARCHAR("+String.valueOf(precision)+")";
 			}
 			
 		}
-		
+		return type;
 	}
 	
 
@@ -327,6 +369,7 @@ public class DBHelper {
 			//csv data
 			String value=null;
 			while(rest.next()){
+
 				for(col=1;col<=rsmd.getColumnCount();col++)
 				{
 					//logger.info(rsmd.getColumnName(col)+" : "+rsmd.getColumnClassName(col));
@@ -336,28 +379,28 @@ public class DBHelper {
 					if(classvar.contains("Blob"))
 					{
 						value=Helper.convertBlobToStr(rest.getBlob(col));
-					}else
+					}else if(classvar.contains("Timestamp"))
 					{
 						value=StringUtils.isBlank(rest.getString(col))?"":rest.getString(col);
+						value=value.replaceAll("(\")", "\"$1").replaceAll("\\.*", "");
+					}else if(classvar.contains("Decimal")){
+						
+						value=StringUtils.isBlank(rest.getString(col))?"":rest.getBigDecimal(col).toPlainString();
+						
+					}else if(classvar.contains("Int") || classvar.contains("Boolean")){
+						
+						value=StringUtils.isBlank(rest.getString(col))?"":rest.getString(col).replaceAll("(\")", "\"$1");
+						
+					}else {
+						
+						value=StringUtils.isBlank(rest.getString(col))?"":"\""+rest.getString(col).replaceAll("(\")", "\"$1")+"\"";
 					}
-					if(value!=null)
-					{
-						if(classvar.contains("Timestamp"))
-						{
-							value=value.replaceAll("([\"])", "\"$1").replaceAll("\\.*", "");
-							bufOutFile.append(value);
-						}else if(classvar.contains("Decimal") || classvar.contains("Int") || classvar.contains("Boolean")){
-							value=value.replaceAll("([\"])", "\"$1");
-							bufOutFile.append(value);
-						}else {
-							bufOutFile.append("\"");
-							bufOutFile.append(value.replaceAll("([\"])", "\"$1"));
-							bufOutFile.append("\"");
-						}
-					}
+					
 					if(col!=rsmd.getColumnCount())
 					{
-						bufOutFile.append(",");
+						bufOutFile.append(value+",");
+					}else{
+						bufOutFile.append(value);
 					}
 				}
 				
@@ -448,33 +491,7 @@ public class DBHelper {
 	}
 	
 	public class AccessdbHelper{
-		@Deprecated
-		protected void tset(String dbFullName,String tableName)
-		{
-			try {
-				Database db=DatabaseBuilder.open(new File(dbFullName));
-				Table tab=db.getTable(tableName);
-				for(Row row:tab)
-				{
-					for(Column col:tab.getColumns())
-					{
-						String colName=col.getName();
-						Object value=row.get(colName);
-						if(value==null)
-						{
-							value="null";
-						}
-						logger.debug("column "+colName+"("+col.getType()+")"+value+"("+value.getClass()+")");
-						
-					}
-				}
-				db.close();
-			} catch (IOException e) {
-				logger.error(e.getMessage(),e);
-			}
-			
-		}
-		
+	
 		/***
 		 * existence of access table
 		 * @param tableName
@@ -500,7 +517,9 @@ public class DBHelper {
 			
 			return flag;
 		}
-		/***
+		
+		
+		/**
 		 * import csv to access table
 		 * @param tableName
 		 * @param importCsvFullName
@@ -509,20 +528,47 @@ public class DBHelper {
 		public Boolean importCsvToAccessDB(String tableName,String importCsvFullName)
 		{
 			Boolean flag=false;
+			BufferedReader bufReader=null;
 			try {
-				Boolean useExistingTable=false;
 				String dbFullName=getDatabaseServer().getSchema();
 				Database db=DatabaseBuilder.open(new File(dbFullName));
 				Builder builder=new ImportUtil.Builder(db, tableName);
 				if(db.getTable(tableName)!=null)
 				{
+					db.close();
 					logger.debug("accessdb table["+tableName+"] already exists.");
-					useExistingTable=true;
+					
+					//TODO
+					if(StringUtils.isNoneBlank(importCsvFullName,tableName)){
+						//
+						bufReader=new BufferedReader(new FileReader(importCsvFullName));
+						String line=null;
+						while((line=bufReader.readLine())!=null){
+							String header="insert into "+tableName+" ("+line.replace("\"", "")+" ) values (";
+							while((line=bufReader.readLine())!=null)
+							{
+								if(StringUtils.isBlank(line))continue;
+								String regex=",((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?),";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
+								line=line.replaceAll("(^|,)(,|$)", "$1null$2").replaceAll(regex, ",#$2#,").replaceAll("(^|,)(,|$)", "$1null$2");
+								
+								String sql=header+line+")";
+								flag=addBatch(sql);
+								if(!flag){logger.error("fail to import data:"+sql);break;}
+							}
+							if(!flag){break;}
+						}
+						bufReader.close();
+					}
+						
+				}else{
+					logger.warn("accessdb table["+tableName+"] doesn't exist, import csv directly.");
+					builder.setUseExistingTable(false);
+					builder.setDelimiter(",").setHeader(true).importReader(new BufferedReader(new FileReader(new File(importCsvFullName))));
+					flag=true;
+					db.close();
 				}
-				builder.setUseExistingTable(useExistingTable);
-				builder.setDelimiter(",").setHeader(true).importFile(new File(importCsvFullName));
-				flag=true;
-				db.close();
+				
+				
 				
 			} catch (IOException e) {
 				logger.error(e.getMessage(),e);
@@ -534,22 +580,29 @@ public class DBHelper {
 		 * create access db
 		 * @param dbFullName
 		 */
-		public void createAccessDB(String dbFullName)
+		public Boolean createAccessDB(String dbFullName)
 		{
+			Boolean flag=false;
 			try {
 				Database db=DatabaseBuilder.create(Database.FileFormat.V2010, new File(dbFullName));
 				db.close();
+				flag=true;
 				
 			} catch (IOException e) {
 				logger.error(e.getMessage(),e);
 			} 
+			return flag;
 		}
+		
+		
 		
 		/***
 		 * create access table
+		 * 
 		 * @param tableName
 		 * @param tableDefinition
 		 */
+		@Deprecated
 		public void createAccessTable(String tableName,List<String> tableDefinition)
 		{
 			try {
@@ -615,6 +668,52 @@ public class DBHelper {
 				logger.error(e.getMessage(),e);
 			}
 		}
+		
+		
+		/**
+		 * create access table
+		 * @param tableName
+		 * @param tableDefinition
+		 * @return
+		 */
+		public Boolean createAccessDBTable(String tableName,List<String> tableDefinition)
+		{
+			Boolean flag=false;
+			try {
+				flag=accessTableExistence(tableName);
+				if(flag){
+					return flag;
+				}
+				//generate sql statement
+				StringBuilder sqlBuilder=new StringBuilder("CREATE TABLE "+tableName+"(");
+				for(String str:tableDefinition){
+					String[] strArr=str.split("\\=| ");
+
+					if(strArr[2].equalsIgnoreCase("LONGTEXT")){
+						strArr[2]="MEMO";
+					}else if(strArr[2].equalsIgnoreCase("BOOLEAN")){
+						strArr[2]="YESNO";//Optional
+					}else if(strArr[2].equalsIgnoreCase("DATE")){
+						strArr[2]="DATETIME";//Optional
+					}else if(strArr[2].equalsIgnoreCase("DECIMAL")){
+						strArr[2]="NUMERIC";//Optional
+					}
+					if(strArr.length==3){
+						sqlBuilder.append(strArr[1]+" "+strArr[2]+" NOT NULL,");
+					}else if(strArr.length==4){
+						sqlBuilder.append(strArr[1]+" "+strArr[2]+",");
+					}else {
+						logger.warn("please check the column definition: "+str);
+					}
+				}
+				String sql=sqlBuilder.deleteCharAt(sqlBuilder.length()-1).append(")").toString();
+				flag=addBatch(sql);//create table
+			} catch (Exception e) {
+				logger.error(e.getMessage(),e);
+			} 
+			return flag;
+		}
+		
 		
 
 		private int convertTypeStrToInt_AccessDB(String type)

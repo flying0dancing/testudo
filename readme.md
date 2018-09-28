@@ -39,12 +39,14 @@ json instruction
 {
   "ID": "its ID",
   
-  "prefix": "[optional] your product prefix, i.e. FED, ECR, MAS, ...",
+  "prefix": "[optional] your product prefix, i.e. fed, ecr, MAS, ...",
   
   "metadataPath": "[optional] the location of this product's meta-data folder, and which is followed product folder structure, i.e. E:\\ComplianceProduct\\fed\\src\\Metadata",
   
   "metadataStruct": "[optional] the meta-data structure which in under "metadataPath", i.e.FED_FORM_META.ini",
-  
+   "databaseServerAndTables":[
+  {
+  "ID":"1st",
   "databaseServer": {
     "name": "its Name",
     "driver": "two values you can choose: oracle, sqlserver",
@@ -60,6 +62,8 @@ json instruction
     ],
     "notes": "# means product prefix"
   },
+  }
+  ],
   "zipSettings": {
     "notes": "anything here",
     "requiredMetadata": [ "the meta-data(under "metadataPath") which need to imported to dpm, make sure they are all csv",
@@ -85,27 +89,23 @@ json instruction
   "prefix": "ECR",
   "metadataPath": "E:\\ComplianceProduct\\ecr\\src\\Metadata",
   "metadataStruct": "ECR_FORM_META.ini",
-  "databaseServer": {
-    "name": "toolset system database",
-    "driver": "oracle",
-    "host": "172.20.20.49@ora11g",
-    "schema": "ECR_12801_OFFICIAL_SYSTEM",
-    "password": "password"
-  },
-  "requiredTables": {
-    "singles": [
-      "#FormVars",
-      "#Instances",
-      "#InstanceSets",
-      "#RefReturns",
-      "#Rets"
-    ],
-    "dividedByReturnIds": [
-      "#GridKey",
-      "#GridRef"
-    ],
+  "databaseServerAndTables":[
+  {
+	"ID":"1st",
+	"databaseServer": {
+		"name": "toolset system database",
+    	"driver": "oracle",
+    	"host": "172.20.20.49@ora11g",
+    	"schema": "ECR_12801_OFFICIAL_SYSTEM",
+    	"password": "password"
+	},
+	"requiredTables": {
+    "singles": [ "#FormVars", "#Instances", "#InstanceSets",  "#RefReturns",  "#Rets"   ],
+    "dividedByReturnIds": [  "#GridKey",   "#GridRef" ],
     "notes": ""# means prefix"
-  },
+ 	}
+  }
+  ],
   "zipSettings": {
     "notes": "xxx",
     "requiredMetadata": [

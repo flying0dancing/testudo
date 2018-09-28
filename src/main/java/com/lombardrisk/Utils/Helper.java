@@ -12,8 +12,11 @@ import java.sql.SQLException;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Helper {
+	private final static Logger logger = LoggerFactory.getLogger(Helper.class);
 
 	public static <T> Object filterListByID(List<T> list, Object value) throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
 	{
@@ -133,5 +136,54 @@ public class Helper {
 			e.printStackTrace();
 		}
     }
+    
+    /**
+	 * run external command
+	 * @param commons
+	 * @return
+	 */
+	public static Boolean runCmdCommand(String[] commons)
+	{
+		Boolean flag=true;
+		logger.info(String.join(" ", commons));
+		try {
+			Process process = Runtime.getRuntime().exec(commons);
+			process.waitFor();
+			BufferedReader stdInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
+			BufferedReader stdError = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+
+			String str=null;
+			logger.debug("Here is the standard output of the command:");
+			while((str=stdInput.readLine())!=null)
+			{
+				logger.debug(str);
+				if(str.toLowerCase().contains("error")) 
+				{
+					flag=false;
+					break;
+				}
+			}
+			logger.debug("Here is the standard error of the command (if any):");
+			while((str=stdError.readLine())!=null)
+			{
+				logger.error(str);
+				if(str.toLowerCase().contains("error")) 
+				{
+					flag=false;
+					break;
+				}
+			}
+			
+		} catch (InterruptedException |IOException e) {
+			flag=false;
+			logger.error(e.getMessage(),e);
+		} 
+		if(flag){
+			logger.info("cmd run OK.");
+		}else{
+			logger.error("cmd run failed.");
+		}
+		return flag;
+	}
 
 }
