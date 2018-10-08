@@ -33,6 +33,10 @@ testudo can generates metadata files from many databases, and then compress nece
 	* use this flag means run on jenkins. It will do everything in the original product folder.
 	* does Not use this flag, it will create a copy of product folder, generate packaged files in the copied one without change anything in the original product folder.
 
+sql instruction
+-------------------------------------------
+i.e.[test.sql](test.sql)
+
 json instruction
 -------------------------------------------
 
@@ -82,7 +86,7 @@ json instruction
     "dpmFullPath": "[optional] the full name of this product's dpm, i.e. ...\\ComplianceProduct\\fed\\src\\dpm\\FED_FORM_META.accdb",
     "productProperties": "[optional] the full name of this product's properties. i.e. ...\\ComplianceProduct\\fed\\package.properties",
     "sqlFiles":["[optional] the filtered files or all files under filtered folder will be executed on dpm",
-    	"sqls\\*.sql","sqls\\[test.sql](test.sql)"],
+    	"sqls\\*.sql"],
     "zipFiles": ["the filtered files or all files under filtered folder will be packaged",
     	"manifest.xml", 
     	"dpm",
