@@ -33,9 +33,6 @@ testudo can generates metadata files from many databases, and then compress nece
 	* use this flag means run on jenkins. It will do everything in the original product folder.
 	* does Not use this flag, it will create a copy of product folder, generate packaged files in the copied one without change anything in the original product folder.
 
-sql instruction
--------------------------------------------
-i.e.[test.sql](test.sql)
 
 json instruction
 -------------------------------------------
@@ -184,3 +181,7 @@ json instruction
 
 ]
 ```
+
+sql instruction
+-------------------------------------------
+we use UCanAccess for pure read/write Access database, sql statements's format need like [test.sql](test.sql)

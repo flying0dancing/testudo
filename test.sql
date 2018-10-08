@@ -2,8 +2,8 @@
 alter table GridKey add column ThresholdExpression text;
 alter table GridKey add column RowLimit text;
 alter table GridRef add column Threshold int;
-alter table GridRef add column IsInnerGridCell int;
-alter table GridRef add column ReportLine nvarchar(255);
+alter table GridRef add column IsInnerGridCell datetime;
+alter table GridRef add column ReportLine boolean;
 alter table List add column SOURCETYPE nvarchar(255);
 alter table Ref add column ReportLine nvarchar(255);
 alter table Sums add column Type nvarchar(30);
