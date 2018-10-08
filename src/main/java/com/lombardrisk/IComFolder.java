@@ -18,7 +18,7 @@ public interface IComFolder {
 	//test data folders
 	String SOURCE_FOLDER="src"+System.getProperty("file.separator");
 	String DPM_PATH="dpm"+System.getProperty("file.separator");
-	String META_PATH="Metadata"+System.getProperty("file.separator");
+	String META_PATH="metadata"+System.getProperty("file.separator");
 	String FORMS_PATH="forms"+System.getProperty("file.separator");
 	String TRANS_PATH="transforms"+System.getProperty("file.separator");
 	String SQLS_PATH="sqls"+System.getProperty("file.separator");
