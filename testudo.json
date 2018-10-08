@@ -1,0 +1,35 @@
+[
+{
+  "ID": "aaa",
+  "databaseServerAndTables":[
+  {
+	"ID":"1st",
+	"databaseServer": {
+		"name": "toolset system database",
+    	"driver": "oracle",
+    	"host": "172.20.20.49@ora11g",
+    	"schema": "ECR_12801_OFFICIAL_SYSTEM",
+    	"password": "password"
+	},
+	"requiredTables": {
+    "singles": [ "#FormVars", "#Instances", "#InstanceSets",  "#RefReturns",  "#Rets"   ],
+    "dividedByReturnIds": [  "#GridKey",   "#GridRef" ],
+    "notes": ""# means prefix"
+ 	}
+  }
+  ],
+  "zipSettings": {
+    "notes": "xxx",
+    "requiredMetadata": [
+      "GridRef\\009.csv",
+      "Rets"
+    ],
+   "zipFiles": [
+      "manifest.xml",
+      "transforms",
+      "forms",
+      "dpm"
+    ]
+  }
+}
+]
