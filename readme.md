@@ -1,6 +1,6 @@
 usage 
 ===
-testudo can generates metadata files from many databases(Sql Server, Oracle, Access Database), and then compress necessary files into package(*.zip and *.lrm).
+testudo can generates metadata files from many databases(Sql Server, Oracle, Access Database), and then compress necessary files into package(*.zip and *.lrm). It can use on Linux and Windows Oses.
 ------
 	java -jar testudo.jar -Dconf="d:\abc\foo\testudo.json" -Dprefix=fed -Did=bbb -Dproc=2 -Drelease -DrunOnJenkins
 
