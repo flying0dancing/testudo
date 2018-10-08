@@ -69,6 +69,13 @@ public class DBInfo {
 		return rst;
 	}
 	
+	/***
+	 * export data in database into *.csv files
+	 * @param prefix product prefix, use to replace # defined in tableList
+	 * @param tableList defined in json file
+	 * @param exportPath 
+	 * @param iNIName 
+	 */
 	public void exportToSingle(String prefix,List<String> tableList,String exportPath,String iNIName)
 	{
 		if(StringUtils.isBlank(exportPath)) return;
@@ -114,6 +121,13 @@ public class DBInfo {
 		dbHelper.close();
 	}
 	
+	/***
+	 * export data in database into *.csv files divided by field ReturnId
+	 * @param prefix product prefix, use to replace # defined in tableList
+	 * @param tableList defined in json file
+	 * @param exportPath 
+	 * @param iNIName 
+	 */
 	public void exportToDivides(String prefix,List<String> tableList,String exportPath,String iNIName)
 	{
 		//Boolean flag=false;
@@ -248,6 +262,11 @@ public class DBInfo {
 		return returnAndVer;
 	}
 	
+	/**
+	 * create all tables which defined in the schemaFullName.
+	 * @param schemaFullName
+	 * @return
+	 */
 	public Boolean createAccessTables(String schemaFullName){
 		Boolean flag=true;
 		if(dbHelper.getDatabaseServer().getDriver().startsWith("access"))

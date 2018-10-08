@@ -29,7 +29,11 @@ public class ARPPack implements IComFolder {
 		}
 	}
 	
-	
+	/***
+	 * create a new access database(.accdb) if no existed, otherwise use the existed one.
+	 * @param dbFullName
+	 * @return
+	 */
 	public Boolean createNewDpm(String dbFullName)
 	{
 		Boolean flag=false;
@@ -38,12 +42,12 @@ public class ARPPack implements IComFolder {
 		return flag;
 	}
 	/***
-	 * import all filtered csv files to accessdb
+	 * import all filtered metadata (*.csv files) to access database
 	 * @param db it's a access database, its location or schema should be get value from <I>json file</I>->"zipSettings"->"accessDBFullPath"
 	 * @param csvParentPath it gets value from <I>json file</I> ->"exportPath"
 	 * @param csvPaths it gets value from <I>json file</I>->"zipSettings"->"requiredMetadata"
 	 * @param schemaFullName It's a configuration file, which contains all tables' definition.
-	 * @return return csv full paths
+	 * @return return metadata (*.csv files) full paths
 	 */
 	public List<String> importMetadataToDpm(DBInfo db,String csvParentPath,List<String> csvPaths, String schemaFullName)
 	{
@@ -51,12 +55,12 @@ public class ARPPack implements IComFolder {
 	}
 	
 	/***
-	 * import all filtered csv files to accessdb
+	 * import all filtered metadata (*.csv files) to access database
 	 * @param dbFullPath it should be get value from <I>json file</I>->"zipSettings"->"accessDBFullPath"
 	 * @param csvParentPath it gets value from <I>json file</I> ->"exportPath"
 	 * @param csvPaths it gets value from <I>json file</I>->"zipSettings"->"requiredMetadata"
 	 * @param schemaFullName It's a configuration file, which contains all tables' definition.
-	 * @return return csv full paths, return null if error occurs.
+	 * @return return metadata (*.csv files) full paths, return null if error occurs.
 	 */
 	public List<String> importMetadataToDpm(String dbFullPath,String csvParentPath,List<String> csvPaths, String schemaFullName)
 	{
@@ -104,10 +108,9 @@ public class ARPPack implements IComFolder {
 	
 
 	/***
-	 * read csv file name's returnId, and then through dbFullName and its tableName, find its return name and version
-	 * tableName rets which stored definition of all returns
+	 * read metadata (*.csv file) name's returnId, and then through dbFullName and its tableName(rets which stored definition of all returns), find its return name and version
 	 * @param dbFullName full name of accessdb
-	 * @param csvFullPaths 
+	 * @param csvFullPaths metadata (*.csv files) full paths
 	 * @return return a list of all returns' <I>name_version</I>, return null if error occurs.
 	 */
 	public List<String> getReturnNameAndVersions(String dbFullName,List<String> csvFullPaths)

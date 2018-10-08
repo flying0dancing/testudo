@@ -107,6 +107,10 @@ public class FileUtil extends FileUtils{
 			}
 		}
 	}
+	/**
+	 * if file doesn't existed, create a new one.
+	 * @param fileFullName
+	 */
 	public static void createNew(String fileFullName)
 	{
 		if(StringUtils.isNotBlank(fileFullName)){
