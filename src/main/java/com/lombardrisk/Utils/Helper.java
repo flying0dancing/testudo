@@ -72,6 +72,11 @@ public class Helper {
     	return null;
     }
     
+    /**
+     * revise/uniform file path separator, let file's separator followed OS's.
+     * @param path
+     * @return
+     */
     public static String reviseFilePath(String path)
     {
     	if(StringUtils.isNotBlank(path)){
@@ -93,6 +98,11 @@ public class Helper {
     	return path;
     }
     
+    /***
+     * remove last separator of path if it has.
+     * @param path
+     * @return
+     */
     public static String removeLastSlash(String path)
 	{
 		if(StringUtils.isNotBlank(path)){
@@ -125,7 +135,7 @@ public class Helper {
     }
 
     public static void readme(String file){
-    	try(InputStream is = ClassLoader.getSystemResourceAsStream("readme.md")){
+    	try(InputStream is = ClassLoader.getSystemResourceAsStream(file)){
     		String line;
 
     		BufferedReader br = new BufferedReader(new InputStreamReader(is));
