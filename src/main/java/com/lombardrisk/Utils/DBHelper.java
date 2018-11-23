@@ -552,20 +552,34 @@ public class DBHelper {
 					if(StringUtils.isNoneBlank(importCsvFullName,tableName)){
 						//
 						bufReader=new BufferedReader(new FileReader(importCsvFullName));
+						StringBuffer lineBuffer=new StringBuffer();
 						String line=null;
+						int lineno=1;
+						String header="";
+						String sql;
 						while((line=bufReader.readLine())!=null){
-							String header="insert into "+tableName+" ("+line.replace("\"", "")+" ) values (";
-							while((line=bufReader.readLine())!=null)
-							{
-								if(StringUtils.isBlank(line))continue;
-								String regex=",((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?),";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
-								line=line.replaceAll("(^|,)(,|$)", "$1null$2").replaceAll(regex, ",#$2#,").replaceAll("(^|,)(,|$)", "$1null$2");
-								
-								String sql=header+line+")";
+							 header="insert into "+tableName+" ("+line.replace("\"", "")+" ) values ";
+							 break;
+						}
+						
+						while((line=bufReader.readLine())!=null)
+						{
+							lineno++;
+							if(StringUtils.isBlank(line))continue;
+							String regex=",((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?),";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
+							line=line.replaceAll("(^|,)(,|$)", "$1null$2").replaceAll(regex, ",#$2#,").replaceAll("(^|,)(,|$)", "$1null$2");
+							lineBuffer.append("("+line+"),");
+							if(lineno%200==0){
+								sql=header+lineBuffer.substring(0, lineBuffer.length()-1);
+								lineBuffer.setLength(0);//clear
 								flag=addBatch(sql);
-								if(!flag){logger.error("fail to import data:"+sql);break;}
+								if(!flag){logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");break;}
 							}
-							if(!flag){break;}
+						}
+						if(flag || lineBuffer.length()>0){
+							sql=header+lineBuffer.substring(0, lineBuffer.length()-1);
+							flag=addBatch(sql);
+							if(!flag){logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");}
 						}
 						bufReader.close();
 					}
