@@ -89,7 +89,8 @@ public class Testudo implements IComFolder
     }
     
     private static void HelperDoc(){
-    	Helper.readme("readme.md");
+    	//Helper.readme("readme.md");
+    	logger.error("please see readme.md.");
 	}
     
     private static void readDBToMetadata(ARPCISetting arSetting)

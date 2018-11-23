@@ -290,7 +290,12 @@ public class DBHelper {
 			type=" DOUBLE";
 		}else 
 		if(columnTypeName.contains("DECIMAL") || columnTypeName.contains("NUMERIC")){
-			type=" NUMERIC("+String.valueOf(precision)+","+String.valueOf(scale)+")";
+			if(precision>28){
+				type=" DOUBLE";
+			}else{
+				type=" NUMERIC("+String.valueOf(precision)+","+String.valueOf(scale)+")";
+			}
+			
 		}else{
 			if(precision>255){
 				type=" LONGTEXT";
