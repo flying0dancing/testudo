@@ -259,7 +259,7 @@ public class FileUtil extends FileUtils{
 				}
 				for(String filter:fileters)
 				{
-					if(!name.toLowerCase().contains(filter.toLowerCase())) {
+					if(!name.toLowerCase().contains(filter.toLowerCase()) || name.startsWith(".")) {
 						flag=false;
 						break;
 						}
