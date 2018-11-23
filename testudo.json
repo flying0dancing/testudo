@@ -20,11 +20,15 @@
   ],
   "zipSettings": {
     "notes": "xxx",
+    "excludeFileFilters":"",
     "requiredMetadata": [
       "GridRef\\009.csv",
       "Rets"
     ],
-   "zipFiles": [
+    "sqlFiles":["sqls/New Text Document.sql","sqls/test.sql"],
+    "dpmFullPath": "E:\\ComplianceProduct\\ecr\\src\\dpm\\ECR_FORM_META.accdb",
+    "productProperties": "E:\\ComplianceProduct\\ecr\\package.properties",
+    "zipFiles": [
       "manifest.xml",
       "transforms",
       "forms",

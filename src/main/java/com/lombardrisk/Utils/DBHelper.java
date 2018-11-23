@@ -279,7 +279,12 @@ public class DBHelper {
 			}else if(scale<10){
 				type=" DOUBLE";
 			}else{
-				type=" NUMERIC("+String.valueOf(precision)+","+String.valueOf(scale)+")";
+				if(precision>28){
+					type=" DOUBLE";
+				}else{
+					type=" NUMERIC("+String.valueOf(precision)+","+String.valueOf(scale)+")";
+				}
+				//type=" NUMERIC("+String.valueOf(precision)+","+String.valueOf(scale)+")";
 			}
 			
 		}else 

@@ -73,6 +73,7 @@ json instruction
   ],
   "zipSettings": {
     "notes": "[optional] anything here",
+    "excludeFileFilters":"[optional] like .git;.gitkeep",
     "requiredMetadata": [ "the meta-data(under "metadataPath") which need to imported to dpm, make sure they are all csv",
     	"GridRef\\*.csv",
     	"GridRef\\.csv",
@@ -118,6 +119,7 @@ json instruction
   ],
   "zipSettings": {
     "notes": "xxx",
+    "excludeFileFilters":"",
     "requiredMetadata": [
       "GridRef\\009.csv",
       "Rets"

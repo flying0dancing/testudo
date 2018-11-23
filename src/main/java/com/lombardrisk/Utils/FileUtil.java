@@ -193,34 +193,35 @@ public class FileUtil extends FileUtils{
 	 * @param filePath maybe contains "*"
 	 * @return
 	 */
-	public static List<String> getFilesByFilter(String filePath)
+	public static List<String> getFilesByFilter(String filePath,String excludeFilters)
 	{
 		List<String> filePaths=null;
 		if(StringUtils.isNotBlank(filePath))
 		{
 			filePaths=new ArrayList<String>();
-			listFilesByFilter(filePath,null,filePaths);
+			listFilesByFilter(filePath,null,excludeFilters,filePaths);
 		}
 		return filePaths;
 	}
 	
-	public static void listFilesByFilter(String filePath,String filterStr, List<String> filePaths)
+	public static void listFilesByFilter(String filePath,String filterStr,String exfilterStr, List<String> filePaths)
 	{
 		File fileFullPath=new File(filePath);
+		if(StringUtils.isBlank(filterStr))
+		{
+			filterStr="";
+		}
+		if(StringUtils.isBlank(exfilterStr))
+		{
+			exfilterStr="";
+		}
 		if(fileFullPath.exists())
 		{
 			if(fileFullPath.isDirectory())
 			{
-				if(StringUtils.isBlank(filterStr))
-				{
-					File[] files=fileFullPath.listFiles();
-					for(File file:files)
-					{listFilesByFilter(file.getAbsolutePath(),filterStr,filePaths);}
-				}else{
-					File[] files=filterFilesAndSubFolders(fileFullPath,filterStr);
-					for(File file:files)
-					{listFilesByFilter(file.getAbsolutePath(),filterStr,filePaths);}
-				}
+				File[] files=filterFilesAndSubFolders(fileFullPath,filterStr,exfilterStr);
+				for(File file:files)
+				{listFilesByFilter(file.getAbsolutePath(),filterStr,exfilterStr,filePaths);}
 			}
 			if(fileFullPath.isFile())
 			{filePaths.add(fileFullPath.getAbsolutePath());}
@@ -235,10 +236,10 @@ public class FileUtil extends FileUtils{
 			File parentPath=new File(filePath.substring(0,lastSlash));//TODO maybe contains risk, for example see Helper.getParentPath
 			if(parentPath.isDirectory())
 			{
-				File[] files=filterFilesAndSubFolders(parentPath,fileName);
+				File[] files=filterFilesAndSubFolders(parentPath,fileName,exfilterStr);
 				
 				for(File file:files)
-				{listFilesByFilter(file.getAbsolutePath(),fileName,filePaths);}
+				{listFilesByFilter(file.getAbsolutePath(),fileName,exfilterStr,filePaths);}
 				
 			}else{
 				logger.error("error: invalid path["+filePath+"]");
@@ -247,22 +248,44 @@ public class FileUtil extends FileUtils{
 		
 	}
 	
-	private static File[] filterFilesAndSubFolders(File parentPath,String filterStr)
+	private static File[] filterFilesAndSubFolders(File parentPath,String filterStr,String excludeFileStr)
 	{
-		final String[] fileters=filterStr.split("\\*");
+		final String[] fileters=filterStr.toLowerCase().split("\\*");
+		final String[] exfileters=excludeFileStr.toLowerCase().replaceAll("^\\*(.*)", "$1").split(";");
 		File[] files=parentPath.listFiles(new FilenameFilter(){
 			@Override
 			public boolean accept(File dir, String name) {
 				boolean flag=true;
-				if(new File(dir,name).isDirectory()){
+				name=name.toLowerCase();
+				if(new File(dir,name).isDirectory() && !name.startsWith(".")){
 					return flag;
 				}
 				for(String filter:fileters)
 				{
-					if(!name.toLowerCase().contains(filter.toLowerCase()) || name.startsWith(".")) {
+					if(StringUtils.isNotBlank(filter) && !name.contains(filter)) {
 						flag=false;
 						break;
 						}
+				}
+				if(flag){
+					Boolean exflag=false;
+					for(String exfilter:exfileters){
+						if(StringUtils.isNotBlank(exfilter)){
+							exflag=true;
+							String[] subfilters=exfilter.split("\\*");
+							for(String subexfilter:subfilters){
+								if(StringUtils.isNotBlank(subexfilter) && !name.contains(subexfilter)){
+									exflag=false;
+									break;
+								}
+							}
+						}
+						if(exflag)
+						{
+							flag=false;
+							break;
+						}
+					}
 				}
 				return flag;
 			}

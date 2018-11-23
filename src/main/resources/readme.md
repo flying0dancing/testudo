@@ -73,6 +73,7 @@ json instruction
   ],
   "zipSettings": {
     "notes": "[optional] anything here",
+    "excludeFileFilters":"[optional] like .git;.gitkeep",
     "requiredMetadata": [ "the meta-data(under "metadataPath") which need to imported to dpm, make sure they are all csv",
     	"GridRef\\*.csv",
     	"GridRef\\.csv",
@@ -118,6 +119,7 @@ json instruction
   ],
   "zipSettings": {
     "notes": "xxx",
+    "excludeFileFilters":"",
     "requiredMetadata": [
       "GridRef\\009.csv",
       "Rets"
@@ -181,7 +183,10 @@ json instruction
 
 ]
 ```
+example [testudo.json](testudo.json)
 
 sql instruction
 -------------------------------------------
 we use UCanAccess for pure read/write Access database, sql statements's format need like [test.sql](test.sql)
+
+![workflow](Testudo-workflow.png "testudo workflow")

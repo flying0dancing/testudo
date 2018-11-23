@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import com.lombardrisk.Utils.*;
 import com.lombardrisk.pojo.DatabaseServer;
+import com.lombardrisk.pojo.ZipSettings;
 
 
 public class ARPPack implements IComFolder {
@@ -72,7 +73,7 @@ public class ARPPack implements IComFolder {
 		logger.info("================= import metadata into DPM =================");
 		for(String pathTmp:csvPaths)
 		{
-			List<String> realCsvFullPathsTmp=FileUtil.getFilesByFilter(csvParentPath+System.getProperty("file.separator")+pathTmp);
+			List<String> realCsvFullPathsTmp=FileUtil.getFilesByFilter(csvParentPath+System.getProperty("file.separator")+pathTmp,null);
 			if(realCsvFullPathsTmp.size()<=0)
 			{
 				logger.error("error: invalid path ["+csvParentPath+System.getProperty("file.separator")+pathTmp+"]");
@@ -136,12 +137,12 @@ public class ARPPack implements IComFolder {
 	}
 	
 	
-	public Boolean execSQLs(String dbFullName,String sourcePath,List<String> sqlFileNames)
+	public Boolean execSQLs(String dbFullName,String sourcePath,List<String> sqlFileNames,String excludeFileFilters)
 	{
 		Boolean flag=true;
 		if(sqlFileNames==null || sqlFileNames.size()<=0) return true;//means testudo.json doesn't provide sqlFiles.
 		logger.info("================= execute SQLs =================");
-		List<String> realFullPaths=getFileFullPaths(sourcePath, sqlFileNames);
+		List<String> realFullPaths=getFileFullPaths(sourcePath, sqlFileNames,excludeFileFilters);
 		if(realFullPaths==null || realFullPaths.size()<=0) {
 			logger.error("error: sqlFiles are invalid files or filters.");
 			return false;//illegal, no invalid files need to execute if it set sqlFiles
@@ -185,13 +186,14 @@ public class ARPPack implements IComFolder {
 	 * @param buildType blank(null) represents it is internal build, true represents it is release build
 	 * @return
 	 */
-	public Boolean packageARProduct(String sourcePath,List<String> packFileNames, String propFullPath, String zipPath, String buildType){
+	public Boolean packageARProduct(String sourcePath,ZipSettings zipSet, String propFullPath, String zipPath, String buildType){
 		if(StringUtils.isBlank(sourcePath)){return false;}
 		logger.info("================= package files =================");
 		//get all packaged files
 		String productPrefix=FileUtil.getFileNameWithSuffix(Helper.getParentPath(sourcePath)).toUpperCase().replaceAll("\\(\\d+\\)", "");
 		Boolean flag=true;
-		List<String> realFullPaths=getFileFullPaths(sourcePath, packFileNames);
+		List<String> packFileNames=zipSet.getZipFiles();
+		List<String> realFullPaths=getFileFullPaths(sourcePath, packFileNames,zipSet.getExcludeFileFilters());
 		if(realFullPaths==null){
 			logger.error("error: zipFiles are invalid files or filters.");
 			return false;
@@ -202,7 +204,7 @@ public class ARPPack implements IComFolder {
 		}
 		//modify manifest.xml
 		String packageVersion=Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE, IMP_VERSION, arpbuild);
-		List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+"/"+DPM_PATH+"*"+DPM_FILE_SUFFIX));
+		List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+"/"+DPM_PATH+"*"+DPM_FILE_SUFFIX),null);
 		if(accdbfiles.size()>0)
 		{
 			String accdbFileName=FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
@@ -261,7 +263,7 @@ public class ARPPack implements IComFolder {
 		List<String> realFilePaths=new ArrayList<String>();
 		for(String filter:filters){
 			
-			List<String> realFullPathsTmp=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+filter));
+			List<String> realFullPathsTmp=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+filter),null);
 			if(realFullPathsTmp.size()<=0)
 			{
 				logger.error("error: cannot search ["+filter+"] under path ["+sourcePath+"]");
@@ -277,5 +279,33 @@ public class ARPPack implements IComFolder {
 		return realFilePaths;
 	}
 	
-	
+	/***
+	 * get all file's full path under sourcePath, with filters
+	 * @param sourcePath
+	 * @param filters
+	 * @return if get nothing or arguments contains blank argument, return null.
+	 */
+	public List<String> getFileFullPaths(String sourcePath, List<String> filters,String excludeFilters)
+	{
+		if(filters==null || filters.size()<=0) return null;
+		if(StringUtils.isBlank(sourcePath)) return null;
+		sourcePath=Helper.reviseFilePath(sourcePath+"/");
+		List<String> realFilePaths=new ArrayList<String>();
+		for(String filter:filters){
+			
+			List<String> realFullPathsTmp=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+filter),excludeFilters);
+			if(realFullPathsTmp.size()<=0)
+			{
+				logger.error("error: cannot search ["+filter+"] under path ["+sourcePath+"]");
+				continue;
+			}
+			for(String pathTmp:realFullPathsTmp){
+				if(!realFilePaths.contains(pathTmp)){
+					realFilePaths.add(pathTmp);
+				}
+			}
+		}
+		if(realFilePaths.size()<=0) return null;
+		return realFilePaths;
+	}
 }

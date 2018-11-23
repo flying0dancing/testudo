@@ -10,6 +10,7 @@ import com.google.gson.GsonBuilder;
 public class ZipSettings {
 	private static final Logger logger = LoggerFactory.getLogger(ZipSettings.class);
 	
+	private String excludeFileFilters;
 	private List<String> requiredMetadata;
 	private String dpmFullPath;
 	private String productProperties;
@@ -72,6 +73,14 @@ public class ZipSettings {
 
 	public void setSqlFiles(List<String> sqlFiles) {
 		this.sqlFiles = sqlFiles;
+	}
+
+	public String getExcludeFileFilters() {
+		return excludeFileFilters;
+	}
+
+	public void setExcludeFileFilters(String excludeFileFilters) {
+		this.excludeFileFilters = excludeFileFilters;
 	}
 
 	
