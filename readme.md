@@ -6,10 +6,11 @@ testudo can generates metadata files from many databases(Sql Server, Oracle, Acc
 
 * [conf]
 	* optional
-	* conf is defined for full path of configuration file(format is json). `Highest priority`.
+	* conf is defined for full path of configuration file(format is json).
 	* get "testudo.json" under the same folder if both [prefix] and [conf] are not provided.
 	
 * [prefix]
+    * `Highest priority`
 	* prefix is the folder name of product
 	* get "testudo.json" under this folder.
     
