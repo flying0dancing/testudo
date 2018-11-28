@@ -85,7 +85,8 @@ public class ARPPack implements IComFolder {
 				{
 					realCsvFullPaths.add(pathTmp2);
 					logger.info("import dpm's file path:"+pathTmp2);
-					String tableName=FileUtil.getFileNameWithoutSuffix(pathTmp2);
+					String tableNameWithDB=FileUtil.getFileNameWithoutSuffix(pathTmp2);
+					String tableName=tableNameWithDB.replaceAll("#.*?_", "_");
 					Pattern p = Pattern.compile("(GridKey|GridRef|List|Ref|Sums|Vals|XVals)_.*", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
 					Matcher m = p.matcher(tableName);
 					if(m.find())
@@ -95,7 +96,7 @@ public class ARPPack implements IComFolder {
 					/*String[] commons={"cscript",PropHelper.SCRIPT_GEN_DPM, Helper.reviseFilePath(schemaFullName), Helper.reviseFilePath(dbFullPath), Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(PropHelper.SCRIPT_PATH+"/log/GenerateProductDPM.log"), tableName};
 					Helper.runCmdCommand(commons);*/
 					
-					Boolean flag=dbInfo.importCsvToAccess(tableName, Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(schemaFullName));
+					Boolean flag=dbInfo.importCsvToAccess(tableName,tableNameWithDB, Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(schemaFullName));
 					if(!flag){
 						logger.error("import csv["+pathTmp2+"] to "+tableName+" unsucessful.");
 					}
@@ -125,7 +126,7 @@ public class ARPPack implements IComFolder {
 			String csvName=FileUtil.getFileNameWithoutSuffix(csvPath);
 			if(!csvName.contains("_"))continue;
 			String[] nameParts=csvName.split("_");
-			if(!nameParts[1].matches("/d+"))continue;
+			if(!nameParts[1].matches("\\d+"))continue;
 			String returnId=nameParts[1];
 			String returnNameVer=dbInfo.getReturnAndVersion(returnId);
 			if(!returnNameVer.equals("") && !nameAndVers.contains(returnNameVer)){
