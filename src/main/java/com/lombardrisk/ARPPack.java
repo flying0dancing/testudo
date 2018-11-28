@@ -125,7 +125,7 @@ public class ARPPack implements IComFolder {
 			String csvName=FileUtil.getFileNameWithoutSuffix(csvPath);
 			if(!csvName.contains("_"))continue;
 			String[] nameParts=csvName.split("_");
-			if(!nameParts[1].matches("/d+"))continue;
+			if(!nameParts[1].matches("\\d+"))continue;
 			String returnId=nameParts[1];
 			String returnNameVer=dbInfo.getReturnAndVersion(returnId);
 			if(!returnNameVer.equals("") && !nameAndVers.contains(returnNameVer)){
