@@ -95,14 +95,15 @@ public class DBInfo {
 			String tableName=queryRecord(SQL);
 			if(StringUtils.isNotBlank(tableName))
 			{
+				logger.info("----------- "+tableName+" ----------- ");
 				tab=tab.replace("#", "");
 				String exportFullPath=exportPath+System.getProperty("file.separator")+tab+".csv";
 				if(new File(exportFullPath).exists())
 				{
-					logger.warn("warn: duplicated ["+tab+"] in configuration file, overwriting existed one.");
+					logger.warn("warn: duplicated ["+tab+"] in metadata, overwriting existed one.");
 					//continue;
 				}
-				logger.info("table["+tableName+"] is found. export metadata struct to "+iNIName);
+				logger.info("export metadata struct to "+iNIName);
 				
 				SQL="select * from \""+tableName+"\"";// 
 				if(getDbDriverFlag()==DBDriverType.SQLSERVER || getDbDriverFlag()==DBDriverType.ACCESSDB){
@@ -149,20 +150,21 @@ public class DBInfo {
 			String tableName=queryRecord(SQL);
 			if(StringUtils.isNotBlank(tableName))
 			{
+				logger.info("----------- "+tableName+" ----------- ");
 				tab=tab.replace("#", "");
 				String exportFullPath=exportPath+System.getProperty("file.separator")+tab+idOfDBAndTable+".csv";
 				if(new File(exportFullPath).exists())
 				{
-					logger.warn("warn: duplicated ["+tab+"] in configuration file, overwriting existed one.");
+					logger.warn("warn: duplicated ["+tab+idOfDBAndTable+"] in metadata, overwriting existed one.");
 				}
-				logger.info("table["+tableName+"] is found. export metadata struct to "+iNIName);
+				logger.info("export metadata struct to "+iNIName);
 				
 				SQL="select * from \""+tableName+"\"";// 
 				if(getDbDriverFlag()==DBDriverType.SQLSERVER || getDbDriverFlag()==DBDriverType.ACCESSDB){
 					SQL="select * from "+tableName;
 				}
 				dbHelper.exportToINI(tab+idOfDBAndTable,SQL, new File(exportPath).getPath()+System.getProperty("file.separator")+iNIName);
-				logger.info("metadata exports to:"+tab+".csv");
+				logger.info("metadata exports to:"+tab+idOfDBAndTable+".csv");
 				dbHelper.exportToCsv(SQL, exportFullPath);
 				
 			}else
@@ -201,14 +203,11 @@ public class DBInfo {
 			String tableName=queryRecord(SQL);
 			if(StringUtils.isNotBlank(tableName))
 			{
+				logger.info("----------- "+tableName+" ----------- ");
 				tab=tab.replace("#", "");
 				String subPath=new File(exportPath).getPath()+System.getProperty("file.separator")+tab;
-				if(new File(subPath).exists())
-				{
-					logger.warn("warn: duplicated ["+tab+"], overwrite existed one.");
-					//continue;
-				}
-				logger.info("table["+tableName+"] is found. export metadata struct to "+iNIName);
+				
+				logger.info("export metadata struct to "+iNIName);
 				SQL="select * from \""+tableName+"\" where rownum=1";// 
 				if(getDbDriverFlag()==DBDriverType.SQLSERVER || getDbDriverFlag()==DBDriverType.ACCESSDB){
 					SQL="select top 1 * from "+tableName;
@@ -240,7 +239,7 @@ public class DBInfo {
 					}
 				}else
 				{
-					logger.warn("warn: table["+tableName+"] doesn't contains ReturnId field.");
+					logger.warn("warn: table["+tableName+"] doesn't contains any ReturnId.");
 					//logger.debug(" Sql Statement:"+SQL);
 				}
 				
@@ -281,18 +280,11 @@ public class DBInfo {
 			String tableName=queryRecord(SQL);
 			if(StringUtils.isNotBlank(tableName))
 			{
+				logger.info("----------- "+tableName+" ----------- ");
 				tab=tab.replace("#", "");
 				String subPath=new File(exportPath).getPath()+System.getProperty("file.separator")+tab;
-				if(new File(subPath).exists())
-				{
-					//logger.warn("warn: duplicated ["+tab+"], plus "+idOfDBAndTable+" on file name.");
-					//TODO
-					//subPath=new File(exportPath).getPath()+System.getProperty("file.separator")+tab+idOfDBAndTable;
-					//new File(subPath).delete();//this delete method must after reset subPath
-					logger.warn("warn: duplicated ["+tab+"], overwrite existed one.");
-					//continue;
-				}
-				logger.info("table["+tableName+"] is found. export metadata struct to "+iNIName);
+				
+				logger.info("export metadata struct to "+iNIName);
 				SQL="select * from \""+tableName+"\" where rownum=1";// 
 				if(getDbDriverFlag()==DBDriverType.SQLSERVER || getDbDriverFlag()==DBDriverType.ACCESSDB){
 					SQL="select top 1 * from "+tableName;
@@ -324,7 +316,7 @@ public class DBInfo {
 					}
 				}else
 				{
-					logger.warn("warn: table["+tableName+"] doesn't contains ReturnId field.");
+					logger.warn("warn: table["+tableName+"] doesn't contains any ReturnId.");
 					//logger.debug(" Sql Statement:"+SQL);
 				}
 				
@@ -442,7 +434,9 @@ public class DBInfo {
 			flag=FileUtil.search(schemaFullName, "["+tableNameWithDB+"]");
 			if(flag)
 			{
-				List<String> columns=FileUtil.searchTableDefinition(schemaFullName,tableNameWithDB);
+				//List<String> columns=FileUtil.searchTableDefinition(schemaFullName,tableNameWithDB);
+				
+				List<String> columns=FileUtil.getMaxTablesDefinition(FileUtil.searchTablesDefinition(schemaFullName, tableName));
 				if(columns!=null && columns.size()>0)
 				{
 					DBHelper.AccessdbHelper accdb=dbHelper.new AccessdbHelper();

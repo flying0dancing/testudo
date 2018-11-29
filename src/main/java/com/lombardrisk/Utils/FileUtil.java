@@ -391,7 +391,68 @@ public class FileUtil extends FileUtils{
 		}
 		return tableDefinition;
 	}
-
+	
+	/**
+	 * return table's definition in a INI file
+	 * @param fileFullName
+	 * @param tableName
+	 * @return
+	 */
+	public static List<List<String>> searchTablesDefinition(String fileFullName,String tableName)
+	{
+		List<List<String>> tablesDefinition=null;
+		List<String> tableDefinition=null;
+		BufferedReader bufReader=null;
+		try{
+			if(StringUtils.isNoneBlank(fileFullName,tableName)){
+				tablesDefinition=new ArrayList<List<String>>();
+				bufReader=new BufferedReader(new FileReader(fileFullName));
+				String line=null;
+				
+				while((line=bufReader.readLine())!=null){
+					if(StringUtils.equalsIgnoreCase(line, "["+tableName+"]") || StringUtils.startsWithIgnoreCase(line, "["+tableName+"#")){
+						tableDefinition=new ArrayList<String>();
+						while((line=bufReader.readLine())!=null)
+						{
+							if(StringUtils.isBlank(line))continue;
+							if(line.contains("[")){	break;}
+							tableDefinition.add(line);
+						}
+						tablesDefinition.add(tableDefinition);
+					}
+				}
+				bufReader.close();
+			}
+		}catch(Exception e){
+			logger.error(e.getMessage(),e);
+		}
+		return tablesDefinition;
+	}
+	
+	/***
+	 * get the max columns' table definition.
+	 * @param tablesDefinition
+	 * @return
+	 */
+	public static List<String> getMaxTablesDefinition(List<List<String>> tablesDefinition){
+		List<String> tableDefinition=null;
+		if(tablesDefinition!=null && tablesDefinition.size()>0){
+			int max=tablesDefinition.get(0).size();
+			for(List<String> columns:tablesDefinition){
+				if(columns.size()>max){
+					max=columns.size();
+				}
+			}
+			for(List<String> columns:tablesDefinition){
+				if(columns.size()==max){
+					tableDefinition=columns;
+					break;
+				}
+			}
+			
+		}
+		return tableDefinition;
+	}
 	/**
 	 * if a file contains tableName, case insensitive, it will rewrite this table's definition at the end.
 	 * @param fileFullName
@@ -402,7 +463,7 @@ public class FileUtil extends FileUtils{
 	public static Boolean updateContent(String fileFullName, String tableName,String addedContent)
 	{
 		Boolean flag=false;
-		logger.info("update content in text in file: "+fileFullName);
+		logger.info("update file: "+fileFullName);
 		StringBuffer strBuffer=null;
 		BufferedReader bufReader=null;
 		try {
