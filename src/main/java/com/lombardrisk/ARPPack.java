@@ -67,9 +67,10 @@ public class ARPPack implements IComFolder {
 	{
 		if(StringUtils.isBlank(csvParentPath)){return null;}
 		DBInfo dbInfo=DBInfoSingle.INSTANCE.getDbInfo();
-		dbInfo.createAccessTables(schemaFullName);
+		//dbInfo.createAccessTables(schemaFullName);
 		if(csvPaths==null || csvPaths.size()<=0){return null;}
 		List<String> realCsvFullPaths=new ArrayList<String>();
+		String name_returnId;
 		logger.info("================= import metadata into DPM =================");
 		for(String pathTmp:csvPaths)
 		{
@@ -83,19 +84,25 @@ public class ARPPack implements IComFolder {
 			{
 				if(!realCsvFullPaths.contains(pathTmp2))
 				{
+					name_returnId="";
 					realCsvFullPaths.add(pathTmp2);
 					logger.info("import dpm's file path:"+pathTmp2);
-					String tableName=FileUtil.getFileNameWithoutSuffix(pathTmp2);
-					Pattern p = Pattern.compile("(GridKey|GridRef|List|Ref|Sums|Vals|XVals)_.*", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+					String tableNameWithDB=FileUtil.getFileNameWithoutSuffix(pathTmp2);
+					String tableName=tableNameWithDB.replaceAll("#.*?_", "_");
+					if(!tableName.contains("_")){
+						tableName=tableNameWithDB.replaceAll("#.*", "");
+					}
+					Pattern p = Pattern.compile("(GridKey|GridRef|List|Ref|Sums|Vals|XVals)(_.*)", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
 					Matcher m = p.matcher(tableName);
 					if(m.find())
 					{
 						tableName=m.group(1);
+						name_returnId=m.group(2);
 					}
 					/*String[] commons={"cscript",PropHelper.SCRIPT_GEN_DPM, Helper.reviseFilePath(schemaFullName), Helper.reviseFilePath(dbFullPath), Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(PropHelper.SCRIPT_PATH+"/log/GenerateProductDPM.log"), tableName};
 					Helper.runCmdCommand(commons);*/
-					
-					Boolean flag=dbInfo.importCsvToAccess(tableName, Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(schemaFullName));
+					tableNameWithDB=tableNameWithDB.replace(name_returnId, "");
+					Boolean flag=dbInfo.importCsvToAccess(tableName,tableNameWithDB, Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(schemaFullName));
 					if(!flag){
 						logger.error("import csv["+pathTmp2+"] to "+tableName+" unsucessful.");
 					}

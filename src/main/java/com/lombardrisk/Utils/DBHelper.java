@@ -364,7 +364,7 @@ public class DBHelper {
 			
 			csvName=new FileWriter(fileFullName);
 			bufOutFile=new BufferedWriter(csvName);
-			logger.info("start \"export to csv\"");
+			logger.debug("start \"export to csv\"");
 			StringBuffer strBuf=new StringBuffer();
 			//csv header
 			int col;
@@ -580,6 +580,9 @@ public class DBHelper {
 							sql=header+lineBuffer.substring(0, lineBuffer.length()-1);
 							flag=addBatch(sql);
 							if(!flag){logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");}
+						}
+						if(lineno==1){
+							flag=true;
 						}
 						bufReader.close();
 					}
