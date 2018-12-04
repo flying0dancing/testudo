@@ -558,26 +558,27 @@ public class DBHelper {
 						String header="";
 						String sql;
 						while((line=bufReader.readLine())!=null){
-							 header="insert into "+tableName+" ("+line.replace("\"", "")+" ) values ";
+							 header="insert into ["+tableName+"] ("+line.replaceAll("(^|,)\"", "$1[").replaceAll("\"(,|$)", "]$1")+" ) values ";
 							 break;
 						}
-						
 						while((line=bufReader.readLine())!=null)
 						{
 							lineno++;
 							if(StringUtils.isBlank(line))continue;
-							String regex=",((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?),";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
-							line=line.replaceAll("(^|,)(,|$)", "$1null$2").replaceAll(regex, ",#$2#,").replaceAll("(^|,)(,|$)", "$1null$2");
+							String regex="((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?)";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
+							line=line.replaceAll("(^|,)(,|$)", "$1null$2").replaceAll(regex, "#$2#").replaceAll("(^|,)(,|$)", "$1null$2");//TODO may contains risk in ,,
 							lineBuffer.append("("+line+"),");
 							if(lineno%200==0){
 								sql=header+lineBuffer.substring(0, lineBuffer.length()-1);
 								lineBuffer.setLength(0);//clear
+								logger.debug(sql);
 								flag=addBatch(sql);
 								if(!flag){logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");break;}
 							}
 						}
-						if(flag && lineBuffer.length()>0){
+						if(lineBuffer.length()>0){
 							sql=header+lineBuffer.substring(0, lineBuffer.length()-1);
+							logger.debug(sql);
 							flag=addBatch(sql);
 							if(!flag){logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");}
 						}
@@ -712,7 +713,7 @@ public class DBHelper {
 					return flag;
 				}
 				//generate sql statement
-				StringBuilder sqlBuilder=new StringBuilder("CREATE TABLE "+tableName+"(");
+				StringBuilder sqlBuilder=new StringBuilder("CREATE TABLE ["+tableName+"] (");
 				for(String str:tableDefinition){
 					String[] strArr=str.split("\\=| ");
 
@@ -726,9 +727,9 @@ public class DBHelper {
 						strArr[2]="NUMERIC";//Optional
 					}
 					if(strArr.length==3){
-						sqlBuilder.append(strArr[1]+" "+strArr[2]+" NOT NULL,");
+						sqlBuilder.append("["+strArr[1]+"] "+strArr[2]+" NOT NULL,");
 					}else if(strArr.length==4){
-						sqlBuilder.append(strArr[1]+" "+strArr[2]+",");
+						sqlBuilder.append("["+strArr[1]+"] "+strArr[2]+",");
 					}else {
 						logger.warn("please check the column definition: "+str);
 					}

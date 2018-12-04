@@ -104,7 +104,7 @@ public class ARPPack implements IComFolder {
 					tableNameWithDB=tableNameWithDB.replace(name_returnId, "");
 					Boolean flag=dbInfo.importCsvToAccess(tableName,tableNameWithDB, Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(schemaFullName));
 					if(!flag){
-						logger.error("import csv["+pathTmp2+"] to "+tableName+" unsucessful.");
+						logger.error("import csv["+pathTmp2+"] to "+tableName+" fail.");
 					}
 					
 				}
