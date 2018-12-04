@@ -576,7 +576,7 @@ public class DBHelper {
 								if(!flag){logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");break;}
 							}
 						}
-						if(flag || lineBuffer.length()>0){
+						if(flag && lineBuffer.length()>0){
 							sql=header+lineBuffer.substring(0, lineBuffer.length()-1);
 							flag=addBatch(sql);
 							if(!flag){logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");}
