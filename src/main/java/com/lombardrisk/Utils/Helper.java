@@ -83,12 +83,12 @@ public class Helper {
     		path=path.replace("\"", "");
     		
 			if(System.getProperty("file.separator").equals("/")){
-				path=path.replace("\\", "/");
+				path=path.replace("\\\\", "/");
 				path=path.replaceAll("/+", "/");
 			}else
 			{
 				path=path.replace("/", "\\");
-				path=path.replaceAll("\\+", "\\");
+				path=path.replaceAll("\\\\+", "\\\\");
 			}
 			if(path.contains(" "))
 			{
@@ -97,7 +97,7 @@ public class Helper {
 		}
     	return path;
     }
-    
+
     /***
      * remove last separator of path if it has.
      * @param path
