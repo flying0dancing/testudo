@@ -74,7 +74,7 @@ public class ARPPack implements IComFolder {
 		logger.info("================= import metadata into DPM =================");
 		for(String pathTmp:csvPaths)
 		{
-			List<String> realCsvFullPathsTmp=FileUtil.getFilesByFilter(csvParentPath+System.getProperty("file.separator")+pathTmp,null);
+			List<String> realCsvFullPathsTmp=FileUtil.getFilesByFilter(Helper.reviseFilePath(csvParentPath+System.getProperty("file.separator")+pathTmp),null);
 			if(realCsvFullPathsTmp.size()<=0)
 			{
 				logger.error("error: invalid path ["+csvParentPath+System.getProperty("file.separator")+pathTmp+"]");

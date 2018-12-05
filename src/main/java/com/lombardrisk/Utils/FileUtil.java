@@ -237,7 +237,6 @@ public class FileUtil extends FileUtils{
 			if(parentPath.isDirectory())
 			{
 				File[] files=filterFilesAndSubFolders(parentPath,fileName,exfilterStr);
-				
 				for(File file:files)
 				{listFilesByFilter(file.getAbsolutePath(),fileName,exfilterStr,filePaths);}
 				
@@ -256,16 +255,15 @@ public class FileUtil extends FileUtils{
 			@Override
 			public boolean accept(File dir, String name) {
 				boolean flag=true;
-				name=name.toLowerCase();
 				if(new File(dir,name).isDirectory() && !name.startsWith(".")){
 					return flag;
 				}
 				for(String filter:fileters)
 				{
-					if(StringUtils.isNotBlank(filter) && !name.contains(filter)) {
+					if(StringUtils.isNotBlank(filter) && !name.toLowerCase().contains(filter)) {
 						flag=false;
 						break;
-						}
+					}
 				}
 				if(flag){
 					Boolean exflag=false;
@@ -274,7 +272,7 @@ public class FileUtil extends FileUtils{
 							exflag=true;
 							String[] subfilters=exfilter.split("\\*");
 							for(String subexfilter:subfilters){
-								if(StringUtils.isNotBlank(subexfilter) && !name.contains(subexfilter)){
+								if(StringUtils.isNotBlank(subexfilter) && !name.toLowerCase().contains(subexfilter)){
 									exflag=false;
 									break;
 								}
