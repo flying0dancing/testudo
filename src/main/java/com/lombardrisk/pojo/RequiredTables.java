@@ -11,6 +11,7 @@ public class RequiredTables {
 	private static final Logger logger = LoggerFactory.getLogger(RequiredTables.class);
 	private List<String> singles;
 	private List<String> dividedByReturnIds;
+	private List<String> excludeReturnIds;
 	private String notes;
 	
 	public List<String> getSingles() {
@@ -41,5 +42,11 @@ public class RequiredTables {
 			logger.error(e.getMessage());
 			return "";
 		}
+	}
+	public List<String> getExcludeReturnIds() {
+		return excludeReturnIds;
+	}
+	public void setExcludeReturnIds(List<String> excludeReturnIds) {
+		this.excludeReturnIds = excludeReturnIds;
 	}
 }

@@ -101,15 +101,15 @@ public class Testudo implements IComFolder
 		if(dbAndTables!=null && dbAndTables.size()>0){
 			DBAndTables dbAndTable=dbAndTables.get(0);
 			DBInfo db=new DBInfo(dbAndTable.getDatabaseServer());
-			db.exportToDivides(arSetting.getPrefix(),dbAndTable.getRequiredTables().getDividedByReturnIds(),arSetting.getMetadataPath(),arSetting.getMetadataStruct());
-			db.exportToSingle(arSetting.getPrefix(),dbAndTable.getRequiredTables().getSingles(),arSetting.getMetadataPath(),arSetting.getMetadataStruct());
+			db.exportToDivides(arSetting.getPrefix(),dbAndTable.getRequiredTables().getDividedByReturnIds(),arSetting.getMetadataPath(),arSetting.getMetadataStruct(),dbAndTable.getRequiredTables().getExcludeReturnIds());
+			db.exportToSingle(arSetting.getPrefix(),dbAndTable.getRequiredTables().getSingles(),arSetting.getMetadataPath(),arSetting.getMetadataStruct(),dbAndTable.getRequiredTables().getExcludeReturnIds());
 			
 			for(int i=1;i<dbAndTables.size();i++){
 				dbAndTable=dbAndTables.get(i);
 				db=new DBInfo(dbAndTable.getDatabaseServer());
 				String idOfDBAndTable="#"+dbAndTable.getID();
-				db.exportToDivides1(arSetting.getPrefix(),dbAndTable.getRequiredTables().getDividedByReturnIds(),arSetting.getMetadataPath(),arSetting.getMetadataStruct(),idOfDBAndTable);
-				db.exportToSingle1(arSetting.getPrefix(),dbAndTable.getRequiredTables().getSingles(),arSetting.getMetadataPath(),arSetting.getMetadataStruct(),idOfDBAndTable);
+				db.exportToDivides1(arSetting.getPrefix(),dbAndTable.getRequiredTables().getDividedByReturnIds(),arSetting.getMetadataPath(),arSetting.getMetadataStruct(),dbAndTable.getRequiredTables().getExcludeReturnIds(),idOfDBAndTable);
+				db.exportToSingle1(arSetting.getPrefix(),dbAndTable.getRequiredTables().getSingles(),arSetting.getMetadataPath(),arSetting.getMetadataStruct(),dbAndTable.getRequiredTables().getExcludeReturnIds(),idOfDBAndTable);
 				
 			}
 		}

@@ -102,6 +102,9 @@ public class ARPPack implements IComFolder {
 					/*String[] commons={"cscript",PropHelper.SCRIPT_GEN_DPM, Helper.reviseFilePath(schemaFullName), Helper.reviseFilePath(dbFullPath), Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(PropHelper.SCRIPT_PATH+"/log/GenerateProductDPM.log"), tableName};
 					Helper.runCmdCommand(commons);*/
 					tableNameWithDB=tableNameWithDB.replace(name_returnId, "");
+					if(name_returnId.equals("") && tableNameWithDB.contains("_")){
+						tableName=tableNameWithDB.split("#")[0];
+					}
 					Boolean flag=dbInfo.importCsvToAccess(tableName,tableNameWithDB, Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(schemaFullName));
 					if(!flag){
 						logger.error("import csv["+pathTmp2+"] to "+tableName+" fail.");

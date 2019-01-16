@@ -76,13 +76,13 @@ public class DBInfo {
 	 * @param exportPath 
 	 * @param iNIName 
 	 */
-	public void exportToSingle(String prefix,List<String> tableList,String exportPath,String iNIName)
+	public void exportToSingle(String prefix,List<String> tableList,String exportPath,String iNIName,List<String> excludeReturnIds)
 	{
 		if(StringUtils.isBlank(exportPath)) return;
 		if(tableList==null || tableList.size()<=0) return;
 		if(StringUtils.isBlank(prefix)){prefix="";}
 		//else{prefix=prefix.toLowerCase();}
-		
+		String sqlCondition=combineSqlCondition(excludeReturnIds);
 		logger.info("================= export single tables =================");
 		for(String tab:tableList)
 		{
@@ -105,9 +105,11 @@ public class DBInfo {
 				}
 				logger.info("export metadata struct to "+iNIName);
 				
-				SQL="select * from \""+tableName+"\"";// 
+				
 				if(getDbDriverFlag()==DBDriverType.SQLSERVER || getDbDriverFlag()==DBDriverType.ACCESSDB){
-					SQL="select * from "+tableName;
+					SQL="select * from "+tableName+judgeReturnIdExist(tableName,sqlCondition);
+				}else{
+					SQL="select * from \""+tableName+"\""+judgeReturnIdExist(tableName,sqlCondition);// 
 				}
 				dbHelper.exportToINI(tab,SQL, new File(exportPath).getPath()+System.getProperty("file.separator")+iNIName);
 				logger.info("metadata exports to:"+tab+".csv");
@@ -131,13 +133,13 @@ public class DBInfo {
 	 * @param iNIName 
 	 * @param idOfDBAndTable this value starts with "#", following databaseServerAndTables's ID
 	 */
-	public void exportToSingle1(String prefix,List<String> tableList,String exportPath,String iNIName,String idOfDBAndTable)
+	public void exportToSingle1(String prefix,List<String> tableList,String exportPath,String iNIName,List<String> excludeReturnIds,String idOfDBAndTable)
 	{
 		if(StringUtils.isBlank(exportPath)) return;
 		if(tableList==null || tableList.size()<=0) return;
 		if(StringUtils.isBlank(prefix)){prefix="";}
 		//else{prefix=prefix.toLowerCase();}
-		
+		String sqlCondition=combineSqlCondition(excludeReturnIds);
 		logger.info("================= export single tables =================");
 		for(String tab:tableList)
 		{
@@ -159,9 +161,11 @@ public class DBInfo {
 				}
 				logger.info("export metadata struct to "+iNIName);
 				
-				SQL="select * from \""+tableName+"\"";// 
+				 
 				if(getDbDriverFlag()==DBDriverType.SQLSERVER || getDbDriverFlag()==DBDriverType.ACCESSDB){
-					SQL="select * from "+tableName;
+					SQL="select * from "+tableName+judgeReturnIdExist(tableName,sqlCondition);
+				}else{
+					SQL="select * from \""+tableName+"\""+judgeReturnIdExist(tableName,sqlCondition);//
 				}
 				dbHelper.exportToINI(tab+idOfDBAndTable,SQL, new File(exportPath).getPath()+System.getProperty("file.separator")+iNIName);
 				logger.info("metadata exports to:"+tab+idOfDBAndTable+".csv");
@@ -176,7 +180,43 @@ public class DBInfo {
 		dbHelper.close();
 	}
 	
+	public String judgeReturnIdExist(String tableName,String sqlCondition){
+		String exist=null;
+		String SQL="";
+		if(getDbDriverFlag()==DBDriverType.ORACLE){
+			SQL="select column_name from user_tab_cols where table_name='"+tableName+"' and column_name='ReturnId'";
+			exist=queryRecord(SQL);
+		}else if(getDbDriverFlag()==DBDriverType.SQLSERVER){
+			SQL="select b.name from sysobjects a, syscolumns b where a.xtype='u' and a.id=b.id and a.name='"+tableName+"' and b.name='ReturnId'";
+			exist=queryRecord(SQL);
+		}else if(getDbDriverFlag()==DBDriverType.ACCESSDB){
+			SQL="SELECT * FROM "+tableName+" where false";
+			if(getDbHelper().existColumn(SQL,"ReturnId")){
+				exist="ReturnId";
+			}
+		}
+		
+		if(StringUtils.isBlank(exist)){
+			sqlCondition="";
+		}
+		return sqlCondition;
+	}
 	
+	
+	public String combineSqlCondition(List<String> excludeReturnIds){
+		String sqlCondition="";
+		if(excludeReturnIds!=null && excludeReturnIds.size()>0){
+			sqlCondition=" where \"ReturnId\" not in (";
+			if(getDbDriverFlag()==DBDriverType.ACCESSDB){
+				sqlCondition=" where CStr(ReturnId) not in ("; 
+			}
+			for(int i=0;i<excludeReturnIds.size();i++){
+				sqlCondition=sqlCondition+"'"+excludeReturnIds.get(i)+"',";
+			}
+			sqlCondition=sqlCondition.replaceAll(",$", ")");
+		}
+		return sqlCondition;
+	}
 	/***
 	 * export data in database into *.csv files divided by field ReturnId
 	 * @param prefix product prefix, use to replace # defined in tableList
@@ -184,12 +224,13 @@ public class DBInfo {
 	 * @param exportPath 
 	 * @param iNIName 
 	 */
-	public void exportToDivides(String prefix,List<String> tableList,String exportPath,String iNIName)
+	public void exportToDivides(String prefix,List<String> tableList,String exportPath,String iNIName,List<String> excludeReturnIds)
 	{
 		//Boolean flag=false;
 		if(StringUtils.isBlank(exportPath)) return;
 		if(tableList==null || tableList.size()<=0) return;
 		if(StringUtils.isBlank(prefix)){prefix="";}
+		String sqlCondition=combineSqlCondition(excludeReturnIds);
 		
 		logger.info("================= export tables need to be divided by ReturnId =================");
 		for(String tab:tableList)
@@ -213,11 +254,11 @@ public class DBInfo {
 					SQL="select top 1 * from "+tableName;
 				}
 				dbHelper.exportToINI(tab,SQL, new File(exportPath).getPath()+System.getProperty("file.separator")+iNIName);
-				SQL="select unique \"ReturnId\" from \""+tableName+"\"";
+				SQL="select unique \"ReturnId\" from \""+tableName+"\""+sqlCondition;
 				if(getDbDriverFlag()==DBDriverType.SQLSERVER){
-					SQL="select distinct \"ReturnId\" from \""+tableName+"\"";
+					SQL="select distinct \"ReturnId\" from \""+tableName+"\""+sqlCondition;
 				}else if(getDbDriverFlag()==DBDriverType.ACCESSDB){
-					SQL="SELECT distinct ReturnId FROM "+tableName;
+					SQL="SELECT distinct ReturnId FROM "+tableName+sqlCondition;
 				}
 				List<String> returnIds=queryRecords(SQL);
 				if(returnIds!=null)
@@ -261,13 +302,13 @@ public class DBInfo {
 	 * @param iNIName 
 	 * @param idOfDBAndTable this value starts with "#", following databaseServerAndTables's ID
 	 */
-	public void exportToDivides1(String prefix,List<String> tableList,String exportPath,String iNIName,String idOfDBAndTable)
+	public void exportToDivides1(String prefix,List<String> tableList,String exportPath,String iNIName,List<String> excludeReturnIds,String idOfDBAndTable)
 	{
 		//Boolean flag=false;
 		if(StringUtils.isBlank(exportPath)) return;
 		if(tableList==null || tableList.size()<=0) return;
 		if(StringUtils.isBlank(prefix)){prefix="";}
-		
+		String sqlCondition=combineSqlCondition(excludeReturnIds);
 		logger.info("================= export tables need to be divided by ReturnId =================");
 		for(String tab:tableList)
 		{
@@ -290,11 +331,11 @@ public class DBInfo {
 					SQL="select top 1 * from "+tableName;
 				}
 				dbHelper.exportToINI(tab+idOfDBAndTable,SQL, new File(exportPath).getPath()+System.getProperty("file.separator")+iNIName);
-				SQL="select unique \"ReturnId\" from \""+tableName+"\"";
+				SQL="select unique \"ReturnId\" from \""+tableName+"\""+sqlCondition;
 				if(getDbDriverFlag()==DBDriverType.SQLSERVER){
-					SQL="select distinct \"ReturnId\" from \""+tableName+"\"";
+					SQL="select distinct \"ReturnId\" from \""+tableName+"\""+sqlCondition;
 				}else if(getDbDriverFlag()==DBDriverType.ACCESSDB){
-					SQL="SELECT distinct ReturnId FROM "+tableName;
+					SQL="SELECT distinct ReturnId FROM "+tableName+sqlCondition;
 				}
 				List<String> returnIds=queryRecords(SQL);
 				if(returnIds!=null)

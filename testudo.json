@@ -14,6 +14,7 @@
 	"requiredTables": {
     "singles": [ "#FormVars", "#Instances", "#InstanceSets",  "#RefReturns",  "#Rets"   ],
     "dividedByReturnIds": [  "#GridKey",   "#GridRef" ],
+    "excludeReturnIds":["360012","360023"],
     "notes": "# means prefix"
  	}
   }

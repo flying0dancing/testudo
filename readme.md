@@ -65,6 +65,7 @@ json instruction
      "dividedByReturnIds": [ "#GridKey","#GridRef", "#Ref", "#Sums","#Vals","#XVals", "#XVals", 
      		"items will be exported to meta-data folder and divided by returnId, their exported files' name is table name(without #) with returnId like List_440001.csv",
      ],
+     "excludeReturnIds":["360012","360023","list which returnId will be excluded"],
      "notes": "[optional] # means product prefix, "
    }
   },
@@ -114,6 +115,7 @@ json instruction
 	"requiredTables": {
     "singles": [ "#FormVars", "#Instances", "#InstanceSets",  "#RefReturns",  "#Rets"   ],
     "dividedByReturnIds": [  "#GridKey",   "#GridRef" ],
+    "excludeReturnIds":["360012","360023"],
     "notes": "# means prefix"
  	}
   }
@@ -151,6 +153,7 @@ json instruction
 	"requiredTables": {
      "singles": [ "#FormVars", "#Instances", "#InstanceSets",  "#RefReturns",  "#Rets"   ],
      "dividedByReturnIds": [  "#GridKey",   "#GridRef" ],
+     "excludeReturnIds":["360012","360023"],
      "notes": "# means prefix"
  	}
   },
