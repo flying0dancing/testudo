@@ -1,6 +1,7 @@
 package com.lombardrisk.Utils;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -8,14 +9,17 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.lombardrisk.IComFolder;
 import com.lombardrisk.pojo.DatabaseServer;
+import com.lombardrisk.pojo.TableProps;
 
 
-public class DBInfo {
+public class DBInfo  implements IComFolder{
 	private final static Logger logger = LoggerFactory.getLogger(DBInfo.class);
 	private DBHelper dbHelper;
 	private DBDriverType dbDriverFlag;
 	public enum DBDriverType{ORACLE,SQLSERVER,ACCESSDB;}
+	private static Map<String,List<TableProps>> dbTableColumns=new HashMap<String,List<TableProps>>();
 	
 	public DBInfo(DatabaseServer databaseServer){
 		setDbHelper(databaseServer);
@@ -472,22 +476,34 @@ public class DBInfo {
 		if(dbHelper.getDatabaseServer().getDriver().startsWith("access"))
 		{
 			dbHelper.connect();
-			flag=FileUtil.search(schemaFullName, "["+tableNameWithDB+"]");
-			if(flag)
+			String userSchemaFullName=schemaFullName.replace(FileUtil.getFileNameWithSuffix(schemaFullName), ACCESS_SCHEMA_INI);
+			List<TableProps> columns=null;
+			columns=findDbTableColumns(tableName);
+			if(columns==null){
+				flag=FileUtil.search(userSchemaFullName,"["+tableName+"]");
+				if(flag){
+					columns=FileUtil.getMixedTablesDefinition(FileUtil.searchTablesDefinition(userSchemaFullName, tableName));
+					setDbTableColumns(tableName,columns);
+				}else{
+					flag=FileUtil.search(schemaFullName, "["+tableNameWithDB+"]");
+					//List<String> columns=FileUtil.searchTableDefinition(schemaFullName,tableNameWithDB);
+					//List<String> columns=FileUtil.getMaxTablesDefinition(FileUtil.searchTablesDefinitionold(schemaFullName, tableName));
+					columns=FileUtil.getMixedTablesDefinition(FileUtil.searchTablesDefinition(schemaFullName, tableName));
+					setDbTableColumns(tableName,columns);
+				}
+			}
+			if(columns!=null && columns.size()>0)
 			{
-				//List<String> columns=FileUtil.searchTableDefinition(schemaFullName,tableNameWithDB);
+				DBHelper.AccessdbHelper accdb=dbHelper.new AccessdbHelper();
 				
-				List<String> columns=FileUtil.getMaxTablesDefinition(FileUtil.searchTablesDefinition(schemaFullName, tableName));
-				if(columns!=null && columns.size()>0)
-				{
-					DBHelper.AccessdbHelper accdb=dbHelper.new AccessdbHelper();
+				flag=accdb.createAccessDBTab(tableName, columns);
+				if(flag){
+					flag=accdb.importCsvToAccessDB(tableName,columns,csvPath);
 					
-					flag=accdb.createAccessDBTable(tableName, columns);
-					if(flag){
-						flag=accdb.importCsvToAccessDB(tableName,csvPath);
-						
-					}else{logger.error("error: fail to create table ["+tableName+"]");}
-				}else{logger.error("error: invalid table definition ["+tableName+"]");}
+				}else{logger.error("error: fail to create table ["+tableName+"]");}
+			}else{
+				logger.error("error: invalid table definition ["+tableName+"]");
+				flag=false;
 			}
 			
 			dbHelper.close();
@@ -506,6 +522,24 @@ public class DBInfo {
 	public void setDbDriverFlag(DBDriverType dbDriverFlag) {
 		this.dbDriverFlag = dbDriverFlag;
 	}
+
+	public static Map<String,List<TableProps>> getDbTableColumns() {
+		return dbTableColumns;
+	}
+
+	public static void setDbTableColumns(String tableName,List<TableProps> columns) {
+		DBInfo.dbTableColumns.put(tableName, columns);
+	}
 	
+	public static List<TableProps> findDbTableColumns(String tableName){
+		if(! DBInfo.dbTableColumns.isEmpty()){
+			for(String key:DBInfo.dbTableColumns.keySet()){
+				if(key.equals(tableName)){
+					return DBInfo.dbTableColumns.get(key);
+				}
+			}
+		}
+		return null;
+	}
 
 }

@@ -22,6 +22,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.lombardrisk.IComFolder;
+import com.lombardrisk.pojo.TableProps;
+
 
 public class FileUtil extends FileUtils{
 
@@ -392,11 +395,13 @@ public class FileUtil extends FileUtils{
 	
 	/**
 	 * return table's definition in a INI file
+	 * use other searchTablesDefinition method.
 	 * @param fileFullName
 	 * @param tableName
 	 * @return
 	 */
-	public static List<List<String>> searchTablesDefinition(String fileFullName,String tableName)
+	@Deprecated
+	public static List<List<String>> searchTablesDefinitionold(String fileFullName,String tableName)
 	{
 		List<List<String>> tablesDefinition=null;
 		List<String> tableDefinition=null;
@@ -417,6 +422,51 @@ public class FileUtil extends FileUtils{
 							tableDefinition.add(line);
 						}
 						tablesDefinition.add(tableDefinition);
+					}
+				}
+				bufReader.close();
+			}
+		}catch(Exception e){
+			logger.error(e.getMessage(),e);
+		}
+		return tablesDefinition;
+	}
+	/**
+	 * return table's definition in a INI file
+	 * @param fileFullName
+	 * @param tableName
+	 * @return
+	 */
+	public static List<List<TableProps>> searchTablesDefinition(String fileFullName,String tableName)
+	{
+		List<List<TableProps>> tablesDefinition=null;
+		List<TableProps> tableColumns=null;
+		BufferedReader bufReader=null;
+		try{
+			if(StringUtils.isNoneBlank(fileFullName,tableName)){
+				tablesDefinition=new ArrayList<List<TableProps>>();
+				bufReader=new BufferedReader(new FileReader(fileFullName));
+				String line=null;
+				String[] strArr=null;
+				while((line=bufReader.readLine())!=null){
+					if(StringUtils.equalsIgnoreCase(line, "["+tableName+"]") || StringUtils.startsWithIgnoreCase(line, "["+tableName+"#")){
+						tableColumns=new ArrayList<TableProps>();
+						while((line=bufReader.readLine())!=null)
+						{
+							if(StringUtils.isBlank(line))continue;
+							if(line.contains("[")){	break;}
+							//tableColumns.add(line);//
+							strArr=line.split("\\=| ");
+							if(strArr.length==3){
+								tableColumns.add(new TableProps(strArr[1],strArr[2]," NOT NULL",strArr[0]));
+							}else if(strArr.length==4){//strArr.length==4
+								tableColumns.add(new TableProps(strArr[1],strArr[2],"",strArr[0]));
+							}else{
+								logger.warn("please check the column definition: "+line);
+							}
+							
+						}
+						tablesDefinition.add(tableColumns);
 					}
 				}
 				bufReader.close();
@@ -450,6 +500,35 @@ public class FileUtil extends FileUtils{
 			
 		}
 		return tableDefinition;
+	}
+	/**
+	 * get mixed columns from all same table's table definition
+	 * @param tablesDefinition
+	 * @return
+	 */
+	public static List<TableProps> getMixedTablesDefinition(List<List<TableProps>> tablesDefinition){
+		List<TableProps> tableColumns=null;
+		if(tablesDefinition!=null && tablesDefinition.size()>0){
+			List<String> columnNames=new ArrayList<String>();
+			tableColumns=tablesDefinition.get(0);//get first table's columns
+			
+			TableProps tableProps=null;
+			//get first table columns' name
+			for(int i=0;i<tableColumns.size();i++){
+				columnNames.add(tableColumns.get(i).getName());
+			}
+			for(int index=1;index<tablesDefinition.size();index++){
+				for(int col=0;col<tablesDefinition.get(index).size();col++){
+					tableProps=tablesDefinition.get(index).get(col);
+					if(!columnNames.contains(tableProps.getName())){
+						columnNames.add(tableProps.getName());
+						tableColumns.add(tableProps);
+					}
+				}
+			}
+			
+		}
+		return tableColumns;
 	}
 	/**
 	 * if a file contains tableName, case insensitive, it will rewrite this table's definition at the end.

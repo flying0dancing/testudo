@@ -15,10 +15,17 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.dbutils.DbUtils;
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.lang3.StringUtils;
@@ -32,9 +39,11 @@ import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.util.ImportUtil;
 import com.healthmarketscience.jackcess.util.ImportUtil.Builder;
 import com.lombardrisk.pojo.DatabaseServer;
+import com.lombardrisk.pojo.TableProps;
 
 public class DBHelper {
 
@@ -363,8 +372,6 @@ public class DBHelper {
 					break;
 				}
 			}
-			
-
 		}catch(SQLException e)
 		{
 			logger.error("error: SQLException in [" + sql + "]");
@@ -476,7 +483,7 @@ public class DBHelper {
 		try {
 			getConn().setAutoCommit(false);
 			Statement statement=getConn().createStatement();
-			if(sql.toLowerCase().startsWith("update")){
+			if(sql.toLowerCase().startsWith("update") || sql.toLowerCase().contains("alter") || (sql.toLowerCase().contains("create") && sql.toLowerCase().contains("select"))){
 				statement.executeUpdate(sql);
 			}else{
 				statement.execute(sql);
@@ -558,9 +565,162 @@ public class DBHelper {
 			
 			return flag;
 		}
-		
+		private List<String> getIntersectNames(List<String> dbTabHeaders, List<String> csvHeaders){
+			List<String> intersectNames=null;
+			if(dbTabHeaders!=null && dbTabHeaders.size()>0 && csvHeaders!=null && csvHeaders.size()>0){
+				intersectNames=new ArrayList<String>();
+				List<String> largerOne=dbTabHeaders;
+				List<String> smallOne=csvHeaders;
+				if(dbTabHeaders.size()<csvHeaders.size()){
+					largerOne=csvHeaders;
+					smallOne=dbTabHeaders;
+				}
+				for(int i=0;i<smallOne.size();i++){
+					if(largerOne.contains(smallOne.get(i))){
+						intersectNames.add(smallOne.get(i));
+					}
+				}
+			}
+			return intersectNames;
+		}
+		private List<String> getIntersectNames(Set<String> dbTabHeaders, Set<String> csvHeaders){
+			List<String> intersectNames=null;
+			if(dbTabHeaders!=null && dbTabHeaders.size()>0 && csvHeaders!=null && csvHeaders.size()>0){
+				intersectNames=new ArrayList<String>();
+				Set<String> largerOne=dbTabHeaders;
+				Set<String> smallOne=csvHeaders;
+				if(dbTabHeaders.size()<csvHeaders.size()){
+					largerOne=csvHeaders;
+					smallOne=dbTabHeaders;
+				}
+				for(String small:smallOne){
+					if(largerOne.contains(small)){
+						intersectNames.add(small);
+					}
+				}
+			}
+			
+			return intersectNames;
+		}
 		
 		/**
+		 * import csv to access table
+		 * @param tableName
+		 * @param importCsvFullName
+		 * @return
+		 */
+		@SuppressWarnings("unchecked")
+		public Boolean importCsvToAccessDB(String tableName,List<TableProps> columns,String importCsvFullName)
+		{
+			Boolean flag=false;
+			try {
+				String dbFullName=getDatabaseServer().getSchema();
+				Database db=DatabaseBuilder.open(new File(dbFullName));
+				Builder builder=new ImportUtil.Builder(db, tableName);
+				if(db.getTable(tableName)!=null)
+				{
+					/*List<ColumnImpl> dbTableColumns=(List<ColumnImpl>) db.getTable(tableName).getColumns();
+					for(int i=0;i<dbTableColumns.size();i++){
+						
+					}*/
+					db.close();
+					logger.debug("accessdb table["+tableName+"] already exists.");
+					List<String> dbTableColumns=new ArrayList<String>();
+					Map<String,String> columnsDefs=new HashMap<String,String>(); // key: columns's name, value: column's type
+					String type;
+					for(int j=0;j<columns.size();j++){
+						dbTableColumns.add(columns.get(j).getName());
+						type=columns.get(j).getTypeSize();
+						if(type.contains("(")){
+							type=type.substring(0,type.indexOf("("));
+						}
+						columnsDefs.put(columns.get(j).getName(), type);
+					}
+					//TODO
+					if(StringUtils.isNoneBlank(importCsvFullName,tableName)){
+						//
+						Reader in = new FileReader(importCsvFullName);
+						CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().parse(in);
+						List<String> finalHeaders=getIntersectNames(dbTableColumns,new ArrayList<String>(parser.getHeaderMap().keySet()));
+						if(finalHeaders==null || finalHeaders.size()==0){
+							return flag;
+						}
+						int lineno=1;
+						String header="";
+						String line=null;
+						String value=null;
+						String sql;
+						StringBuffer lineBuffer=new StringBuffer();
+						String regex="((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?)";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
+						header="insert into ["+tableName+"] (";
+						for(int i=0;i<finalHeaders.size();i++){
+							header=header+" ["+finalHeaders.get(i)+"],";
+						}
+						header=header.replaceAll(",$", " ) values "); // like insert into [InstanceSets] ([InstSetId],[InstSetName] ) values 
+						List<String> strTypes=new ArrayList<String>(Arrays.asList("MEMO","LONGTEXT","VARCHAR"));
+						List<CSVRecord> records=parser.getRecords();
+						for(CSVRecord record : records){
+							line="(";
+							for(int i=0;i<finalHeaders.size();i++){
+								value=record.get(finalHeaders.get(i));
+								type=columnsDefs.get(finalHeaders.get(i)).toUpperCase();
+								if(StringUtils.isBlank(value)){
+									value="null";
+								}else if(strTypes.contains(type) && value.startsWith("\"")){
+									value="\"\""+value+"\"\"";
+								}else if(strTypes.contains(type) && !value.startsWith("\"")){
+									value=value.replaceAll("(\")", "\"$1");// some values are contains ", changed to ""
+									value="\""+value+"\"";//adding "
+								}else if(type.startsWith("DATE")){
+									value=value.replaceAll(regex, "#$2#");
+								}
+								line=line+value+",";
+							}
+							line=line.replaceAll(",$", ")");
+							lineBuffer.append(line+",");
+							if(lineno%200==0){
+								sql=header+lineBuffer.substring(0, lineBuffer.length()-1);
+								lineBuffer.setLength(0);//clear
+								logger.debug(sql);
+								flag=addBatch(sql);
+								if(!flag){logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");break;}
+							}
+							lineno++;
+						}
+						parser.close();
+						if(lineBuffer.length()>0){
+							sql=header+lineBuffer.substring(0, lineBuffer.length()-1);
+							logger.debug(sql);
+							flag=addBatch(sql);
+							if(!flag){
+								if(lineno>=100){
+									logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");
+								}else{
+									logger.error("fail to import data into:"+tableName+" ( 0-"+lineno+" )");
+								}
+							}
+						}
+						if(lineno==1){
+							flag=true;
+						}
+						
+					}
+						
+				}else{
+					logger.warn("accessdb table["+tableName+"] doesn't exist, import csv directly.");
+					builder.setUseExistingTable(false);
+					builder.setDelimiter(",").setHeader(true).importReader(new BufferedReader(new FileReader(new File(importCsvFullName))));
+					flag=true;
+					db.close();
+				}
+				
+			} catch (IOException e) {
+				logger.error(e.getMessage(),e);
+			}
+			return flag;
+		}
+		/**
+		 * Deprecated
 		 * import csv to access table
 		 * @param tableName
 		 * @param importCsvFullName
@@ -626,8 +786,6 @@ public class DBHelper {
 					flag=true;
 					db.close();
 				}
-				
-				
 				
 			} catch (IOException e) {
 				logger.error(e.getMessage(),e);
@@ -735,6 +893,7 @@ public class DBHelper {
 		 * @param tableDefinition
 		 * @return
 		 */
+		@Deprecated
 		public Boolean createAccessDBTable(String tableName,List<String> tableDefinition)
 		{
 			Boolean flag=false;
@@ -773,6 +932,41 @@ public class DBHelper {
 			return flag;
 		}
 		
+		/**
+		 * create access table
+		 * @param tableName
+		 * @param tableDefinition
+		 * @return
+		 */
+		public Boolean createAccessDBTab(String tableName,List<TableProps> tableDefinition)
+		{
+			Boolean flag=false;
+			try {
+				flag=accessTableExistence(tableName);
+				if(flag){
+					return flag;
+				}
+				//generate sql statement
+				StringBuilder sqlBuilder=new StringBuilder("CREATE TABLE ["+tableName+"] (");
+				for(TableProps props:tableDefinition){
+					if(props.getTypeSize().equalsIgnoreCase("LONGTEXT")){
+						props.setTypeSize("MEMO");
+					}else if(props.getTypeSize().equalsIgnoreCase("BOOLEAN")){
+						props.setTypeSize("YESNO");//Optional
+					}else if(props.getTypeSize().equalsIgnoreCase("DATE")){
+						props.setTypeSize("DATETIME");
+					}else if(props.getTypeSize().equalsIgnoreCase("DECIMAL")){
+						props.setTypeSize("NUMERIC");
+					}
+					sqlBuilder.append("["+props.getName()+"] "+props.getTypeSize()+props.getNullable()+",");
+				}
+				String sql=sqlBuilder.deleteCharAt(sqlBuilder.length()-1).append(")").toString();
+				flag=addBatch(sql);//create table
+			} catch (Exception e) {
+				logger.error(e.getMessage(),e);
+			} 
+			return flag;
+		}
 		
 
 		private int convertTypeStrToInt_AccessDB(String type)

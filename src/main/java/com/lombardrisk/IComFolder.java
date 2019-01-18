@@ -44,5 +44,8 @@ public interface IComFolder {
 	String PACKAGE_SUFFIX=".zip";
 	String PACKAGE_LRM_SUFFIX=".lrm";
 	
+	//user-defined, access database's table schema name
+	String ACCESS_SCHEMA_INI="ACCESS_FORM_META.ini";
+	
 
 }

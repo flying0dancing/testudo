@@ -166,7 +166,7 @@ public class ARPPack implements IComFolder {
 				String[] sqlStatements=fileContent.split(";");
 				for(String sql:sqlStatements){
 					if(StringUtils.isNotBlank(sql)){
-						logger.info("execute sql:"+sql);
+						logger.info("execute sql:"+sql.trim());
 						Boolean status=dbInfo.executeSQL(sql.trim());
 						if(!status){
 							logger.error("execute failed.");

@@ -176,7 +176,7 @@ json instruction
       "GridRef\\009.csv",
       "Rets"
     ],
-    "sqlFiles":["sqls/test1.sql","sqls/test2.sql"],
+    "sqlFiles":["test.sql"],
     "zipFiles": [
       "manifest.xml",
       "transforms",
