@@ -32,14 +32,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.ColumnBuilder;
+import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
-import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
-import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.util.ImportUtil;
 import com.healthmarketscience.jackcess.util.ImportUtil.Builder;
 import com.lombardrisk.pojo.DatabaseServer;
@@ -478,23 +476,37 @@ public class DBHelper {
 	}
 	
 	public Boolean addBatch(String sql){
+		Boolean flag=false;
 		if (getConn() == null)
-			return false;
+			return flag;
 		try {
 			getConn().setAutoCommit(false);
 			Statement statement=getConn().createStatement();
-			if(sql.toLowerCase().startsWith("update") || sql.toLowerCase().contains("alter") || (sql.toLowerCase().contains("create") && sql.toLowerCase().contains("select"))){
+			String sqlLow=sql.trim().toLowerCase().replaceAll("(\\s)+", "$1");
+			if(sqlLow.startsWith("update") || sqlLow.startsWith("alter") || (sqlLow.contains("create") && sqlLow.contains("select") && sqlLow.contains("with"))){
 				statement.executeUpdate(sql);
+				flag=true;
+			}else if(sqlLow.startsWith("drop")){
+				String tableName="";
+				String regexDROP="DROP\\s+TABLE\\s+\\[?(\\w+)\\]?";
+				Pattern pattern=Pattern.compile(regexDROP,Pattern.CASE_INSENSITIVE);
+				Matcher match=pattern.matcher(sql);
+				if(match.find()){
+					tableName=match.group(1);
+				}
+				DBHelper.AccessdbHelper accessDBH=this.new AccessdbHelper();
+				flag=accessDBH.deleteAccessDBTable(tableName);
 			}else{
-				statement.execute(sql);
+				statement.execute(sql);//result false is not quite sure
+				flag=true;
 			}
 			getConn().commit();
-			return true;
 		} catch (SQLException e) {
 			logger.error("SQLException in [" + sql + "]");
 			logger.error(e.getMessage(),e);
-			return false;
+			flag=false;
 		}
+		return flag;
 	}
 	/**
 	 * Execute an SQL INSERT, UPDATE, or DELETE query without replacement parameters
@@ -968,6 +980,33 @@ public class DBHelper {
 			return flag;
 		}
 		
+		public Boolean deleteAccessDBTable(String tableName){
+			Boolean flag=false;
+			if(StringUtils.isBlank(tableName)){
+				logger.info("table name is blank, please check sql syntax.");
+				return flag;
+			}
+			try{
+				String dbFullName=getDatabaseServer().getSchema();
+				Database db=DatabaseBuilder.open(new File(dbFullName));
+				Table sysTable=db.getSystemTable("MSysObjects");
+				Cursor sysCursor=sysTable.getDefaultCursor();
+				Map<String,Object> findCriteria=new HashMap<String,Object>();
+				findCriteria.put("Name", tableName);
+				findCriteria.put("Type", (short)1);
+				
+				if(sysCursor.findFirstRow(findCriteria)){
+					sysTable.deleteRow(sysCursor.getCurrentRow());
+					flag=true;
+				}else{
+					logger.info("table name ["+tableName+"] doesn't exist.");
+				}
+				db.close();
+			}catch(Exception e){
+				logger.error(e.getMessage(),e);
+			}
+			return flag;
+		}
 
 		private int convertTypeStrToInt_AccessDB(String type)
 		{
