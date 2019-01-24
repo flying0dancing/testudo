@@ -36,6 +36,7 @@ import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
+import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.util.ImportUtil;
@@ -483,9 +484,21 @@ public class DBHelper {
 			getConn().setAutoCommit(false);
 			Statement statement=getConn().createStatement();
 			String sqlLow=sql.trim().toLowerCase().replaceAll("(\\s)+", "$1");
-			if(sqlLow.startsWith("update") || sqlLow.startsWith("alter") || (sqlLow.contains("create") && sqlLow.contains("select") && sqlLow.contains("with"))){
+			if(sqlLow.startsWith("update") || (sqlLow.contains("create") && sqlLow.contains("select") && sqlLow.contains("with"))){
 				statement.executeUpdate(sql);
 				flag=true;
+			}else if(sqlLow.startsWith("alter")){
+				String tableName="";
+				String newTableName="";
+				String regexDROP="alter\\s+TABLE\\s+\\[?(\\w+)\\]?\\s+rename\\s+to\\s+\\[?(\\w+)\\]?";
+				Pattern pattern=Pattern.compile(regexDROP,Pattern.CASE_INSENSITIVE);
+				Matcher match=pattern.matcher(sql);
+				if(match.find()){
+					tableName=match.group(1);
+					newTableName=match.group(2);
+				}
+				DBHelper.AccessdbHelper accessDBH=this.new AccessdbHelper();
+				flag=accessDBH.renameAccessDBTable( tableName,newTableName);
 			}else if(sqlLow.startsWith("drop")){
 				String tableName="";
 				String regexDROP="DROP\\s+TABLE\\s+\\[?(\\w+)\\]?";
@@ -678,11 +691,10 @@ public class DBHelper {
 								type=columnsDefs.get(finalHeaders.get(i)).toUpperCase();
 								if(StringUtils.isBlank(value)){
 									value="null";
-								}else if(strTypes.contains(type) && value.startsWith("\"")){
-									value="\"\""+value+"\"\"";
-								}else if(strTypes.contains(type) && !value.startsWith("\"")){
+								}else if(strTypes.contains(type)){
 									value=value.replaceAll("(\")", "\"$1");// some values are contains ", changed to ""
 									value="\""+value+"\"";//adding "
+									//value="\"\""+value+"\"\"";
 								}else if(type.startsWith("DATE")){
 									value=value.replaceAll(regex, "#$2#");
 								}
@@ -1000,6 +1012,33 @@ public class DBHelper {
 					flag=true;
 				}else{
 					logger.info("table name ["+tableName+"] doesn't exist.");
+				}
+				db.close();
+			}catch(Exception e){
+				logger.error(e.getMessage(),e);
+			}
+			return flag;
+		}
+		public Boolean renameAccessDBTable(String tableName,String newTableName){
+			Boolean flag=false;
+			if(StringUtils.isBlank(tableName) || StringUtils.isBlank(newTableName)){
+				logger.info("table name is blank, please check sql syntax.");
+				return flag;
+			}
+			try{
+				String dbFullName=getDatabaseServer().getSchema();
+				Database db=DatabaseBuilder.open(new File(dbFullName));
+				Table sysTable=db.getSystemTable("MSysObjects");
+				Cursor sysCursor=sysTable.getDefaultCursor();
+				Map<String,Object> findCriteria=new HashMap<String,Object>();
+				findCriteria.put("Name", tableName);
+				findCriteria.put("Type", (short)1);
+				
+				if(sysCursor.findFirstRow(findCriteria)){
+					Row row=sysCursor.getCurrentRow();
+					row.put("Name", newTableName);
+					sysTable.updateRow(row);
+					flag=true;
 				}
 				db.close();
 			}catch(Exception e){
