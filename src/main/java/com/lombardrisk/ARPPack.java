@@ -212,6 +212,7 @@ public class ARPPack implements IComFolder {
 		if(StringUtils.isBlank(buildType)){
 			arpbuild=String.valueOf(System.currentTimeMillis());
 		}
+		realFullPaths.addAll(Dom4jUtil.getPathFromElement(sourcePath+MANIFEST_FILE,sourcePath));
 		//modify manifest.xml
 		String packageVersion=Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE, IMP_VERSION, arpbuild);
 		List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+"/"+DPM_PATH+"*"+DPM_FILE_SUFFIX),null);

@@ -3,9 +3,12 @@ package com.lombardrisk.Utils;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
 import java.util.Iterator;
 
 
+
+import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 import org.dom4j.Attribute;
@@ -22,6 +25,91 @@ public class Dom4jUtil {
 	private final static Logger logger = LoggerFactory.getLogger(Dom4jUtil.class);
 	
 	
+	public static List<String> getPathFromElement(String xmlFileStr,String localPath)
+	{ 
+		Document doc =null;
+		List<String> paths=new ArrayList<String>();
+	    try
+	    {
+	    	SAXReader reader=new SAXReader();
+	    	File xmlFile=new File(xmlFileStr);
+	    	Element root=null;
+	    	if(!xmlFile.exists())
+	    	{
+	    		logger.error("error: invalid xml file["+xmlFileStr+"]");
+	    		return paths;
+	        	
+	    	}else
+	    	{
+	    		doc=reader.read(xmlFile);
+	    		root=doc.getRootElement();//list
+	    	}
+	    	String op=System.getProperty("file.separator");
+	    	String formConfig=localPath+getPathFromElement(root, "formConfig","path");//1 level
+	    	String presentationTemplate=formConfig+op+getPathFromElement(root, "presentationTemplate","path"); //1-1 level
+	    	String excelExportTemplate=formConfig+op+getPathFromElement(root, "excelExportTemplate","path");//1-1 level
+	    	String arbitraryExcelExport=formConfig+op+getPathFromElement(root, "arbitraryExcelExport","path");//1-2 level
+	    	String arbitraryExcelExportTemplate=arbitraryExcelExport+op+getPathFromElement(root, "arbitraryExcelExportTemplate","path");//1-2-1 level
+	    	String arbitraryExcelExportDescriptor=arbitraryExcelExport+op+getPathFromElement(root, "arbitraryExcelExportDescriptor","path");//1-2-1 level
+	    	String transforms=localPath+getPathFromElement(root, "transforms","path");//1 level
+	    	
+	    	paths.add(presentationTemplate);
+	    	paths.add(excelExportTemplate);
+	    	paths.add(arbitraryExcelExportTemplate);
+	    	paths.add(arbitraryExcelExportDescriptor);
+	    	paths.add(transforms);
+	    	
+	    }catch(Exception e)
+	    {
+	    	logger.error(e.getMessage(),e);
+	    } 
+	    return paths;
+	}
+	/**
+	 * 1. get attr's value from which element(elementOrAttribute); 2. get first matched elementOrAttribute's text if attr is blank
+	 * @param parentEle
+	 * @param elementOrAttribute
+	 * @param atrr
+	 * @return
+	 */
+	private static String getPathFromElement(Element parentEle,String elementOrAttribute,String atrr)
+	{
+		boolean foundflag=false;
+		String returnValue=null;
+		if(elementOrAttribute.equalsIgnoreCase(parentEle.getName())){
+			foundflag=true;
+			if(StringUtils.isBlank(atrr)){
+				returnValue=parentEle.getTextTrim();
+			}else{
+				returnValue=parentEle.attributeValue(atrr);
+			}
+			return returnValue;
+		}
+		if(!foundflag && StringUtils.isBlank(atrr)){
+			@SuppressWarnings("unchecked")
+			Iterator<Attribute> attr=parentEle.attributeIterator();
+			while(attr.hasNext())
+			{
+				Attribute attrNext= (Attribute)attr.next();
+				if(elementOrAttribute.equalsIgnoreCase(attrNext.getName())){
+					foundflag=true;
+					returnValue=attrNext.getValue();
+					break;
+				}
+			}
+		}
+		if(!foundflag){
+			@SuppressWarnings("unchecked")
+			Iterator<Element> it=parentEle.elementIterator();
+			while(it.hasNext())
+			{
+				Element elementNext = (Element) it.next(); 
+				returnValue=getPathFromElement(elementNext,elementOrAttribute,atrr);
+				if(returnValue!=null) return returnValue;
+			}
+		}
+		return returnValue;
+	}
 	
 	public static String updateElement(String xmlFileStr, String elementOrAttribute, String newValue)
 	{ 

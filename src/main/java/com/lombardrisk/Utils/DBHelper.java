@@ -487,7 +487,7 @@ public class DBHelper {
 			if(sqlLow.startsWith("update") || (sqlLow.contains("create") && sqlLow.contains("select") && sqlLow.contains("with"))){
 				statement.executeUpdate(sql);
 				flag=true;
-			}else if(sqlLow.startsWith("alter")){
+			}else if(sqlLow.startsWith("alter") && sqlLow.contains("rename to")){
 				String tableName="";
 				String newTableName="";
 				String regexDROP="alter\\s+TABLE\\s+\\[?(\\w+)\\]?\\s+rename\\s+to\\s+\\[?(\\w+)\\]?";

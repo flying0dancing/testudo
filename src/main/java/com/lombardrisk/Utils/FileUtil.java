@@ -40,7 +40,7 @@ public class FileUtil extends FileUtils{
 	}
 	
 	/***
-	 * Zipped folder which has multiple files along with sub folders.
+	 * Zipped folder which has multiple files along with sub folders, also can only zip folders.
 	 * @param sourcePath toZipFileFullPaths's parent path, but not be included in zip file.
 	 * @param toZipFileFullPaths many files's getAbsolutePath with name.
 	 * @param zipFullName zip full path with name
@@ -73,15 +73,21 @@ public class FileUtil extends FileUtils{
 			{
 				File fileHd=new File(fileFullPath);
 				String toZipPath=fileFullPath.substring(sourcePath.length()+1);
-				FileInputStream in = new FileInputStream(fileHd);
-				out.putNextEntry(new ZipEntry(toZipPath));
-				int len;
-				while ((len = in.read(buf)) > 0)
-				{
-					out.write(buf, 0, len);
+				if(fileHd.isDirectory()){
+					out.putNextEntry(new ZipEntry(toZipPath+System.getProperty("file.separator")));
+					out.closeEntry();
+				}else{
+					FileInputStream in = new FileInputStream(fileHd);
+					out.putNextEntry(new ZipEntry(toZipPath));
+					int len;
+					while ((len = in.read(buf)) > 0)
+					{
+						out.write(buf, 0, len);
+					}
+					out.closeEntry();
+					in.close();
 				}
-				out.closeEntry();
-				in.close();
+				
 			}
 			out.close();
 		}
