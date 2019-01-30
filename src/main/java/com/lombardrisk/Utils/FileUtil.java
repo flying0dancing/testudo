@@ -1,5 +1,6 @@
 package com.lombardrisk.Utils;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -10,6 +11,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +20,8 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -41,6 +46,65 @@ public class FileUtil extends FileUtils{
 	
 	/***
 	 * Zipped folder which has multiple files along with sub folders, also can only zip folders.
+	 * @param sourcePath toZipFileFullPaths's parent path, but not be included in zip file.
+	 * @param toZipFileFullPaths many files's getAbsolutePath with name.
+	 * @param zipFullName zip full path with name
+	 */
+	public static Boolean zipFilesAndFolders(String sourcePath, List<String> toZipFileFullPaths, String zipFullName){
+		Boolean flag=true;
+		byte[] buf = new byte[1024];
+		try{
+			int lastSlash=zipFullName.lastIndexOf("\\")==-1?zipFullName.lastIndexOf("/"):zipFullName.lastIndexOf("\\");
+			String zipsPath=zipFullName.substring(0,lastSlash);//get zip's path
+			File zipPathHd=new File(zipsPath);
+			if(!zipPathHd.exists()){//if directories doesn't exist, create them
+				zipPathHd.mkdirs();
+			}
+			File zipFullNameHd=new File(zipFullName);
+			if(zipFullNameHd.exists())
+			{
+				zipFullNameHd.delete();
+			}
+			File sourcePathHd=new File(sourcePath);
+			if(!sourcePathHd.exists()){
+				logger.error("error:source path cannot be found ["+sourcePath+"]");
+				return false;
+			}
+			sourcePath=sourcePathHd.getAbsolutePath();
+			OutputStream os=new BufferedOutputStream(new FileOutputStream(zipFullName));
+			ZipArchiveOutputStream zipOut=new ZipArchiveOutputStream(os);
+			zipOut.setEncoding("UTF-8");
+			for (String fileFullPath : toZipFileFullPaths){
+				File fileHd=new File(fileFullPath);
+				String toZipPath=fileFullPath.substring(sourcePath.length()+1);
+				if(fileHd.isDirectory()){
+					zipOut.putArchiveEntry(new ZipArchiveEntry(toZipPath+System.getProperty("file.separator")));
+					zipOut.closeArchiveEntry();
+				}
+				if(fileHd.isFile()){
+					FileInputStream in = new FileInputStream(fileHd);
+					zipOut.putArchiveEntry(new ZipArchiveEntry(toZipPath));
+					int len=0;
+					while ((len = in.read(buf)) > 0)
+					{
+						zipOut.write(buf, 0, len);
+					}
+					zipOut.closeArchiveEntry();
+					in.close();
+				}
+			}
+			zipOut.close();
+			os.close();
+		}catch(Exception e){
+			flag=false;
+			logger.error(e.getMessage(),e);
+		}
+		return flag;
+	}
+	
+	/***
+	 * Zipped folder which has multiple files along with sub folders, also can only zip folders.
+	 * this function use java's zip contains file name's encoding issue
 	 * @param sourcePath toZipFileFullPaths's parent path, but not be included in zip file.
 	 * @param toZipFileFullPaths many files's getAbsolutePath with name.
 	 * @param zipFullName zip full path with name

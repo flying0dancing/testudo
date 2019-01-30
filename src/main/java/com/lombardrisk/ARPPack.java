@@ -239,7 +239,7 @@ public class ARPPack implements IComFolder {
 		String zipFileNameWithoutSuffix=packageNamePrefix+"v"+packageVersion+packageNameSuffix;
 		String zipFullPathWithoutSuffix=Helper.reviseFilePath(zipPath+"/"+zipFileNameWithoutSuffix);
 		if(StringUtils.isNotBlank(zipFileNameWithoutSuffix)){
-			flag=FileUtil.ZipFiles(sourcePath, realFullPaths,Helper.reviseFilePath(zipFullPathWithoutSuffix+PACKAGE_SUFFIX));
+			flag=FileUtil.zipFilesAndFolders(sourcePath, realFullPaths,Helper.reviseFilePath(zipFullPathWithoutSuffix+PACKAGE_SUFFIX));
 			if(!flag) return flag;
 			String[] commons={"java","-jar",PropHelper.SCRIPT_LRM_PRODUCT,Helper.reviseFilePath(zipFullPathWithoutSuffix+PACKAGE_SUFFIX)};
 			flag=Helper.runCmdCommand(commons); 

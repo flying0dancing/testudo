@@ -24,7 +24,12 @@ public class Dom4jUtil {
 
 	private final static Logger logger = LoggerFactory.getLogger(Dom4jUtil.class);
 	
-	
+	/**
+	 * get attribute path's value from manifest.xml
+	 * @param xmlFileStr
+	 * @param localPath
+	 * @return
+	 */
 	public static List<String> getPathFromElement(String xmlFileStr,String localPath)
 	{ 
 		Document doc =null;
@@ -45,20 +50,17 @@ public class Dom4jUtil {
 	    		root=doc.getRootElement();//list
 	    	}
 	    	String op=System.getProperty("file.separator");
-	    	String formConfig=localPath+getPathFromElement(root, "formConfig","path");//1 level
-	    	String presentationTemplate=formConfig+op+getPathFromElement(root, "presentationTemplate","path"); //1-1 level
-	    	String excelExportTemplate=formConfig+op+getPathFromElement(root, "excelExportTemplate","path");//1-1 level
+	    	String formConfig=Helper.reviseFilePath(localPath+getPathFromElement(root, "formConfig","path"));//1 level
 	    	String arbitraryExcelExport=formConfig+op+getPathFromElement(root, "arbitraryExcelExport","path");//1-2 level
-	    	String arbitraryExcelExportTemplate=arbitraryExcelExport+op+getPathFromElement(root, "arbitraryExcelExportTemplate","path");//1-2-1 level
-	    	String arbitraryExcelExportDescriptor=arbitraryExcelExport+op+getPathFromElement(root, "arbitraryExcelExportDescriptor","path");//1-2-1 level
-	    	String transforms=localPath+getPathFromElement(root, "transforms","path");//1 level
 	    	
-	    	paths.add(presentationTemplate);
-	    	paths.add(excelExportTemplate);
-	    	paths.add(arbitraryExcelExportTemplate);
-	    	paths.add(arbitraryExcelExportDescriptor);
-	    	paths.add(transforms);
-	    	
+	    	paths.add(formConfig);
+	    	paths.addAll(Helper.getRelativePaths(formConfig+op,getPathFromElement(root, "presentationTemplate","path")));
+	    	paths.addAll(Helper.getRelativePaths(formConfig+op,getPathFromElement(root, "excelExportTemplate","path")));
+	    	paths.addAll(Helper.getRelativePaths(formConfig+op,getPathFromElement(root, "arbitraryExcelExport","path")));
+	    	paths.addAll(Helper.getRelativePaths(arbitraryExcelExport+op,getPathFromElement(root, "arbitraryExcelExportTemplate","path")));
+	    	paths.addAll(Helper.getRelativePaths(arbitraryExcelExport+op,getPathFromElement(root, "arbitraryExcelExportDescriptor","path")));
+	    	paths.add(Helper.reviseFilePath(localPath+op+getPathFromElement(root, "transforms","path")));
+	    	paths.add(Helper.reviseFilePath(localPath+op+getPathFromElement(root, "dpmConfig","path")));
 	    }catch(Exception e)
 	    {
 	    	logger.error(e.getMessage(),e);

@@ -21,7 +21,7 @@
   ],
   "zipSettings": {
     "notes": "xxx",
-    "excludeFileFilters":"",
+    "excludeFileFilters": ".git;.gitkeep",
     "requiredMetadata": [
       "GridRef\\009.csv",
       "Rets"

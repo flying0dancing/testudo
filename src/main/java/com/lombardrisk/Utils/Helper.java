@@ -9,7 +9,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Blob;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -113,6 +116,31 @@ public class Helper {
 		}
 		return path;
 	}
+    /***
+     * it can get all relative parent folders, for example /grandfather/fater/foo, result is [grandfather/,grandfather/fater/,grandfather/fater/foo/]
+     * it will remove ", and started or ended \ or //, adding / or \\ at the end
+     * @param relativePath path is a relative path
+     * @return
+     */
+    public static List<String> getRelativePaths(String startPath,String relativePath){
+    	List<String> paths=null;
+    	if(StringUtils.isNotBlank(relativePath)){
+    		paths=new ArrayList<String>();
+    		relativePath=relativePath.replace("\"", "");
+    		relativePath=relativePath.replaceAll("^(?:[\\/\\\\]+)?(.*?)(?:[\\/\\\\]+)?$", "$1");
+    		String[] pathsTmp=relativePath.split("[\\/\\\\]+");
+    		for(int i=0;i<pathsTmp.length;i++){
+    			String tmp=startPath;
+    			for(int j=0;j<=i;j++){
+    				tmp=tmp+pathsTmp[j]+System.getProperty("file.separator");
+    			}
+    			paths.add(tmp.substring(0,tmp.length()-1));
+    			//paths.add(tmp);
+    		}
+    		
+    	}
+    	return paths;
+    }
     /***
      * get parent path, if it is the top folder, return itself
      * @param path

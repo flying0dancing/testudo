@@ -76,7 +76,7 @@ json instruction
   "zipSettings": {
     "notes": "[optional] anything here",
     "excludeFileFilters":"[optional] like .git;.gitkeep",
-    "requiredMetadata": [ "the meta-data(under "metadataPath") which need to imported to dpm, make sure they are all csv",
+    "requiredMetadata": [ "the meta-data(under "metadataPath") which need to imported to dpm, make sure they are all csv; it will search src folder and package all named with returnName+_v+version files if you filter some returnId;",
     	"GridRef\\*.csv",
     	"GridRef\\.csv",
     	"Sums\\*01*.csv",
@@ -140,38 +140,38 @@ json instruction
 },
 {
   "ID": "bbb",
+  "prefix": "mas",
   "databaseServerAndTables":[
   {
 	"ID":"1st",
 	"databaseServer": {
-		"name": "toolset system database",
-    	"driver": "oracle",
-    	"host": "172.20.20.49@ora11g",
-    	"schema": "ECR_12801_OFFICIAL_SYSTEM",
+		"name": "AR system database",
+    	"driver": "sqlserver",
+    	"host": "172.20.20.230\\SQL12",
+    	"schema": "MAS_22103_2K8T55U_SYSTEM",
     	"password": "password"
 	},
 	"requiredTables": {
      "singles": [ "#FormVars", "#Instances", "#InstanceSets",  "#RefReturns",  "#Rets"   ],
      "dividedByReturnIds": [  "#GridKey",   "#GridRef" ],
      "excludeReturnIds":["360012","360023"],
-     "notes": "# means prefix"
  	}
   },
   {
 	"ID":"2st",
 	"databaseServer": {
 		"driver": "accessdb",
-		"schema": "E:\\ComplianceProduct\\ecr\\PRA_FORM_META_V1_2_0_1.accdb"
+		"schema": "F:\\ComplianceProduct\\mas\\MAS_FORM_META.accdb"
 	},
 	"requiredTables": {
 		"singles": ["Taxonomy","CFG_CONFIG_DEFINED_VARIABLES"],
 		"dividedByReturnIds": [],
-		"notes": "# means prefix"
+		"excludeReturnIds":[],
 	}
   }
   ],
   "zipSettings": {
-    "notes": "xxx",
+    "excludeFileFilters": ".git;.gitkeep",
     "requiredMetadata": [
       "GridRef\\009.csv",
       "Rets"
