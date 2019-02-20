@@ -44,7 +44,7 @@ public class ARPPack implements IComFolder {
 	}
 	/***
 	 * import all filtered metadata (*.csv files) to access database
-	 * @param db it's a access database, its location or schema should be get value from <I>json file</I>->"zipSettings"->"accessDBFullPath"
+	 * @param db it's a access database, its location or schema should be get value from <I>json file</I>->"zipSettings"->"dpmFullPath"
 	 * @param csvParentPath it gets value from <I>json file</I> ->"exportPath"
 	 * @param csvPaths it gets value from <I>json file</I>->"zipSettings"->"requiredMetadata"
 	 * @param schemaFullName It's a configuration file, which contains all tables' definition.
@@ -57,7 +57,7 @@ public class ARPPack implements IComFolder {
 	
 	/***
 	 * import all filtered metadata (*.csv files) to access database
-	 * @param dbFullPath it should be get value from <I>json file</I>->"zipSettings"->"accessDBFullPath"
+	 * @param dbFullPath it should be get value from <I>json file</I>->"zipSettings"->"dpmFullPath"
 	 * @param csvParentPath it gets value from <I>json file</I> ->"exportPath"
 	 * @param csvPaths it gets value from <I>json file</I>->"zipSettings"->"requiredMetadata"
 	 * @param schemaFullName It's a configuration file, which contains all tables' definition.

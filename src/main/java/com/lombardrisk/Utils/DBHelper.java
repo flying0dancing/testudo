@@ -634,7 +634,6 @@ public class DBHelper {
 		 * @param importCsvFullName
 		 * @return
 		 */
-		@SuppressWarnings("unchecked")
 		public Boolean importCsvToAccessDB(String tableName,List<TableProps> columns,String importCsvFullName)
 		{
 			Boolean flag=false;
@@ -676,7 +675,7 @@ public class DBHelper {
 						String value=null;
 						String sql;
 						StringBuffer lineBuffer=new StringBuffer();
-						String regex="((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?)";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
+						String regex="((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?(?:\\.\\d+)?)";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
 						header="insert into ["+tableName+"] (";
 						for(int i=0;i<finalHeaders.size();i++){
 							header=header+" ["+finalHeaders.get(i)+"],";
