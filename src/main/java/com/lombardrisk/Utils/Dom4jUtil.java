@@ -50,17 +50,37 @@ public class Dom4jUtil {
 	    		root=doc.getRootElement();//list
 	    	}
 	    	String op=System.getProperty("file.separator");
-	    	String formConfig=Helper.reviseFilePath(localPath+getPathFromElement(root, "formConfig","path"));//1 level
-	    	String arbitraryExcelExport=formConfig+op+getPathFromElement(root, "arbitraryExcelExport","path");//1-2 level
+	    	@SuppressWarnings("unchecked")
+			List<Element> eltList=root.elements();
+	    	for(Element element:eltList){
+				if(element.getName().equalsIgnoreCase("assets")){
+					List<String> manifestpaths=new ArrayList<String>();
+					getPathsFromElement(element,"path","",manifestpaths);
+					for(String path:manifestpaths){
+			    		paths.add(Helper.reviseFilePath(localPath+path));
+			    	}
+					break;
+				}
+			}
 	    	
-	    	paths.add(formConfig);
-	    	paths.addAll(Helper.getRelativePaths(formConfig+op,getPathFromElement(root, "presentationTemplate","path")));
-	    	paths.addAll(Helper.getRelativePaths(formConfig+op,getPathFromElement(root, "excelExportTemplate","path")));
-	    	paths.addAll(Helper.getRelativePaths(formConfig+op,getPathFromElement(root, "arbitraryExcelExport","path")));
-	    	paths.addAll(Helper.getRelativePaths(arbitraryExcelExport+op,getPathFromElement(root, "arbitraryExcelExportTemplate","path")));
-	    	paths.addAll(Helper.getRelativePaths(arbitraryExcelExport+op,getPathFromElement(root, "arbitraryExcelExportDescriptor","path")));
-	    	paths.add(Helper.reviseFilePath(localPath+op+getPathFromElement(root, "transforms","path")));
-	    	paths.add(Helper.reviseFilePath(localPath+op+getPathFromElement(root, "dpmConfig","path")));
+	    	/*
+	    	String formConfig=Helper.reviseFilePath(localPath+getPathFromElement(root, "formConfig","path"));//1 level
+	    	if(StringUtils.isNotBlank(formConfig)){
+	    		paths.add(formConfig);
+	    		
+	    		String arbitraryExcelExport=formConfig+op+getPathFromElement(root, "arbitraryExcelExport","path");//1-2 level
+		    	List<String> tmppaths=Helper.getRelativePaths(formConfig+op,getPathFromElement(root, "presentationTemplate","path"));
+		    	if(tmppaths!=null && tmppaths.size()>0){
+		    		paths.addAll(tmppaths);
+		    	}
+		    	paths.addAll(Helper.getRelativePaths(formConfig+op,getPathFromElement(root, "excelExportTemplate","path")));
+		    	paths.addAll(Helper.getRelativePaths(formConfig+op,getPathFromElement(root, "arbitraryExcelExport","path")));
+		    	paths.addAll(Helper.getRelativePaths(arbitraryExcelExport+op,getPathFromElement(root, "arbitraryExcelExportTemplate","path")));
+		    	paths.addAll(Helper.getRelativePaths(arbitraryExcelExport+op,getPathFromElement(root, "arbitraryExcelExportDescriptor","path")));
+		    	paths.add(Helper.reviseFilePath(localPath+op+getPathFromElement(root, "transforms","path")));
+		    	paths.add(Helper.reviseFilePath(localPath+op+getPathFromElement(root, "dpmConfig","path")));
+	    	}*/
+	    	
 	    }catch(Exception e)
 	    {
 	    	logger.error(e.getMessage(),e);
@@ -68,12 +88,57 @@ public class Dom4jUtil {
 	    return paths;
 	}
 	/**
+	 * this is for get all attribute path's values of manifest.xml's assets element, stored in pathList
+	 * @param parentElt
+	 * @param atrr the attribute name
+	 * @param appendPath set it as "" if parentElt doesn't contains the attr, set it as attr's value if parentElt contains the attr
+	 * @param pathList defined it before using this method
+	 */
+	private static void getPathsFromElement(Element parentElt,String atrr,String appendPath,List<String> pathList)
+	{
+		String returnValue=null;
+		int attributeCount=parentElt.attributeCount();
+		if(attributeCount>0){
+			Attribute attribute=parentElt.attribute(atrr);
+			if(attribute!=null){
+				returnValue=attribute.getValue();
+				if(StringUtils.isNotBlank(returnValue)){
+					returnValue=returnValue.replace("\"", "");
+					returnValue=returnValue.replaceAll("^(?:[\\/\\\\]+)?(.*?)(?:[\\/\\\\]+)?$", "$1");
+		    		String[] pathsTmp=returnValue.split("[\\/\\\\]+");
+					for(String returnPath:pathsTmp){
+						if(StringUtils.isNotBlank(appendPath)){
+							appendPath=appendPath+System.getProperty("file.separator")+returnPath;
+							pathList.add(appendPath);
+						}else{
+							appendPath=returnPath;
+							pathList.add(appendPath);
+						}
+					}
+					
+				}
+			}
+		}
+		@SuppressWarnings("unchecked")
+		List<Element> eltList=parentElt.elements();
+		for(Element element:eltList){
+			if(returnValue==null){
+				getPathsFromElement(element,atrr,"",pathList);
+			}else{
+				getPathsFromElement(element,atrr,appendPath,pathList);
+			}
+		}
+		
+	}
+	/**
 	 * 1. get attr's value from which element(elementOrAttribute); 2. get first matched elementOrAttribute's text if attr is blank
+	 * for example, getPathFromElement(root, "excelExportTemplate","path")
 	 * @param parentEle
 	 * @param elementOrAttribute
 	 * @param atrr
 	 * @return
 	 */
+	@Deprecated
 	private static String getPathFromElement(Element parentEle,String elementOrAttribute,String atrr)
 	{
 		boolean foundflag=false;

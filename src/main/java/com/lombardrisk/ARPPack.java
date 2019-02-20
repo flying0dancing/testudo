@@ -86,7 +86,7 @@ public class ARPPack implements IComFolder {
 				{
 					name_returnId="";
 					realCsvFullPaths.add(pathTmp2);
-					logger.info("import dpm's file path:"+pathTmp2);
+					logger.info("import metadata file:"+pathTmp2);
 					String tableNameWithDB=FileUtil.getFileNameWithoutSuffix(pathTmp2);
 					String tableName=tableNameWithDB.replaceAll("#.*?_", "_");
 					if(!tableName.contains("_")){
@@ -107,7 +107,9 @@ public class ARPPack implements IComFolder {
 					}
 					Boolean flag=dbInfo.importCsvToAccess(tableName,tableNameWithDB, Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(schemaFullName));
 					if(!flag){
-						logger.error("import csv["+pathTmp2+"] to "+tableName+" fail.");
+						logger.error("import metadata["+pathTmp2+"] to "+tableName+" fail.");
+					}else{
+						logger.error("import metadata["+pathTmp2+"] to "+tableName+" successfully.");
 					}
 					
 				}
@@ -212,7 +214,10 @@ public class ARPPack implements IComFolder {
 		if(StringUtils.isBlank(buildType)){
 			arpbuild=String.valueOf(System.currentTimeMillis());
 		}
-		realFullPaths.addAll(Dom4jUtil.getPathFromElement(sourcePath+MANIFEST_FILE,sourcePath));
+		List<String> pathsInManifest=Dom4jUtil.getPathFromElement(sourcePath+MANIFEST_FILE,sourcePath);
+		if(pathsInManifest!=null && pathsInManifest.size()>0){
+			realFullPaths.addAll(pathsInManifest);
+		}
 		//modify manifest.xml
 		String packageVersion=Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE, IMP_VERSION, arpbuild);
 		List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+"/"+DPM_PATH+"*"+DPM_FILE_SUFFIX),null);

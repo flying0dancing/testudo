@@ -399,7 +399,11 @@ public class FileUtil extends FileUtils{
 	{
 		Boolean flag=false;
 		logger.info("search "+searchStr+" in "+fileFullName);
-		
+		File filehd=new File(fileFullName);
+		if(!filehd.exists() || !filehd.isFile()){
+			logger.warn("File Not Found: "+fileFullName);
+			return flag;
+		}
 		BufferedReader bufReader=null;
 		try {
 			bufReader=new BufferedReader(new FileReader(fileFullName));
@@ -408,7 +412,7 @@ public class FileUtil extends FileUtils{
 				if(line.toLowerCase().equals(searchStr.toLowerCase()))
 				{
 					flag=true;
-					logger.info("found "+searchStr);
+					logger.info("found "+searchStr+" in "+fileFullName);
 					break;
 				}
 			}
