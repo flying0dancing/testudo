@@ -18,6 +18,8 @@ import com.google.gson.reflect.TypeToken;
 import com.lombardrisk.Utils.FileUtil;
 import com.lombardrisk.Utils.Helper;
 import com.lombardrisk.pojo.ARPCISetting;
+import com.lombardrisk.pojo.ExternalProject;
+import com.lombardrisk.pojo.ZipSettings;
 
 
 public class ARPCISettingManager implements IComFolder {
@@ -25,6 +27,7 @@ public class ARPCISettingManager implements IComFolder {
 
 	private final static Logger logger = LoggerFactory.getLogger(ARPCISettingManager.class);
 	private static Boolean hasLoaded=false;
+	private static Boolean copyAllProductsInOneProject=true;
 	private final static List<ARPCISetting> ARPCISETTINGS=loadJson(System.getProperty(CMDL_ARPCICONFG,JSON_PATH));
 	
 	
@@ -88,45 +91,73 @@ public class ARPCISettingManager implements IComFolder {
 		return null;
 	}
 	
+	public static List<ARPCISetting> getARPCISettingList()
+	{
+		List<ARPCISetting> arCIConfgList=new ArrayList<ARPCISetting>();
+		try {
+			if(ARPCISETTINGS!=null && ARPCISETTINGS.size()>0){
+				for(ARPCISetting arCIConfg:ARPCISETTINGS){
+					arCIConfgList.add(reviseARPCISetting(arCIConfg));
+				}
+				return arCIConfgList;
+			}
+		} catch (SecurityException
+				| IllegalArgumentException e) {
+			logger.error(e.getMessage(), e);
+		}
+		return null;
+	}
+	
 	private static ARPCISetting reviseARPCISetting(ARPCISetting arCIConfg)
 	{
 		if(arCIConfg!=null){
-			//revise "prefix"
+			//revise "prefix", make sure it is lowercase
 			String productPrefix=arCIConfg.getPrefix();
 			if(StringUtils.isBlank(productPrefix)){
-				if(StringUtils.isBlank(System.getProperty(CMDL_ARPPRODUCTPREFIX))){
+				throw new JsonSyntaxException("error: prefix is null, please set it value");//prefix must be set as a subfolder's name of project folder name
+				/*if(StringUtils.isBlank(System.getProperty(CMDL_ARPPRODUCTPREFIX))){
 					throw new JsonSyntaxException("error: prefix is null, please set it value");
 				}else
 				{
 					productPrefix=System.getProperty(CMDL_ARPPRODUCTPREFIX).toLowerCase();
 					arCIConfg.setPrefix(productPrefix);
-				}
+				}*/
 			}else{
 				arCIConfg.setPrefix(productPrefix.toLowerCase());
 			}
 			
 			//revise "metadataPath"
 			String metadataPath=arCIConfg.getMetadataPath();
-			String productPath=null;
-			String targetProductPath=null;
+			String projectPath=null;
+			String productPath=null;//subfolder under project folder
 			String targetSrcPath=null;
 			String sourcePath=null;
 			if(StringUtils.isNotBlank(metadataPath)){
 				metadataPath=Helper.reviseFilePath(metadataPath);
 				sourcePath=Helper.getParentPath(metadataPath); //src/
 				productPath=Helper.removeLastSlash(Helper.getParentPath(sourcePath));
+				projectPath=Helper.removeLastSlash(Helper.getParentPath(productPath));
 			}else{
-				sourcePath=Helper.getParentPath(System.getProperty("user.dir"))+arCIConfg.getPrefix()+System.getProperty("file.separator")+SOURCE_FOLDER; //src/	
+				projectPath=Helper.getParentPath(System.getProperty("user.dir"))+System.getProperty(CMDL_ARPPROJECTFOLDER);
+				productPath=projectPath+File.separator+arCIConfg.getPrefix();
+				sourcePath=productPath+File.separator+SOURCE_FOLDER; //src/	
 				metadataPath=sourcePath+META_PATH;
-				productPath=Helper.getParentPath(System.getProperty("user.dir"))+arCIConfg.getPrefix();
 			}
 			if(StringUtils.isBlank(System.getProperty(CMDL_ARPRUNONJENKINS))){
 				//run on local machine
 				//get target product path
+				String targetProductPath=null;
 				targetProductPath=FileUtil.createNewFileWithSuffix(productPath,null,null);
-				targetSrcPath=targetProductPath+System.getProperty("file.separator")+SOURCE_FOLDER;//target source path
-				metadataPath=targetSrcPath+META_PATH; //target metadata path
-				FileUtil.copyDirectory(sourcePath, targetSrcPath);
+				targetSrcPath=targetProductPath+File.separator+SOURCE_FOLDER;//current product(prefix)'s target source path
+				metadataPath=targetSrcPath+META_PATH; //current product(prefix)'s target metadata path
+				if(StringUtils.isNotBlank(System.getProperty(CMDL_ARPRODUCTID)) && System.getProperty(CMDL_ARPRODUCTID).startsWith("*")){
+					if(copyAllProductsInOneProject){
+						FileUtil.copyDirectory(projectPath, Helper.getParentPath(targetProductPath));
+						copyAllProductsInOneProject=false;
+					}
+				}else{
+					FileUtil.copyDirectory(sourcePath, targetSrcPath);
+				}
 			}else{
 				//run on Jenkins server
 				targetSrcPath=sourcePath;
@@ -143,11 +174,13 @@ public class ARPCISettingManager implements IComFolder {
 				//arCIConfg.setMetadataStruct(arCIConfg.getPrefix()+INI_FILE_SUFFIX);
 				arCIConfg.setMetadataStruct(arCIConfg.getPrefix().toUpperCase()+INI_FILE_SUFFIX);
 			}
+			//revise "zipSettings"
+			ZipSettings zipSetting=arCIConfg.getZipSettings();
 			if(arCIConfg.getZipSettings()!=null){
 				//revise "zipSettings"->"dpmFullPath"
 				String dpmFullName=arCIConfg.getZipSettings().getDpmFullPath();
+				FileUtil.createDirectories(targetSrcPath+DPM_PATH);
 				if(StringUtils.isNotBlank(dpmFullName)){
-					FileUtil.createDirectories(targetSrcPath+DPM_PATH);
 					if(!dpmFullName.contains("/") && !dpmFullName.contains("\\")){
 						//dpmFullName just a file name without path
 						dpmFullName=targetSrcPath+DPM_PATH+dpmFullName;
@@ -155,12 +188,23 @@ public class ARPCISettingManager implements IComFolder {
 						dpmFullName=Helper.reviseFilePath(dpmFullName);
 						String dpmPathTemp=Helper.getParentPath(dpmFullName);
 						String dpmName=dpmFullName.replace(dpmPathTemp, "");
+						//copy access file
+						if(!dpmPathTemp.contains(sourcePath)){
+							FileUtil.copyFileToDirectory(dpmFullName, targetSrcPath+DPM_PATH);
+						}
 						dpmFullName=targetSrcPath+DPM_PATH+dpmName;//remap its dpmFullName to target folder
 					}
 				}else{
-					FileUtil.createDirectories(targetSrcPath+DPM_PATH);//FileUtil.createDirectories(Helper.reviseFilePath(commonFolder+DPM_PATH));
 					//dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+arCIConfg.getPrefix()+DPM_FILE_SUFFIX);
 					dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+arCIConfg.getPrefix().toUpperCase()+DPM_FILE_SUFFIX);
+					List<ExternalProject> externalProjects=zipSetting.getExternalProjects();
+					if(externalProjects!=null && externalProjects.size()>0){
+						for(ExternalProject externalpro:externalProjects){
+							if(StringUtils.isNotBlank(externalpro.getProject())){
+								FileUtil.copyExternalProject(externalpro.getProject(), externalpro.getSrcFile(), externalpro.getDestDir(), externalpro.getType());
+							}
+						}
+					}
 				}
 				arCIConfg.getZipSettings().setDpmFullPath(dpmFullName);
 				

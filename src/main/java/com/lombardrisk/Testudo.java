@@ -53,45 +53,57 @@ public class Testudo implements IComFolder
 		if(StringUtils.isBlank(iDinJoson)){
 			logger.warn("argument id is not setted, get the fist by default in json.");
 		}
-		
-		ARPCISetting arSetting=ARPCISettingManager.getARPCISetting(iDinJoson);
-		if(arSetting!=null){
-			logger.info(arSetting.toString());
-			if(StringUtils.isBlank(proc))
-			{
-				logger.warn("argument proc is not setted, run 2 by default.");
-				proc="2";
-			}
-
-			if(proc.equals("1"))
-			{
-				readDBToMetadata(arSetting);
-				
-			}else if(proc.equals("2")){
-				
-				packMetadataAndFiles(arSetting);
-				
-			}else if(proc.equalsIgnoreCase("all")){
-				
-				readDBToMetadata(arSetting);
-				packMetadataAndFiles(arSetting);
-				
-			}else
-			{
-				HelperDoc();
+		if(StringUtils.isNotBlank(iDinJoson) && iDinJoson.startsWith("*")){
+			List<ARPCISetting> arSettingList=ARPCISettingManager.getARPCISettingList();
+			for(ARPCISetting arSetting:arSettingList){
+				if(arSetting!=null){
+					logger.info(arSetting.toString());
+					jobproc(arSetting, proc);
+				}else{
+					logger.error("testudo's json might contains error, details see readme's json instruction.");
+				}
 			}
 		}else{
-			HelperDoc();
+			if(StringUtils.isBlank(iDinJoson)){
+				logger.warn("argument id is not setted, get the fist in json by default.");
+			}
+			ARPCISetting arSetting=ARPCISettingManager.getARPCISetting(iDinJoson);
+			if(arSetting!=null){
+				logger.info(arSetting.toString());
+				jobproc(arSetting, proc);
+			}else{
+				HelperDoc();
+			}
 		}
+		
 		end=System.currentTimeMillis();
 		logger.info("total time(sec):"+(end-begin)/1000.00F);
 		
     }
-    
+
     private static void HelperDoc(){
     	//Helper.readme("readme.md");
     	logger.error("please see readme.md.");
 	}
+    
+    private static void jobproc(ARPCISetting arSetting, String proc){
+    	if(StringUtils.isBlank(proc))
+		{
+			logger.warn("argument proc is not setted, run 2 by default.");
+			proc="2";
+		}
+		if(proc.equals("1")){
+			readDBToMetadata(arSetting);
+		}else if(proc.equals("2")){
+			packMetadataAndFiles(arSetting);
+		}else if(proc.equalsIgnoreCase("all")){
+			
+			readDBToMetadata(arSetting);
+			packMetadataAndFiles(arSetting);
+		}else{
+			logger.error("argument proc is wrong, should be 1 or 2 or all, details see readme's [proc] instruction.");
+		}
+    }
     
     private static void readDBToMetadata(ARPCISetting arSetting)
     {

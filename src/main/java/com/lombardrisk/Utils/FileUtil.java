@@ -1,5 +1,6 @@
 package com.lombardrisk.Utils;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -11,18 +12,32 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.compress.archivers.ArchiveInputStream;
+import org.apache.commons.compress.archivers.ArchiveStreamFactory;
+import org.apache.commons.compress.archivers.jar.JarArchiveEntry;
+import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
+import org.apache.commons.compress.archivers.sevenz.SevenZFile;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
+import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +48,7 @@ import com.lombardrisk.pojo.TableProps;
 public class FileUtil extends FileUtils{
 
 	private final static Logger logger = LoggerFactory.getLogger(FileUtil.class);
-	
+	public static int BUFFER_SIZE = 2048;
 	public static Boolean exists(String fileFullName){
 		Boolean flag=false;
 		
@@ -162,7 +177,350 @@ public class FileUtil extends FileUtils{
 		}
 		return flag;
 	}
-	
+	private static List<String> un7z1(File file, String destDir) throws Exception
+	{
+		List<String> fileNames = new ArrayList<String>();
+		SevenZFile sevenZFile = new SevenZFile(file);
+		SevenZArchiveEntry entry = null;
+		try
+		{
+			while ((entry = sevenZFile.getNextEntry()) != null)
+			{
+				fileNames.add(entry.getName());
+				if (entry.isDirectory())
+				{
+					createDirectory(destDir, entry.getName());
+				}
+				else
+				{
+					File tmpFile = new File(destDir + File.separator + entry.getName());
+					createDirectory(tmpFile.getParent() + File.separator, null);
+					OutputStream out = null;
+					try
+					{
+						out = new FileOutputStream(tmpFile);
+						int length = 0;
+						byte[] b = new byte[2048];
+						while ((length = sevenZFile.read(b)) != -1)
+						{
+							out.write(b, 0, length);
+						}
+					}
+					finally
+					{
+						IOUtils.closeQuietly(out);
+					}
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+			logger.error(e.getMessage());
+			throw e;
+		}
+		finally
+		{
+			IOUtils.closeQuietly(sevenZFile);
+		}
+
+		return fileNames;
+	}
+	private static List<String> unTar(InputStream inputStream, String destDir) throws Exception
+	{
+		List<String> fileNames = new ArrayList<String>();
+		TarArchiveInputStream tarIn = new TarArchiveInputStream(inputStream, BUFFER_SIZE);
+		TarArchiveEntry entry = null;
+		try
+		{
+			while ((entry = tarIn.getNextTarEntry()) != null)
+			{
+				fileNames.add(entry.getName());
+				if (entry.isDirectory())
+				{
+					createDirectory(destDir, entry.getName());
+				}
+				else
+				{
+					File tmpFile = new File(destDir + File.separator + entry.getName());
+					createDirectory(tmpFile.getParent() + File.separator, null);
+					OutputStream out = null;
+					try
+					{
+						out = new FileOutputStream(tmpFile);
+						int length = 0;
+						byte[] b = new byte[2048];
+						while ((length = tarIn.read(b)) != -1)
+						{
+							out.write(b, 0, length);
+						}
+					}
+					finally
+					{
+						IOUtils.closeQuietly(out);
+					}
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+			logger.error(e.getMessage());
+			throw e;
+		}
+		finally
+		{
+			IOUtils.closeQuietly(tarIn);
+		}
+
+		return fileNames;
+	}
+	public static List<String> un7z(String tarFile, String destDir) throws Exception
+	{
+		File file = new File(tarFile);
+		return unTar(file, destDir);
+	}
+
+	public static List<String> un7z(File tarFile, String destDir) throws Exception
+	{
+		if (StringUtils.isBlank(destDir))
+		{
+			destDir = tarFile.getParent();
+		}
+		destDir = destDir.endsWith(File.separator) ? destDir : destDir + File.separator;
+		return un7z1(tarFile, destDir);
+	}
+	public static List<String> unTar(String tarFile, String destDir) throws Exception
+	{
+		File file = new File(tarFile);
+		return unTar(file, destDir);
+	}
+
+	public static List<String> unTar(File tarFile, String destDir) throws Exception
+	{
+		if (StringUtils.isBlank(destDir))
+		{
+			destDir = tarFile.getParent();
+		}
+		destDir = destDir.endsWith(File.separator) ? destDir : destDir + File.separator;
+		return unTar(new FileInputStream(tarFile), destDir);
+	}
+
+	public static List<String> unTarBZip2(File tarFile, String destDir) throws Exception
+	{
+		if (StringUtils.isBlank(destDir))
+		{
+			destDir = tarFile.getParent();
+		}
+		destDir = destDir.endsWith(File.separator) ? destDir : destDir + File.separator;
+		return unTar(new BZip2CompressorInputStream(new FileInputStream(tarFile)), destDir);
+	}
+
+	public static List<String> unTarBZip2(String file, String destDir) throws Exception
+	{
+		File tarFile = new File(file);
+		return unTarBZip2(tarFile, destDir);
+	}
+
+	public static List<String> unBZip2(String bzip2File, String destDir) throws IOException
+	{
+		File file = new File(bzip2File);
+		return unBZip2(file, destDir);
+	}
+
+	public static List<String> unBZip2(File srcFile, String destDir) throws IOException
+	{
+		if (StringUtils.isBlank(destDir))
+		{
+			destDir = srcFile.getParent();
+		}
+		destDir = destDir.endsWith(File.separator) ? destDir : destDir + File.separator;
+		List<String> fileNames = new ArrayList<String>();
+		InputStream is = null;
+		OutputStream os = null;
+		try
+		{
+			File destFile = new File(destDir, FilenameUtils.getBaseName(srcFile.toString()));
+			fileNames.add(FilenameUtils.getBaseName(srcFile.toString()));
+			is = new BZip2CompressorInputStream(new BufferedInputStream(new FileInputStream(srcFile), BUFFER_SIZE));
+			os = new BufferedOutputStream(new FileOutputStream(destFile), BUFFER_SIZE);
+			IOUtils.copy(is, os);
+		}
+		finally
+		{
+			IOUtils.closeQuietly(os);
+			IOUtils.closeQuietly(is);
+		}
+		return fileNames;
+	}
+
+	public static List<String> unGZ(String gzFile, String destDir) throws IOException
+	{
+		File file = new File(gzFile);
+		return unGZ(file, destDir);
+	}
+
+	public static List<String> unGZ(File srcFile, String destDir) throws IOException
+	{
+		if (StringUtils.isBlank(destDir))
+		{
+			destDir = srcFile.getParent();
+		}
+		destDir = destDir.endsWith(File.separator) ? destDir : destDir + File.separator;
+		List<String> fileNames = new ArrayList<String>();
+		InputStream is = null;
+		OutputStream os = null;
+		try
+		{
+			File destFile = new File(destDir, FilenameUtils.getBaseName(srcFile.toString()));
+			fileNames.add(FilenameUtils.getBaseName(srcFile.toString()));
+			is = new GzipCompressorInputStream(new BufferedInputStream(new FileInputStream(srcFile), BUFFER_SIZE));
+			os = new BufferedOutputStream(new FileOutputStream(destFile), BUFFER_SIZE);
+			IOUtils.copy(is, os);
+		}
+		finally
+		{
+			IOUtils.closeQuietly(os);
+			IOUtils.closeQuietly(is);
+		}
+		return fileNames;
+	}
+
+	public static List<String> unTarGZ(File tarFile, String destDir) throws Exception
+	{
+		if (StringUtils.isBlank(destDir))
+		{
+			destDir = tarFile.getParent();
+		}
+		destDir = destDir.endsWith(File.separator) ? destDir : destDir + File.separator;
+		return unTar(new GzipCompressorInputStream(new FileInputStream(tarFile)), destDir);
+	}
+
+	public static List<String> unTarGZ(String file, String destDir) throws Exception
+	{
+		File tarFile = new File(file);
+		return unTarGZ(tarFile, destDir);
+	}
+	public static List<String> unZip(String zipfilePath, String destDir) throws Exception
+	{
+		File zipFile = new File(zipfilePath);
+		if (destDir == null || destDir.equals(""))
+		{
+			destDir = zipFile.getParent();
+		}
+		destDir = destDir.endsWith(File.separator) ? destDir : destDir + File.separator;
+		ZipArchiveInputStream is = null;
+		List<String> fileNames = new ArrayList<String>();
+
+		try
+		{
+			is = new ZipArchiveInputStream(new BufferedInputStream(new FileInputStream(zipfilePath), BUFFER_SIZE));
+			ZipArchiveEntry entry = null;
+			while ((entry = is.getNextZipEntry()) != null)
+			{
+				fileNames.add(entry.getName());
+				if (entry.isDirectory())
+				{
+					File directory = new File(destDir, entry.getName());
+					directory.mkdirs();
+				}
+				else
+				{
+					OutputStream os = null;
+					try
+					{
+						os = new BufferedOutputStream(new FileOutputStream(new File(destDir, entry.getName())), BUFFER_SIZE);
+						IOUtils.copy(is, os);
+					}
+					finally
+					{
+						IOUtils.closeQuietly(os);
+					}
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			logger.error(e.getMessage());
+			throw e;
+		}
+		finally
+		{
+			IOUtils.closeQuietly(is);
+		}
+
+		return fileNames;
+	}
+
+	public static List<String> unWar(String warPath, String destDir)
+	{
+		List<String> fileNames = new ArrayList<String>();
+		File warFile = new File(warPath);
+		try
+		{
+			BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(warFile));
+			ArchiveInputStream in = new ArchiveStreamFactory().createArchiveInputStream(ArchiveStreamFactory.JAR, bufferedInputStream);
+
+			JarArchiveEntry entry = null;
+			while ((entry = (JarArchiveEntry) in.getNextEntry()) != null)
+			{
+				fileNames.add(entry.getName());
+				if (entry.isDirectory())
+				{
+					new File(destDir, entry.getName()).mkdir();
+				}
+				else
+				{
+					OutputStream out = new BufferedOutputStream(new FileOutputStream(new File(destDir, entry.getName())), BUFFER_SIZE);
+					IOUtils.copy(in, out);
+					out.close();
+				}
+			}
+			in.close();
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+			logger.error(e.getMessage());
+		}
+
+		return fileNames;
+	}
+
+	public static List<String> unCompress(String compressFile, String destDir) throws Exception
+	{
+		String upperName = compressFile.toUpperCase();
+		List<String> ret = null;
+		if (upperName.endsWith(".ZIP"))
+		{
+			ret = unZip(compressFile, destDir);
+		}
+		else if (upperName.endsWith(".TAR"))
+		{
+			ret = unTar(compressFile, destDir);
+		}
+		else if (upperName.endsWith(".TAR.BZ2"))
+		{
+			ret = unTarBZip2(compressFile, destDir);
+		}
+		else if (upperName.endsWith(".BZ2"))
+		{
+			ret = unBZip2(compressFile, destDir);
+		}
+		else if (upperName.endsWith(".TAR.GZ"))
+		{
+			ret = unTarGZ(compressFile, destDir);
+		}
+		else if (upperName.endsWith(".GZ"))
+		{
+			ret = unGZ(compressFile, destDir);
+		}
+		else if (upperName.endsWith(".WAR"))
+		{
+			ret = unWar(compressFile, destDir);
+		}
+		return ret;
+	}
 	public static void renameTo(String fileFullName,String destFullName)
 	{
 		if(StringUtils.isNoneBlank(fileFullName,destFullName)){
@@ -215,6 +573,29 @@ public class FileUtil extends FileUtils{
 			}
 		}
 	}
+	public static void createDirectory(String outputDir, String subDir) throws Exception
+	{
+		File file = new File(outputDir);
+		if (!(subDir == null || subDir.trim().equals("")))
+		{
+			file = new File(outputDir + File.separator + subDir);
+		}
+		if (!file.exists())
+		{
+			file.mkdirs();
+		}
+	}
+	public static void createDirectory(String folderPath)
+	{
+		if(folderPath!=null)
+		{
+			File folder = new File(folderPath);
+			if(!folder.isDirectory())
+			{
+				folder.mkdirs();
+			}
+		}
+	}
 	
 	public static void createDirectories(String folderPath)
 	{
@@ -259,7 +640,34 @@ public class FileUtil extends FileUtils{
 		if(folder.exists()){folder.delete();}
 		
 	}
-	
+	/**
+	 * Copies a file to a directory preserving the file date.
+     * <p>
+     * This method copies the contents of the specified source file
+     * to a file of the same name in the specified destination directory.
+     * The destination directory is created if it does not exist.
+     * If the destination file exists, then this method will overwrite it.
+	 * @param srcFileFullName
+	 * @param destDirFullPath
+	 * @return
+	 */
+	public static Boolean copyFileToDirectory(String srcFileFullName,String destDirFullPath){
+		Boolean flag=false;
+		File srcFile=new File(srcFileFullName); 
+		File destDir=new File(destDirFullPath);
+		try {
+			if(srcFile.isFile()){
+				if(StringUtils.isNotBlank(destDirFullPath)){
+					copyFileToDirectory(srcFile, destDir);
+					flag=true;
+				}
+			}
+			
+		} catch (IOException e) {
+			logger.error(e.getMessage(),e);
+		}
+		return flag;
+	}
 	/***
 	 * get all file paths by filePath, maybe one file path return, or maybe more file paths return.
 	 * @param filePath maybe contains "*"
@@ -786,12 +1194,31 @@ public class FileUtil extends FileUtils{
 			{
 				File sourceFile=new File(sourcePath);
 				File destFile=new File(destPath);
+				createDirectories(destPath);
 				copyDirectory(sourceFile,destFile);
 			}
 		
 		}catch(Exception e)
 		{logger.error(e.getMessage(),e);}
 
+	}
+	
+	public static void copyExternalProject(String project,String srcFile,String destDir,String type){
+		//TODO
+		File srcFileHd=new File(Helper.reviseFilePath(project+File.pathSeparator+srcFile));
+		if(srcFileHd.exists()){
+			String srcFileSuffix=srcFile.substring(srcFile.lastIndexOf(".")+1).toUpperCase();
+			List<String> compressTypes=new ArrayList<String>(Arrays.asList("ZIP","7Z","GZ","TAR"));
+			if(compressTypes.contains(srcFileSuffix) && type.equalsIgnoreCase("uncompress")){
+				try {
+					createDirectories(destDir);
+					List<String> unCompressFiles=unCompress(srcFile,destDir);
+					logger.info("Debug external projects:"+unCompressFiles.toString());
+				} catch (Exception e) {
+					logger.error(e.getMessage(),e);
+				}
+			}
+		}
 	}
 
 }

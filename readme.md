@@ -2,21 +2,22 @@ usage
 ===
 testudo can generates metadata files from many databases(Sql Server, Oracle, Access Database), and then compress necessary files into package(*.zip and *.lrm). It can use on Linux and Windows Oses.
 ------
-	java -jar testudo.jar -Dconf="d:\abc\foo\testudo.json" -Dprefix=fed -Did=bbb -Dproc=2 -Drelease -DrunOnJenkins
+	java -jar testudo.jar -Dconf="d:\abc\foo\testudo.json" -Dproject=fed -Did=bbb -Dproc=2 -Drelease -DrunOnJenkins
 
 * [conf]
 	* optional
 	* conf is defined for full path of configuration file(format is json).
 	* get "testudo.json" under the same folder if both [prefix] and [conf] are not provided.
 	
-* [prefix]
+* [project]
     * `Highest priority`
-	* prefix is the folder name of product
+	* project is the folder name of product project.
 	* get "testudo.json" under this folder.
     
 * [id]
-	* optional
-	* id is the key(ID) of [conf](json file[{"ID":"a",...},{"ID":"b",...},{...},...]). Get the 1st if no provided.
+	* get the 1st if no provided.
+	* id is the key(ID) of [conf](json file[{"ID":"a",...},{"ID":"b",...},{...},...]).
+    * "*" means get all ids in this project's "testudo.json".
 
 * [proc]
 	* choose "2"  by default if no provided.
@@ -43,7 +44,7 @@ json instruction
 {
   "ID": "its ID",
   
-  "prefix": "[optional] product prefix, i.e. fed, ecr, MAS, ...",
+  "prefix": "product prefix, i.e. fed, ecr, MAS, ce, ...",
   
   "metadataPath": "[optional] path of meta-data folder, and which is followed product folder structure, i.e. ...\\ComplianceProduct\\fed\\src\\Metadata",
   
@@ -83,6 +84,8 @@ json instruction
     	"ExportFormatModule.csv",
     	......
      ],
+    "externalProjects":[{"project":"ecrxbrl","srcFile":"access.7z","destDir":"src/dpm","type":"uncompress"},               {"project":"ecrxbrl","srcFile":"xbrl.7z","destDir":"src/xbrl","type":"uncompress"},
+    {"project":"apra_fcr","srcFile":"apra_fcr","destDir":"src/dpm","type":"uncompress"}],
     "dpmFullPath": "[optional] the full name of this product's dpm, i.e. ...\\ComplianceProduct\\fed\\src\\dpm\\FED_FORM_META.accdb",
     "productProperties": "[optional] the full name of this product's properties. i.e. ...\\ComplianceProduct\\fed\\package.properties",
     "sqlFiles":["[optional] the filtered files or all files under filtered folder will be executed on dpm",

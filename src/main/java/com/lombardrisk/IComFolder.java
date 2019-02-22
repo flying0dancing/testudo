@@ -5,15 +5,17 @@ import org.apache.commons.lang3.StringUtils;
 public interface IComFolder {
 	
 	//command-line arguments key
-	String CMDL_ARPPRODUCTPREFIX="prefix";
+	String CMDL_ARPPROJECTFOLDER="project";//project folder
+	String CMDL_ARPPRODUCTPREFIX="prefix";//subfolder under project folder, Deprecated
 	String CMDL_ARPCICONFG="conf";
 	String CMDL_ARPRODUCTID="id";
 	String CMDL_ARPCIPROC="proc";
 	String CMDL_ARPBUILDTYPE="release";
 	String CMDL_ARPRUNONJENKINS="runOnJenkins";
-		
+	
+	String JSON_FILENAME="testudo.json";	
 	//String JSON_PATH="src/main/resources/exportSettings.json";
-	String JSON_PATH=StringUtils.isBlank(System.getProperty(CMDL_ARPPRODUCTPREFIX))?"testudo.json":System.getProperty(CMDL_ARPPRODUCTPREFIX)+System.getProperty("file.separator")+"testudo.json";
+	String JSON_PATH=StringUtils.isBlank(System.getProperty(CMDL_ARPPROJECTFOLDER))?JSON_FILENAME:System.getProperty(CMDL_ARPPROJECTFOLDER)+System.getProperty("file.separator")+JSON_FILENAME;
 	
 	//test data folders
 	String SOURCE_FOLDER="src"+System.getProperty("file.separator");

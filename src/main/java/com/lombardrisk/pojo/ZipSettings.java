@@ -12,6 +12,7 @@ public class ZipSettings {
 	
 	private String excludeFileFilters;
 	private List<String> requiredMetadata;
+	private List<ExternalProject> externalProjects;
 	private String dpmFullPath;
 	private String productProperties;
 	private List<String> sqlFiles;
@@ -83,5 +84,11 @@ public class ZipSettings {
 		this.excludeFileFilters = excludeFileFilters;
 	}
 
-	
+	public List<ExternalProject> getExternalProjects() {
+		return externalProjects;
+	}
+
+	public void setExternalProjects(List<ExternalProject> externalProjects) {
+		this.externalProjects = externalProjects;
+	}
 }
