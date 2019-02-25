@@ -354,7 +354,37 @@ public class DBHelper {
 		}
 		
 	}
-	
+	public String getColumnType(String tableName,String sql,String columnName)
+	{
+		if (getConn() == null) {connect();}
+		String colProp=null;
+		try{
+			Statement state=getConn().createStatement();
+			ResultSet rest=state.executeQuery(sql);
+			ResultSetMetaData rsmd=rest.getMetaData();
+			
+			logger.debug("No of columns in the table:"+ rsmd.getColumnCount());
+			
+			for(int i=1;i<=rsmd.getColumnCount();i++)
+			{
+				if(rsmd.getColumnName(i).equalsIgnoreCase(columnName)){
+					colProp=convertTypeStr(rsmd.getColumnTypeName(i),rsmd.getPrecision(i),rsmd.getScale(i));	
+					break;
+				}
+				
+			}
+		}catch(SQLException e)
+		{
+			logger.error("error: SQLException in [" + sql + "]");
+			logger.error(e.getMessage(),e);
+		}catch(Exception e){
+			logger.error("error: Exception in [" + sql + "]");
+			logger.error(e.getMessage(),e);
+		}finally{
+			close();
+		}
+		return colProp;
+	}
 	public Boolean existColumn(String sql,String column)
 	{
 		Boolean flag=false;
