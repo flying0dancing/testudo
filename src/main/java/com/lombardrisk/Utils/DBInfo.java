@@ -258,6 +258,7 @@ public class DBInfo  implements IComFolder{
 					SQL="select top 1 * from "+tableName;
 				}
 				dbHelper.exportToINI(tab,SQL, new File(exportPath).getPath()+System.getProperty("file.separator")+iNIName);
+				String typeReturnId=dbHelper.getColumnType(tab, SQL, "ReturnId");
 				SQL="select unique \"ReturnId\" from \""+tableName+"\""+sqlCondition;
 				if(getDbDriverFlag()==DBDriverType.SQLSERVER){
 					SQL="select distinct \"ReturnId\" from \""+tableName+"\""+sqlCondition;
@@ -276,8 +277,10 @@ public class DBInfo  implements IComFolder{
 							SQL="select * from \""+tableName+"\" where \"ReturnId\"='"+returnId+"'";
 							if(getDbDriverFlag()==DBDriverType.SQLSERVER){
 								SQL="select * from \""+tableName+"\" where \"ReturnId\"='"+returnId+"'";
-							}else if(getDbDriverFlag()==DBDriverType.ACCESSDB){
-								SQL="select * from "+tableName+" where CStr(ReturnId)=CStr('"+returnId+"')";
+							}else if(getDbDriverFlag()==DBDriverType.ACCESSDB && typeReturnId.contains("VARCHAR")){
+								SQL="select * from "+tableName+" where ReturnId='"+returnId+"'";
+							}else if(getDbDriverFlag()==DBDriverType.ACCESSDB && !typeReturnId.contains("VARCHAR")){
+								SQL="select * from "+tableName+" where ReturnId="+returnId;
 							}
 							dbHelper.exportToCsv(SQL, subPath+System.getProperty("file.separator")+tab+"_"+returnId+".csv");
 						}
@@ -335,6 +338,7 @@ public class DBInfo  implements IComFolder{
 					SQL="select top 1 * from "+tableName;
 				}
 				dbHelper.exportToINI(tab+idOfDBAndTable,SQL, new File(exportPath).getPath()+System.getProperty("file.separator")+iNIName);
+				String typeReturnId=dbHelper.getColumnType(tab, SQL, "ReturnId");
 				SQL="select unique \"ReturnId\" from \""+tableName+"\""+sqlCondition;
 				if(getDbDriverFlag()==DBDriverType.SQLSERVER){
 					SQL="select distinct \"ReturnId\" from \""+tableName+"\""+sqlCondition;
@@ -353,9 +357,14 @@ public class DBInfo  implements IComFolder{
 							SQL="select * from \""+tableName+"\" where \"ReturnId\"='"+returnId+"'";
 							if(getDbDriverFlag()==DBDriverType.SQLSERVER){
 								SQL="select * from \""+tableName+"\" where \"ReturnId\"='"+returnId+"'";
-							}else if(getDbDriverFlag()==DBDriverType.ACCESSDB){
-								SQL="select * from "+tableName+" where CStr(ReturnId)=CStr('"+returnId+"')";
+							}else if(getDbDriverFlag()==DBDriverType.ACCESSDB && typeReturnId.contains("VARCHAR")){
+								SQL="select * from "+tableName+" where ReturnId='"+returnId+"'";
+							}else if(getDbDriverFlag()==DBDriverType.ACCESSDB && !typeReturnId.contains("VARCHAR")){
+								SQL="select * from "+tableName+" where ReturnId="+returnId;
 							}
+							//else if(getDbDriverFlag()==DBDriverType.ACCESSDB){
+							//	SQL="select * from "+tableName+" where CStr(ReturnId)=CStr('"+returnId+"')";
+							//}
 							dbHelper.exportToCsv(SQL, subPath+System.getProperty("file.separator")+tab+idOfDBAndTable+"_"+returnId+".csv");
 						}
 					}
