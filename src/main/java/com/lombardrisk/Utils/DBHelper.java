@@ -354,7 +354,7 @@ public class DBHelper {
 		}
 		
 	}
-	public String getColumnType(String tableName,String sql,String columnName)
+	public String getColumnType(String sql,String columnName)
 	{
 		if (getConn() == null) {connect();}
 		String colProp=null;
@@ -385,35 +385,7 @@ public class DBHelper {
 		}
 		return colProp;
 	}
-	public Boolean existColumn(String sql,String column)
-	{
-		Boolean flag=false;
-		if (getConn() == null) {connect();}
-		try{
-			Statement state=getConn().createStatement();
-			ResultSet rest=state.executeQuery(sql);
-			ResultSetMetaData rsmd=rest.getMetaData();
-			
-			for(int i=1;i<=rsmd.getColumnCount();i++)
-			{
-				if(rsmd.getColumnName(i).equalsIgnoreCase(column)){
-					flag=true;
-					break;
-				}
-			}
-		}catch(SQLException e)
-		{
-			logger.error("error: SQLException in [" + sql + "]");
-			logger.error(e.getMessage(),e);
-		}
-		catch(Exception e){
-			logger.error("error: Exception in [" + sql + "]");
-			logger.error(e.getMessage(),e);
-		}finally{
-			close();
-		}
-		return flag;
-	}
+	
 	/**
 	 * execute sql and get result into fileFullName(comma limit), if fileFullName exists, overwrite it.
 	 * @param sql
