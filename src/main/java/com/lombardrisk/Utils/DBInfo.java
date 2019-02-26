@@ -195,7 +195,7 @@ public class DBInfo  implements IComFolder{
 			exist=queryRecord(SQL);
 		}else if(getDbDriverFlag()==DBDriverType.ACCESSDB){
 			SQL="SELECT * FROM "+tableName+" where false";
-			if(getDbHelper().existColumn(SQL,"ReturnId")){
+			if(StringUtils.isNotBlank(getDbHelper().getColumnType(SQL,"ReturnId"))){
 				exist="ReturnId";
 			}
 		}
@@ -258,7 +258,7 @@ public class DBInfo  implements IComFolder{
 					SQL="select top 1 * from "+tableName;
 				}
 				dbHelper.exportToINI(tab,SQL, new File(exportPath).getPath()+System.getProperty("file.separator")+iNIName);
-				String typeReturnId=dbHelper.getColumnType(tab, SQL, "ReturnId");
+				String typeReturnId=dbHelper.getColumnType(SQL, "ReturnId");
 				SQL="select unique \"ReturnId\" from \""+tableName+"\""+sqlCondition;
 				if(getDbDriverFlag()==DBDriverType.SQLSERVER){
 					SQL="select distinct \"ReturnId\" from \""+tableName+"\""+sqlCondition;
@@ -338,7 +338,7 @@ public class DBInfo  implements IComFolder{
 					SQL="select top 1 * from "+tableName;
 				}
 				dbHelper.exportToINI(tab+idOfDBAndTable,SQL, new File(exportPath).getPath()+System.getProperty("file.separator")+iNIName);
-				String typeReturnId=dbHelper.getColumnType(tab, SQL, "ReturnId");
+				String typeReturnId=dbHelper.getColumnType(SQL, "ReturnId");
 				SQL="select unique \"ReturnId\" from \""+tableName+"\""+sqlCondition;
 				if(getDbDriverFlag()==DBDriverType.SQLSERVER){
 					SQL="select distinct \"ReturnId\" from \""+tableName+"\""+sqlCondition;
