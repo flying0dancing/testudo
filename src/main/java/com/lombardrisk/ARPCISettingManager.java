@@ -28,6 +28,7 @@ public class ARPCISettingManager implements IComFolder {
 	private final static Logger logger = LoggerFactory.getLogger(ARPCISettingManager.class);
 	private static Boolean hasLoaded=false;
 	private static Boolean copyAllProductsInOneProject=true;
+	private static String targetProjectPath=null;
 	private final static List<ARPCISetting> ARPCISETTINGS=loadJson(System.getProperty(CMDL_ARPCICONFG,JSON_PATH));
 	
 	
@@ -143,23 +144,29 @@ public class ARPCISettingManager implements IComFolder {
 				sourcePath=productPath+File.separator+SOURCE_FOLDER; //src/	
 				metadataPath=sourcePath+META_PATH;
 			}
+			
 			if(StringUtils.isBlank(System.getProperty(CMDL_ARPRUNONJENKINS))){
 				//run on local machine
+				if(copyAllProductsInOneProject){
+					targetProjectPath=FileUtil.createNewFileWithSuffix(projectPath,null,null);
+				}
 				//get target product path
-				String targetProductPath=null;
-				targetProductPath=FileUtil.createNewFileWithSuffix(productPath,null,null);
+				String targetProductPath=targetProjectPath+File.separator+arCIConfg.getPrefix();
 				targetSrcPath=targetProductPath+File.separator+SOURCE_FOLDER;//current product(prefix)'s target source path
 				metadataPath=targetSrcPath+META_PATH; //current product(prefix)'s target metadata path
 				if(StringUtils.isNotBlank(System.getProperty(CMDL_ARPRODUCTID)) && System.getProperty(CMDL_ARPRODUCTID).startsWith("*")){
 					if(copyAllProductsInOneProject){
-						FileUtil.copyDirectory(projectPath, Helper.getParentPath(targetProductPath));
+						FileUtil.copyDirectory(projectPath, targetProjectPath);
 						copyAllProductsInOneProject=false;
 					}
 				}else{
-					FileUtil.copyDirectory(sourcePath, targetSrcPath);
+					if(!FileUtil.exists(targetProductPath)){
+						FileUtil.copyDirectory(productPath, targetProductPath);
+					}
 				}
 			}else{
 				//run on Jenkins server
+				targetProjectPath=projectPath;
 				targetSrcPath=sourcePath;
 			}
 			
@@ -201,7 +208,7 @@ public class ARPCISettingManager implements IComFolder {
 					if(externalProjects!=null && externalProjects.size()>0){
 						for(ExternalProject externalpro:externalProjects){
 							if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile(),externalpro.getDestDir()) ){
-								FileUtil.copyExternalProject(Helper.reviseFilePath(externalpro.getProject()+File.pathSeparator+externalpro.getSrcFile()), Helper.reviseFilePath(targetSrcPath+File.pathSeparator+externalpro.getDestDir()), externalpro.getType());
+								FileUtil.copyExternalProject(Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+externalpro.getProject()+File.separator+externalpro.getSrcFile()), Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir()), externalpro.getType());
 							}else{
 								logger.error("externalProjects->project,srcFile,destDir cannot be null.");
 							}
@@ -212,15 +219,14 @@ public class ARPCISettingManager implements IComFolder {
 				
 				//revise "zipSettings"->"productProperties"
 				String productPropsPath=arCIConfg.getZipSettings().getProductProperties();
-				String upperComFolder=Helper.getParentPath(sourcePath);
 				if(StringUtils.isNotBlank(productPropsPath)){
 					if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
-						productPropsPath=Helper.reviseFilePath(upperComFolder+productPropsPath);
+						productPropsPath=Helper.reviseFilePath(targetProjectPath+File.separator+productPropsPath);
 					}else{
 						productPropsPath=Helper.reviseFilePath(productPropsPath);
 					}
 				}else{
-					productPropsPath=Helper.reviseFilePath(upperComFolder+PRODUCT_PROP_FILE);
+					productPropsPath=Helper.reviseFilePath(targetProjectPath+File.separator+PRODUCT_PROP_FILE);
 				}
 				arCIConfg.getZipSettings().setProductProperties(productPropsPath);
 			}

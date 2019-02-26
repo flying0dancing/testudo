@@ -175,6 +175,7 @@ json instruction
   ],
   "zipSettings": {
     "excludeFileFilters": ".git;.gitkeep",
+    "externalProjects":[{"project":"ecrxbrl","srcFile":"access.7z","destDir":"dpm","type":"uncompress"}],
     "requiredMetadata": [
       "GridRef\\009.csv",
       "Rets"

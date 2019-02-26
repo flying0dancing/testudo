@@ -18,6 +18,7 @@ public class ARPCISetting {
     private String notes;
     private transient String srcPath;
     private transient String targetSrcPath;
+
     
     public String getID() {
 		return ID;

@@ -3,6 +3,7 @@ package com.lombardrisk;
 
 import java.util.List;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +59,16 @@ public class Testudo implements IComFolder
 			for(ARPCISetting arSetting:arSettingList){
 				if(arSetting!=null){
 					logger.info(arSetting.toString());
-					jobproc(arSetting, proc);
+					if(arSetting.getDatabaseServerAndTables()!=null && arSetting.getDatabaseServerAndTables().size()>0){
+						if(arSetting.getZipSettings()!=null){
+							jobproc(arSetting, proc);
+						}else{
+							jobproc(arSetting, "1");
+						}
+					}else if(arSetting.getZipSettings()!=null){
+						jobproc(arSetting, "2");
+					}
+					
 				}else{
 					logger.error("testudo's json might contains error, details see readme's json instruction.");
 				}

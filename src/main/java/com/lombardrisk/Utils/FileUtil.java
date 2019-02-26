@@ -195,21 +195,11 @@ public class FileUtil extends FileUtils{
 				{
 					File tmpFile = new File(destDir + File.separator + entry.getName());
 					createDirectory(tmpFile.getParent() + File.separator, null);
-					OutputStream out = null;
-					try
-					{
-						out = new FileOutputStream(tmpFile);
-						int length = 0;
-						byte[] b = new byte[2048];
-						while ((length = sevenZFile.read(b)) != -1)
-						{
-							out.write(b, 0, length);
-						}
-					}
-					finally
-					{
-						IOUtils.closeQuietly(out);
-					}
+					FileOutputStream out = new FileOutputStream(tmpFile);
+					byte[] content = new byte[(int) entry.getSize()];
+					sevenZFile.read(content, 0, content.length);
+					out.write(content);
+	                out.close();
 				}
 			}
 		}
@@ -278,7 +268,7 @@ public class FileUtil extends FileUtils{
 	public static List<String> un7z(String tarFile, String destDir) throws Exception
 	{
 		File file = new File(tarFile);
-		return unTar(file, destDir);
+		return un7z(file, destDir);
 	}
 
 	public static List<String> un7z(File tarFile, String destDir) throws Exception
@@ -518,6 +508,10 @@ public class FileUtil extends FileUtils{
 		else if (upperName.endsWith(".WAR"))
 		{
 			ret = unWar(compressFile, destDir);
+		}
+		else if (upperName.endsWith(".7Z"))
+		{
+			ret = un7z(compressFile, destDir);
 		}
 		return ret;
 	}
@@ -1210,7 +1204,7 @@ public class FileUtil extends FileUtils{
 			String srcFileSuffix=srcFile.substring(srcFile.lastIndexOf(".")+1).toUpperCase();
 			List<String> compressTypes=new ArrayList<String>(Arrays.asList("ZIP","7Z","GZ","TAR","BZ2","WAR"));
 			createDirectories(destDir);
-			if(compressTypes.contains(srcFileSuffix) && StringUtils.equalsIgnoreCase(type, "uncompress")){
+			if(compressTypes.contains(srcFileSuffix) && StringUtils.containsIgnoreCase("uncompress",type)){
 				try {
 					List<String> unCompressFiles=unCompress(srcFile,destDir);
 					logger.info("Debug external projects:"+unCompressFiles.toString());
@@ -1218,7 +1212,7 @@ public class FileUtil extends FileUtils{
 					logger.error(e.getMessage(),e);
 				}
 			}else{
-				copyDirectory(srcFile, destDir);
+				copyFileToDirectory(srcFile, destDir);
 			}
 		}else{
 			logger.error("File Not Found: "+srcFile);
