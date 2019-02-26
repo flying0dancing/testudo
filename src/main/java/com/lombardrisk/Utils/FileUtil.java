@@ -1203,21 +1203,25 @@ public class FileUtil extends FileUtils{
 
 	}
 	
-	public static void copyExternalProject(String project,String srcFile,String destDir,String type){
+	public static void copyExternalProject(String srcFile,String destDir,String type){
 		//TODO
-		File srcFileHd=new File(Helper.reviseFilePath(project+File.pathSeparator+srcFile));
+		File srcFileHd=new File(srcFile);
 		if(srcFileHd.exists()){
 			String srcFileSuffix=srcFile.substring(srcFile.lastIndexOf(".")+1).toUpperCase();
-			List<String> compressTypes=new ArrayList<String>(Arrays.asList("ZIP","7Z","GZ","TAR"));
-			if(compressTypes.contains(srcFileSuffix) && type.equalsIgnoreCase("uncompress")){
+			List<String> compressTypes=new ArrayList<String>(Arrays.asList("ZIP","7Z","GZ","TAR","BZ2","WAR"));
+			createDirectories(destDir);
+			if(compressTypes.contains(srcFileSuffix) && StringUtils.equalsIgnoreCase(type, "uncompress")){
 				try {
-					createDirectories(destDir);
 					List<String> unCompressFiles=unCompress(srcFile,destDir);
 					logger.info("Debug external projects:"+unCompressFiles.toString());
 				} catch (Exception e) {
 					logger.error(e.getMessage(),e);
 				}
+			}else{
+				copyDirectory(srcFile, destDir);
 			}
+		}else{
+			logger.error("File Not Found: "+srcFile);
 		}
 	}
 

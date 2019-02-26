@@ -200,8 +200,10 @@ public class ARPCISettingManager implements IComFolder {
 					List<ExternalProject> externalProjects=zipSetting.getExternalProjects();
 					if(externalProjects!=null && externalProjects.size()>0){
 						for(ExternalProject externalpro:externalProjects){
-							if(StringUtils.isNotBlank(externalpro.getProject())){
-								FileUtil.copyExternalProject(externalpro.getProject(), externalpro.getSrcFile(), externalpro.getDestDir(), externalpro.getType());
+							if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile(),externalpro.getDestDir()) ){
+								FileUtil.copyExternalProject(Helper.reviseFilePath(externalpro.getProject()+File.pathSeparator+externalpro.getSrcFile()), Helper.reviseFilePath(targetSrcPath+File.pathSeparator+externalpro.getDestDir()), externalpro.getType());
+							}else{
+								logger.error("externalProjects->project,srcFile,destDir cannot be null.");
 							}
 						}
 					}

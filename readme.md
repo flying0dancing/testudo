@@ -84,8 +84,8 @@ json instruction
     	"ExportFormatModule.csv",
     	......
      ],
-    "externalProjects":[{"project":"ecrxbrl","srcFile":"access.7z","destDir":"src/dpm","type":"uncompress"},               {"project":"ecrxbrl","srcFile":"xbrl.7z","destDir":"src/xbrl","type":"uncompress"},
-    {"project":"apra_fcr","srcFile":"apra_fcr","destDir":"src/dpm","type":"uncompress"}],
+    "externalProjects":[{"project":"ecrxbrl","srcFile":"access.7z","destDir":"dpm","type":"uncompress"},               {"project":"ecrxbrl","srcFile":"xbrl.7z","destDir":"xbrl","type":"uncompress","notes":"[optional] anything here"},
+    {"project":"apra_fcr","srcFile":"apra_fcr","destDir":"dpm","type":"uncompress"}],
     "dpmFullPath": "[optional] the full name of this product's dpm, i.e. ...\\ComplianceProduct\\fed\\src\\dpm\\FED_FORM_META.accdb",
     "productProperties": "[optional] the full name of this product's properties. i.e. ...\\ComplianceProduct\\fed\\package.properties",
     "sqlFiles":["[optional] the filtered files or all files under filtered folder will be executed on dpm",
