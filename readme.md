@@ -84,12 +84,11 @@ json instruction
     	"ExportFormatModule.csv",
     	......
      ],
-    "externalProjects":[{"project":"ecrxbrl","srcFile":"access.7z","destDir":"dpm","type":"uncompress"},               {"project":"ecrxbrl","srcFile":"xbrl.7z","destDir":"xbrl","type":"uncompress","notes":"[optional] anything here"},
-    {"project":"apra_fcr","srcFile":"apra_fcr","destDir":"dpm","type":"uncompress"}],
+    "externalProjects":[{"project":"ecrxbrl","srcFile":"MAS_FORM_META.7z","destDir":"dpm","uncompress":"yes","notes":"[optional] put uncompressed srcFile to a destDir dpm which under src by default, can be not existed folder"},               {"project":"ecrxbrl","srcFile":"xbrl.7z","destDir":"xbrl","uncompress":"yes","notes":"[optional] anything here"},
+    {"project":"ecrxbrl","srcFile":"sqls","destDir":"sqls","uncompress":"no","notes":"[optional] copy srcFile sqls(folder) to destDir sqls(folder under src, can be not existed folder)"}],
     "dpmFullPath": "[optional] the full name of this product's dpm, i.e. ...\\ComplianceProduct\\fed\\src\\dpm\\FED_FORM_META.accdb",
     "productProperties": "[optional] the full name of this product's properties. i.e. ...\\ComplianceProduct\\fed\\package.properties",
-    "sqlFiles":["[optional] the filtered files or all files under filtered folder will be executed on dpm",
-    	"sqls\\*.sql"],
+    "sqlFiles":["[optional] the filtered files or all files under filtered folder will be executed on dpm", "sqls\\*.sql"],
     "zipFiles": ["the filtered files or all files under filtered folder will be packaged",
     	"manifest.xml", 
     	"dpm",
@@ -116,10 +115,10 @@ json instruction
     	"password": "password"
 	},
 	"requiredTables": {
-    "singles": [ "#FormVars", "#Instances", "#InstanceSets",  "#RefReturns",  "#Rets"   ],
-    "dividedByReturnIds": [  "#GridKey",   "#GridRef" ],
-    "excludeReturnIds":["360012","360023"],
-    "notes": "# means prefix"
+        "singles": [ "#FormVars", "#Instances", "#InstanceSets",  "#RefReturns",  "#Rets"   ],
+        "dividedByReturnIds": [  "#GridKey",   "#GridRef" ],
+        "excludeReturnIds":["360012","360023"],
+        "notes": "# means prefix"
  	}
   }
   ],
@@ -175,7 +174,7 @@ json instruction
   ],
   "zipSettings": {
     "excludeFileFilters": ".git;.gitkeep",
-    "externalProjects":[{"project":"ecrxbrl","srcFile":"access.7z","destDir":"dpm","type":"uncompress"}],
+    "externalProjects":[{"project":"masxbrl","srcFile":"MAS_FORM_META.7z","destDir":"dpm","uncompress":"yes"},{"project":"masxbrl","srcFile":"sqls","destDir":"sqls"}],
     "requiredMetadata": [
       "GridRef\\009.csv",
       "Rets"

@@ -1197,22 +1197,27 @@ public class FileUtil extends FileUtils{
 
 	}
 	
-	public static void copyExternalProject(String srcFile,String destDir,String type){
+	public static void copyExternalProject(String srcFile,String destDir,String uncompress){
 		//TODO
 		File srcFileHd=new File(srcFile);
 		if(srcFileHd.exists()){
-			String srcFileSuffix=srcFile.substring(srcFile.lastIndexOf(".")+1).toUpperCase();
-			List<String> compressTypes=new ArrayList<String>(Arrays.asList("ZIP","7Z","GZ","TAR","BZ2","WAR"));
 			createDirectories(destDir);
-			if(compressTypes.contains(srcFileSuffix) && StringUtils.containsIgnoreCase("uncompress",type)){
-				try {
-					List<String> unCompressFiles=unCompress(srcFile,destDir);
-					logger.info("Debug external projects:"+unCompressFiles.toString());
-				} catch (Exception e) {
-					logger.error(e.getMessage(),e);
+			if(srcFileHd.isDirectory()){
+				copyDirectory(srcFile,destDir);
+			}
+			if(srcFileHd.isFile()){
+				String srcFileSuffix=srcFile.substring(srcFile.lastIndexOf(".")+1).toUpperCase();
+				List<String> compressTypes=new ArrayList<String>(Arrays.asList("ZIP","7Z","GZ","TAR","BZ2","WAR"));
+				if(compressTypes.contains(srcFileSuffix) && StringUtils.containsIgnoreCase("yes",uncompress)){
+					try {
+						List<String> unCompressFiles=unCompress(srcFile,destDir);
+						logger.info("Debug external projects:"+unCompressFiles.toString());
+					} catch (Exception e) {
+						logger.error(e.getMessage(),e);
+					}
+				}else{
+					copyFileToDirectory(srcFile, destDir);
 				}
-			}else{
-				copyFileToDirectory(srcFile, destDir);
 			}
 		}else{
 			logger.error("File Not Found: "+srcFile);

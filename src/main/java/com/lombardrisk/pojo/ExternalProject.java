@@ -13,7 +13,7 @@ public class ExternalProject {
 	private String project;
 	private String srcFile;
 	private String destDir;
-	private String type;
+	private String uncompress;
 	private String notes;
 	
 	@Override
@@ -44,17 +44,17 @@ public class ExternalProject {
 	public void setDestDir(String destDir) {
 		this.destDir = destDir;
 	}
-	public String getType() {
-		return type;
-	}
-	public void setType(String type) {
-		this.type = type;
-	}
 	public String getNotes() {
 		return notes;
 	}
 	public void setNotes(String notes) {
 		this.notes = notes;
+	}
+	public String getUncompress() {
+		return uncompress;
+	}
+	public void setUncompress(String uncompress) {
+		this.uncompress = uncompress;
 	}
 
 	
