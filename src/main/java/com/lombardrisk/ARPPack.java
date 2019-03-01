@@ -109,7 +109,7 @@ public class ARPPack implements IComFolder {
 					if(!flag){
 						logger.error("import metadata["+pathTmp2+"] to "+tableName+" fail.");
 					}else{
-						logger.error("import metadata["+pathTmp2+"] to "+tableName+" successfully.");
+						logger.info("import metadata["+pathTmp2+"] to "+tableName+" successfully.");
 					}
 					
 				}
@@ -211,14 +211,18 @@ public class ARPPack implements IComFolder {
 			return false;
 		}
 		String arpbuild=null;
-		if(StringUtils.isBlank(buildType)){
+		if(StringUtils.isBlank(buildType)){//not provided -Drelease
 			arpbuild=String.valueOf(System.currentTimeMillis());
+		}else{//provided -Drelease
+			if(!buildType.equals("true")){//provided like -Drelease=b7, true means only a flag -Drelease
+				arpbuild=buildType;
+			}
 		}
 		List<String> pathsInManifest=Dom4jUtil.getPathFromElement(sourcePath+MANIFEST_FILE,sourcePath);
 		if(pathsInManifest!=null && pathsInManifest.size()>0){
 			realFullPaths.addAll(pathsInManifest);
 		}
-		//modify manifest.xml
+		//modify implementationVersion in manifest.xml
 		String packageVersion=Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE, IMP_VERSION, arpbuild);
 		List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+"/"+DPM_PATH+"*"+DPM_FILE_SUFFIX),null);
 		if(accdbfiles.size()>0)

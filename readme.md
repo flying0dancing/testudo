@@ -27,7 +27,8 @@ testudo can generates metadata files from many databases(Sql Server, Oracle, Acc
     
 * [release]
 	* optional
-	* use this flag means release version. It will increase build number, like 1.2.3.4 -> 1.2.3.5
+	* use this flag -Drelease means release version. It will increase build number, like 1.2.3.4 -> 1.2.3.5
+	* use this -Drelease=b2 in jenkins job( package manually , it will adding the value you set, like 1.2.3.4 -> 1.2.3.4-b2
 	* does Not use this flag, it will adding a timestamp, like 1.2.3.4 -> 1.2.3.4-1538120420274
 
 * [runOnJenkins]

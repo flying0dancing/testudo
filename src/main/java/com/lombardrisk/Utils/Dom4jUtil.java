@@ -115,7 +115,6 @@ public class Dom4jUtil {
 							pathList.add(appendPath);
 						}
 					}
-					
 				}
 			}
 		}
@@ -128,7 +127,6 @@ public class Dom4jUtil {
 				getPathsFromElement(element,atrr,appendPath,pathList);
 			}
 		}
-		
 	}
 	/**
 	 * 1. get attr's value from which element(elementOrAttribute); 2. get first matched elementOrAttribute's text if attr is blank
@@ -217,11 +215,11 @@ public class Dom4jUtil {
 				String value=parentEle.getTextTrim();
 				//if newValue is null, minor build number adds 1, means release version.
 				if(StringUtils.isNotBlank(newValue)){
-					value=value.replaceAll("((?:\\d+\\.){3}\\d+).*", "$1-"+newValue); //like 1.2.3.4-4687613176
+					value=value.replaceAll("((?:\\d+\\.){2,}\\d+).*", "$1-"+newValue); //like 1.2.3.4-4687613176
 				}else{
-					String minorBuildNumber=value.replaceAll("(?:\\d+\\.){3}(\\d+).*", "$1");
+					String minorBuildNumber=value.replaceAll("(?:\\d+\\.){2,}(\\d+).*", "$1");
 					int newBuildNumber=Integer.parseInt(minorBuildNumber)+1;
-					value=value.replaceAll("((?:\\d+\\.){3}).*", "$1"+newBuildNumber); //like 1.2.3.5,1.2.3.5-4457897 to 1.2.3.6
+					value=value.replaceAll("((?:\\d+\\.){2,}).*", "$1"+newBuildNumber); //like 1.2.3.5,1.2.3.5-4457897 to 1.2.3.6
 				}
 				parentEle.setText(value);
 			}else{
