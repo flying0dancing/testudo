@@ -108,6 +108,65 @@ public class ARPCISettingManager implements IComFolder {
 		}
 		return null;
 	}
+	/***
+	 * 
+	 * @param ids i.e. "masMetadata;maspack"
+	 * @return
+	 * @throws Exception 
+	 */
+	public static List<ARPCISetting> getARPCISettingList(String ids) throws Exception
+	{
+		List<ARPCISetting> arCIConfgList=new ArrayList<ARPCISetting>();
+		try {
+			if(ARPCISETTINGS!=null && ARPCISETTINGS.size()>0){
+				
+				if(StringUtils.isNotBlank(ids) && ids.startsWith("*")){ //get all ARPCISetting
+					for(ARPCISetting arCIConfg:ARPCISETTINGS){
+						arCIConfgList.add(reviseARPCISetting(arCIConfg));
+					}
+				}else if(StringUtils.isNotBlank(ids) && ids.contains(";")){
+					String[] idarr=ids.split(";");
+					Boolean flag=false;
+					
+					for(int i=0;i<idarr.length;i++){
+						flag=false;
+						for(ARPCISetting arCIConfg:ARPCISETTINGS){
+							if(idarr[i].trim().equalsIgnoreCase(arCIConfg.getID())){
+								flag=true;
+								if(!arCIConfgList.contains(arCIConfg)){
+									arCIConfgList.add(reviseARPCISetting(arCIConfg));
+								}else{
+									logger.warn("duplicated argument id="+idarr[i].trim());
+								}
+								break;
+							}
+						}
+						if(!flag){
+							logger.error("Not Exists id="+idarr[i].trim());
+							logger.error("testudo's json might contains error, details see readme's json instruction.");
+							throw new Exception("please check your json file.");
+						}
+					}
+				}else{
+					if(StringUtils.isBlank(ids)){
+						logger.warn("argument id is not setted, get the fist by default in json.");
+					}
+					ARPCISetting arpci=getARPCISetting(ids);
+					if(arpci==null){
+						logger.error("Not Exists id="+ids);
+					}else{
+						arCIConfgList.add(reviseARPCISetting(arpci));
+					}
+				}
+				
+				return arCIConfgList;
+			}
+		} catch (SecurityException
+				| IllegalArgumentException e) {
+			logger.error(e.getMessage(), e);
+		}
+		return null;
+	}
 	
 	private static ARPCISetting reviseARPCISetting(ARPCISetting arCIConfg)
 	{
@@ -159,10 +218,12 @@ public class ARPCISettingManager implements IComFolder {
 						FileUtil.copyDirectory(projectPath, targetProjectPath);
 						copyAllProductsInOneProject=false;
 					}
+					
 				}else{
 					if(!FileUtil.exists(targetProductPath)){
 						FileUtil.copyDirectory(productPath, targetProductPath);
 					}
+					copyAllProductsInOneProject=false;
 				}
 			}else{
 				//run on Jenkins server

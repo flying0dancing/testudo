@@ -220,7 +220,11 @@ public class ARPPack implements IComFolder {
 		}
 		List<String> pathsInManifest=Dom4jUtil.getPathFromElement(sourcePath+MANIFEST_FILE,sourcePath);
 		if(pathsInManifest!=null && pathsInManifest.size()>0){
-			realFullPaths.addAll(pathsInManifest);
+			for(String pathtmp:pathsInManifest){
+				if(!realFullPaths.contains(pathtmp)){
+					realFullPaths.add(pathtmp);
+				}
+			}
 		}
 		//modify implementationVersion in manifest.xml
 		String packageVersion=Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE, IMP_VERSION, arpbuild);

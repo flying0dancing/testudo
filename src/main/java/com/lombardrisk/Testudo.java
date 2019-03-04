@@ -51,44 +51,41 @@ public class Testudo implements IComFolder
 		System.out.println("process"+proc);
 		System.out.println("build type:"+arpbuildtype);*/
 		
-		if(StringUtils.isBlank(iDinJoson)){
-			logger.warn("argument id is not setted, get the fist by default in json.");
-		}
-		if(StringUtils.isNotBlank(iDinJoson) && iDinJoson.startsWith("*")){
-			List<ARPCISetting> arSettingList=ARPCISettingManager.getARPCISettingList();
-			for(ARPCISetting arSetting:arSettingList){
-				if(arSetting!=null){
-					logger.info(arSetting.toString());
-					if(arSetting.getDatabaseServerAndTables()!=null && arSetting.getDatabaseServerAndTables().size()>0){
-						if(arSetting.getZipSettings()!=null){
-							jobproc(arSetting, proc);
-						}else{
-							jobproc(arSetting, "1");
+		//if(StringUtils.isBlank(iDinJoson)){
+		//	logger.warn("argument id is not setted, get the fist by default in json.");
+		//}
+
+		List<ARPCISetting> arSettingList;
+		try {
+			arSettingList = ARPCISettingManager.getARPCISettingList(iDinJoson);
+			if(arSettingList!=null && arSettingList.size()>0){
+				for(ARPCISetting arSetting:arSettingList){
+					if(arSetting!=null){
+						logger.info(arSetting.toString());
+						if(arSetting.getDatabaseServerAndTables()!=null && arSetting.getDatabaseServerAndTables().size()>0){
+							if(arSetting.getZipSettings()!=null){
+								jobproc(arSetting, proc);
+							}else{
+								jobproc(arSetting, "1");
+							}
+						}else if(arSetting.getZipSettings()!=null){
+							jobproc(arSetting, "2");
 						}
-					}else if(arSetting.getZipSettings()!=null){
-						jobproc(arSetting, "2");
+						
+					}else{
+						HelperDoc();
+						logger.error("testudo's json might contains error, details see readme's json instruction.");
+						
 					}
-					
-				}else{
-					logger.error("testudo's json might contains error, details see readme's json instruction.");
 				}
 			}
-		}else{
-			if(StringUtils.isBlank(iDinJoson)){
-				logger.warn("argument id is not setted, get the fist in json by default.");
-			}
-			ARPCISetting arSetting=ARPCISettingManager.getARPCISetting(iDinJoson);
-			if(arSetting!=null){
-				logger.info(arSetting.toString());
-				jobproc(arSetting, proc);
-			}else{
-				HelperDoc();
-			}
+			
+		} catch (Exception e) {
+			logger.error(e.getMessage());
 		}
 		
 		end=System.currentTimeMillis();
 		logger.info("total time(sec):"+(end-begin)/1000.00F);
-		
     }
 
     private static void HelperDoc(){
