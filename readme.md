@@ -17,8 +17,8 @@ testudo can generates metadata files from many databases(Sql Server, Oracle, Acc
 * [id]
 	* get the 1st if no provided.
 	* id is the key(ID) of [conf](json file[{"ID":"a",...},{"ID":"b",...},{...},...]).
-	* support more ids, format like id1;id2;id3 
-    * "*" means get all ids in this project's "testudo.json".
+	* support more ids, format like id=id1;id2;id3 
+    * id=* means get all ids in this project's "testudo.json".
 
 * [proc]
 	* choose "2"  by default if no provided.
