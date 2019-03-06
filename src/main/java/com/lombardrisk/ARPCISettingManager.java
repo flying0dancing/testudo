@@ -15,6 +15,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
+import com.lombardrisk.Utils.Dom4jUtil;
 import com.lombardrisk.Utils.FileUtil;
 import com.lombardrisk.Utils.Helper;
 import com.lombardrisk.pojo.ARPCISetting;
@@ -263,14 +264,23 @@ public class ARPCISettingManager implements IComFolder {
 						dpmFullName=targetSrcPath+DPM_PATH+dpmName;//remap its dpmFullName to target folder
 					}
 				}else{
-					//dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+arCIConfg.getPrefix()+DPM_FILE_SUFFIX);
-					dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+arCIConfg.getPrefix().toUpperCase()+DPM_FILE_SUFFIX);
+					String accdbFileNameInManifest=Dom4jUtil.updateElement(targetSrcPath+MANIFEST_FILE,ACCESSFILE ,null);
+					//dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+arCIConfg.getPrefix().toUpperCase()+DPM_FILE_SUFFIX);
+					dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+accdbFileNameInManifest);
 					List<ExternalProject> externalProjects=zipSetting.getExternalProjects();
 					if(externalProjects!=null && externalProjects.size()>0){
 						for(ExternalProject externalpro:externalProjects){
 							if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile()) ){
 								String destDir=StringUtils.isBlank(externalpro.getDestDir())?targetSrcPath:Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir());
 								FileUtil.copyExternalProject(Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+externalpro.getProject()+File.separator+externalpro.getSrcFile()), destDir, externalpro.getUncompress());
+								List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath+"/"+DPM_PATH+"*"+DPM_FILE_TYPE),null);
+								if(accdbfiles.size()>0){
+									String accdbFileName=FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
+									if(!accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)){
+										logger.info("Rename dpm name: "+ accdbFileName +" to "+accdbFileNameInManifest);
+										FileUtil.renameTo(accdbfiles.get(0), targetSrcPath+File.separator+DPM_PATH+accdbFileNameInManifest);
+									}
+								}
 							}else{
 								logger.error("externalProjects->project,srcFile cannot be null.");
 							}

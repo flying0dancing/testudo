@@ -26,7 +26,8 @@ public interface IComFolder {
 	String SQLS_PATH="sqls"+System.getProperty("file.separator");
 	String MANIFEST_FILE="manifest.xml";
 	String INI_FILE_SUFFIX="_FORM_META.ini";
-	String DPM_FILE_SUFFIX="_FORM_META.accdb";
+	String DPM_FILE_SUFFIX="_FORM_META.accdb";//Deprecated
+	String DPM_FILE_TYPE=".accdb";
 	String PRODUCT_PROP_FILE="package.properties";
 	
 	//product properties definition

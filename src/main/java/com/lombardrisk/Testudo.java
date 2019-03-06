@@ -137,29 +137,24 @@ public class Testudo implements IComFolder
     private static void packMetadataAndFiles(ARPCISetting arSetting)
     {
     	String iniFullName=Helper.reviseFilePath(arSetting.getMetadataPath()+System.getProperty("file.separator")+arSetting.getMetadataStruct());
-		if(FileUtil.exists(iniFullName)){
-			ARPPack azipFile=new ARPPack();
-			Boolean flag=azipFile.createNewDpm(arSetting.getZipSettings().getDpmFullPath());
-			if(!flag){
-				logger.error("error: create access database unsuccessful.");
-				return;
-			}
-			List<String> metadataPaths=azipFile.importMetadataToDpm(arSetting.getZipSettings().getDpmFullPath(),arSetting.getMetadataPath(),arSetting.getZipSettings().getRequiredMetadata(),iniFullName);
-			if(metadataPaths!=null){
-				List<String> returnNameVers=azipFile.getReturnNameAndVersions(arSetting.getZipSettings().getDpmFullPath(), metadataPaths);
-				if(returnNameVers!=null){
-					arSetting.getZipSettings().getZipFiles().addAll(returnNameVers);
-				}
-			}
-			
-			Boolean status=azipFile.execSQLs(arSetting.getZipSettings().getDpmFullPath(),arSetting.getTargetSrcPath(),arSetting.getZipSettings().getSqlFiles(),arSetting.getZipSettings().getExcludeFileFilters());
-			if(status){
-				azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(), Helper.getParentPath(arSetting.getTargetSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
-			}	
-			
-		}else{
-			logger.error("error: invalid file["+iniFullName+"]");
+    	ARPPack azipFile=new ARPPack();
+		Boolean flag=azipFile.createNewDpm(arSetting.getZipSettings().getDpmFullPath());
+		if(!flag){
+			logger.error("error: create access database unsuccessful.");
+			return;
 		}
+		List<String> metadataPaths=azipFile.importMetadataToDpm(arSetting.getZipSettings().getDpmFullPath(),arSetting.getMetadataPath(),arSetting.getZipSettings().getRequiredMetadata(),iniFullName);
+		if(metadataPaths!=null){
+			List<String> returnNameVers=azipFile.getReturnNameAndVersions(arSetting.getZipSettings().getDpmFullPath(), metadataPaths);
+			if(returnNameVers!=null){
+				arSetting.getZipSettings().getZipFiles().addAll(returnNameVers);
+			}
+		}
+		
+		Boolean status=azipFile.execSQLs(arSetting.getZipSettings().getDpmFullPath(),arSetting.getTargetSrcPath(),arSetting.getZipSettings().getSqlFiles(),arSetting.getZipSettings().getExcludeFileFilters());
+		if(status){
+			azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(), Helper.getParentPath(arSetting.getTargetSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
+		}	
     }
   
 }

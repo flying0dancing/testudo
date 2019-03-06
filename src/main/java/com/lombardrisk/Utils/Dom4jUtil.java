@@ -223,7 +223,9 @@ public class Dom4jUtil {
 				}
 				parentEle.setText(value);
 			}else{
-				parentEle.setText(newValue);
+				if(StringUtils.isNotBlank(newValue)){
+					parentEle.setText(newValue);
+				}
 			}
 			foundflag=true;
 			returnValue=parentEle.getTextTrim();

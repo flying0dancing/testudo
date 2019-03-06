@@ -228,12 +228,18 @@ public class ARPPack implements IComFolder {
 		}
 		//modify implementationVersion in manifest.xml
 		String packageVersion=Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE, IMP_VERSION, arpbuild);
-		List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+"/"+DPM_PATH+"*"+DPM_FILE_SUFFIX),null);
+		//modify accessFile in manifest.xml
+		/*List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+"/"+DPM_PATH+"*"+DPM_FILE_TYPE),null);
+		String accdbFileNameInManifest=Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE,ACCESSFILE ,null);
 		if(accdbfiles.size()>0)
 		{
 			String accdbFileName=FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
-			Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE,ACCESSFILE ,accdbFileName);
-		}
+			if(!accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)){
+				logger.info("Rename dpm name: "+ accdbFileName +" to "+accdbFileNameInManifest);
+				FileUtil.renameTo(accdbfiles.get(0), sourcePath+"/"+DPM_PATH+accdbFileNameInManifest);
+			}
+			//Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE,ACCESSFILE ,accdbFileName);
+		}*/
 		
 		if(FileUtil.exists(propFullPath)){
 			PropHelper.loading(propFullPath);
