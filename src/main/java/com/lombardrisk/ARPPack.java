@@ -230,16 +230,12 @@ public class ARPPack implements IComFolder {
 		String packageVersion=Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE, IMP_VERSION, arpbuild);
 		//modify accessFile in manifest.xml
 		/*List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+"/"+DPM_PATH+"*"+DPM_FILE_TYPE),null);
-		String accdbFileNameInManifest=Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE,ACCESSFILE ,null);
 		if(accdbfiles.size()>0)
-		{
+		  {
 			String accdbFileName=FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
-			if(!accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)){
-				logger.info("Rename dpm name: "+ accdbFileName +" to "+accdbFileNameInManifest);
-				FileUtil.renameTo(accdbfiles.get(0), sourcePath+"/"+DPM_PATH+accdbFileNameInManifest);
-			}
-			//Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE,ACCESSFILE ,accdbFileName);
-		}*/
+			Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE,ACCESSFILE ,accdbFileName);
+		  }*/
+		
 		
 		if(FileUtil.exists(propFullPath)){
 			PropHelper.loading(propFullPath);
@@ -252,7 +248,7 @@ public class ARPPack implements IComFolder {
 		
 		//zipped and lrm product
 		String packageNamePrefix=PropHelper.getProperty(PACKAGE_NAME_PREFIX);
-		packageNamePrefix=StringUtils.isBlank(packageNamePrefix)?"ARfor"+productPrefix+"_":packageNamePrefix;
+		packageNamePrefix=StringUtils.isBlank(packageNamePrefix)?productPrefix+"_":packageNamePrefix;
 		String packageNameSuffix=null;//PropHelper.getProperty(AR_INSTALLER_VERSION);
 		packageNameSuffix=StringUtils.isBlank(packageNameSuffix)?"":"_for_AR_v"+packageNameSuffix;
 		String zipFileNameWithoutSuffix=packageNamePrefix+"v"+packageVersion+packageNameSuffix;

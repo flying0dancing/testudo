@@ -169,6 +169,11 @@ public class ARPCISettingManager implements IComFolder {
 		return null;
 	}
 	
+	/**
+	 * adding default value for ARPCISetting
+	 * @param arCIConfg
+	 * @return
+	 */
 	private static ARPCISetting reviseARPCISetting(ARPCISetting arCIConfg)
 	{
 		if(arCIConfg!=null){
@@ -273,7 +278,8 @@ public class ARPCISettingManager implements IComFolder {
 							if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile()) ){
 								String destDir=StringUtils.isBlank(externalpro.getDestDir())?targetSrcPath:Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir());
 								FileUtil.copyExternalProject(Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+externalpro.getProject()+File.separator+externalpro.getSrcFile()), destDir, externalpro.getUncompress());
-								List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath+"/"+DPM_PATH+"*"+DPM_FILE_TYPE),null);
+								String dmpType=accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf("."));
+								List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath+"/"+DPM_PATH+"*"+dmpType),null);
 								if(accdbfiles.size()>0){
 									String accdbFileName=FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
 									if(!accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)){
