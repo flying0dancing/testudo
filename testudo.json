@@ -22,6 +22,7 @@
   "zipSettings": {
     "notes": "xxx",
     "excludeFileFilters": ".git;.gitkeep",
+    "externalProjects":[{"project":"praxbrl","srcFile":"PRA_FORM_META.7z","destDir":"dpm","uncompress":"yes"},{"project":"praxbrl","srcFile":"xbrl.7z","destDir":"xbrl","uncompress":"yes"}],
     "requiredMetadata": [
       "GridRef\\009.csv",
       "Rets"
