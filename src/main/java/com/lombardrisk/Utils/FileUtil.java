@@ -1211,7 +1211,7 @@ public class FileUtil extends FileUtils{
 				if(compressTypes.contains(srcFileSuffix) && StringUtils.containsIgnoreCase("yes",uncompress)){
 					try {
 						List<String> unCompressFiles=unCompress(srcFile,destDir);
-						logger.info("Debug external projects:"+unCompressFiles.toString());
+						//logger.info("Debug external projects:"+unCompressFiles.toString());
 					} catch (Exception e) {
 						logger.error(e.getMessage(),e);
 					}

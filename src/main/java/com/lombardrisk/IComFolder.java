@@ -40,7 +40,7 @@ public interface IComFolder {
 	String IMP_VERSION="implementationVersion";
 	String MAPPING_VERSION="mappingVersion";
 	String ACCESSFILE="accessFile";
-	
+	String PREFIX="prefix";
 	//package things
 	String PACKAGE_SUFFIX=".zip";
 	String PACKAGE_LRM_SUFFIX=".lrm";

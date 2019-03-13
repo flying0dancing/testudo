@@ -202,7 +202,11 @@ public class ARPPack implements IComFolder {
 		if(StringUtils.isBlank(sourcePath)){return false;}
 		logger.info("================= package files =================");
 		//get all packaged files
-		String productPrefix=FileUtil.getFileNameWithSuffix(Helper.getParentPath(sourcePath)).toUpperCase().replaceAll("\\(\\d+\\)", "");
+		//String productPrefix=FileUtil.getFileNameWithSuffix(Helper.getParentPath(sourcePath)).toUpperCase().replaceAll("\\(\\d+\\)", "");
+		String productPrefix=Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE,PREFIX ,null);
+		if(StringUtils.isBlank(productPrefix)){
+			productPrefix=FileUtil.getFileNameWithSuffix(Helper.getParentPath(sourcePath)).toUpperCase().replaceAll("\\(\\d+\\)", "");
+		}
 		Boolean flag=true;
 		List<String> packFileNames=zipSet.getZipFiles();
 		List<String> realFullPaths=getFileFullPaths(sourcePath, packFileNames,zipSet.getExcludeFileFilters());
@@ -248,7 +252,7 @@ public class ARPPack implements IComFolder {
 		
 		//zipped and lrm product
 		String packageNamePrefix=PropHelper.getProperty(PACKAGE_NAME_PREFIX);
-		packageNamePrefix=StringUtils.isBlank(packageNamePrefix)?productPrefix+"_":packageNamePrefix;
+		packageNamePrefix=StringUtils.isBlank(packageNamePrefix)?productPrefix+"_":packageNamePrefix+productPrefix;
 		String packageNameSuffix=null;//PropHelper.getProperty(AR_INSTALLER_VERSION);
 		packageNameSuffix=StringUtils.isBlank(packageNameSuffix)?"":"_for_AR_v"+packageNameSuffix;
 		String zipFileNameWithoutSuffix=packageNamePrefix+"v"+packageVersion+packageNameSuffix;
