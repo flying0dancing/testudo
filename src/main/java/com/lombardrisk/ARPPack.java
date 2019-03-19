@@ -243,8 +243,8 @@ public class ARPPack implements IComFolder {
 		
 		if(FileUtil.exists(propFullPath)){
 			PropHelper.loading(propFullPath);
-			//modify manifest.xml
-			Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE, MAPPING_VERSION, PropHelper.getProperty(GEN_PRODUCT_DPM_VERSION));
+			//modify manifest.xml mappingVersion by gen.product.dpm.version in package.properties
+			//Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE, MAPPING_VERSION, PropHelper.getProperty(GEN_PRODUCT_DPM_VERSION));//no need to update it
 			
 		}else{
 			logger.warn("warn: cannot found file ["+propFullPath+"]");
