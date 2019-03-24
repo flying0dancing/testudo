@@ -12,6 +12,7 @@ public interface IComFolder {
 	String CMDL_ARPCIPROC="proc";
 	String CMDL_ARPBUILDTYPE="release";
 	String CMDL_ARPRUNONJENKINS="runOnJenkins";
+    String CMDL_ARPRUNONMAVEN="runMaven";
 	
 	String JSON_FILENAME="testudo.json";	
 	//String JSON_PATH="src/main/resources/exportSettings.json";
