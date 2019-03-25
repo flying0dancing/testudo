@@ -1,4 +1,9 @@
-#!/usr/bin/env groovy
+@Library('pipeline-libs') _
+
+MVN = maven.initialiseMvn()
+BUILD_VERSION = "1.${env.BUILD_NUMBER}.0"
+BUILD_INFO = maven.newBuildInfo()
+
 pipeline{
 	agent any
 

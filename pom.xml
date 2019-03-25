@@ -13,7 +13,6 @@
     <version.java>1.8</version.java>
     <version.junit>4.12</version.junit>
 
-
     <sonar.host.url>http://sonar.lombardrisk.com</sonar.host.url>
   </properties>
 
