@@ -283,10 +283,7 @@ public class ARPCISettingManager implements IComFolder {
         arCIConfg.setMetadataPath(arCIConfg.getSrcPath() + "\\metadata");
         arCIConfg.setTargetSrcPath(directory + "\\target\\");
         FileUtil.copyDirectory(arCIConfg.getSrcPath(), arCIConfg.getTargetSrcPath());
-
-        arCIConfg.getZipSettings().setDpmFullPath(arCIConfg.getTargetSrcPath()+"dpm"+ "\\DPB_FORM_META.accdb");
         arCIConfg.setZipPath(arCIConfg.getTargetSrcPath());
-
     }
 
     private static void setupPaths(final ARPCISetting arCIConfg) {
