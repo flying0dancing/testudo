@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.GsonBuilder;
 
+
 public class ARPCISetting {
 	private static final Logger logger = LoggerFactory.getLogger(ARPCISetting.class);
 	private String ID;
@@ -20,7 +21,6 @@ public class ARPCISetting {
     private transient String targetSrcPath;
     private transient String zipPath;
 
-    
     public String getID() {
 		return ID;
 	}
