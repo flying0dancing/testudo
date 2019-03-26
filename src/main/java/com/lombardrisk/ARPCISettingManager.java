@@ -30,7 +30,8 @@ public class ARPCISettingManager implements IComFolder {
 	private static Boolean hasLoaded=false;
 	private static Boolean copyAllProductsInOneProject=true;
 	private static String targetProjectPath=null;
-	private final static List<ARPCISetting> ARPCISETTINGS=loadJson(System.getProperty(CMDL_ARPCICONFG,JSON_PATH));
+	private final static List<ARPCISetting> ARPCISETTINGS
+            =loadJson(System.getProperty(CMDL_ARPCICONFG,JSON_PATH));
 	
 	
 	public static synchronized List<ARPCISetting> loadJson(String file) 
@@ -75,6 +76,7 @@ public class ARPCISettingManager implements IComFolder {
 	public static ARPCISetting getARPCISetting(String key)
 	{
 		try {
+		    logger.info("Settings" + ARPCISETTINGS.size());
 			if(ARPCISETTINGS!=null && ARPCISETTINGS.size()>0){
 				ARPCISetting arCIConfg;
 				if(StringUtils.isBlank(key)){
@@ -119,6 +121,7 @@ public class ARPCISettingManager implements IComFolder {
 	{
 		List<ARPCISetting> arCIConfgList=new ArrayList<ARPCISetting>();
 		try {
+
 			if(ARPCISETTINGS!=null && ARPCISETTINGS.size()>0){
 				
 				if(StringUtils.isNotBlank(ids) && ids.startsWith("*")){ //get all ARPCISetting
@@ -191,55 +194,13 @@ public class ARPCISettingManager implements IComFolder {
 			}else{
 				arCIConfg.setPrefix(productPrefix.toLowerCase());
 			}
-			
-			//revise "metadataPath"
-			String metadataPath=arCIConfg.getMetadataPath();
-			String projectPath=null;
-			String productPath=null;//subfolder under project folder
-			String targetSrcPath=null;
-			String sourcePath=null;
-			if(StringUtils.isNotBlank(metadataPath)){
-				metadataPath=Helper.reviseFilePath(metadataPath);
-				sourcePath=Helper.getParentPath(metadataPath); //src/
-				productPath=Helper.removeLastSlash(Helper.getParentPath(sourcePath));
-				projectPath=Helper.removeLastSlash(Helper.getParentPath(productPath));
-			}else{
-				projectPath=Helper.getParentPath(System.getProperty("user.dir"))+System.getProperty(CMDL_ARPPROJECTFOLDER);
-				productPath=projectPath+File.separator+arCIConfg.getPrefix();
-				sourcePath=productPath+File.separator+SOURCE_FOLDER; //src/	
-				metadataPath=sourcePath+META_PATH;
-			}
-			
-			if(StringUtils.isBlank(System.getProperty(CMDL_ARPRUNONJENKINS))){
-				//run on local machine
-				if(copyAllProductsInOneProject){
-					targetProjectPath=FileUtil.createNewFileWithSuffix(projectPath,null,null);
-				}
-				//get target product path
-				String targetProductPath=targetProjectPath+File.separator+arCIConfg.getPrefix();
-				targetSrcPath=targetProductPath+File.separator+SOURCE_FOLDER;//current product(prefix)'s target source path
-				metadataPath=targetSrcPath+META_PATH; //current product(prefix)'s target metadata path
-				if(StringUtils.isNotBlank(System.getProperty(CMDL_ARPRODUCTID)) && System.getProperty(CMDL_ARPRODUCTID).startsWith("*")){
-					if(copyAllProductsInOneProject){
-						FileUtil.copyDirectory(projectPath, targetProjectPath);
-						copyAllProductsInOneProject=false;
-					}
-					
-				}else{
-					if(!FileUtil.exists(targetProductPath)){
-						FileUtil.copyDirectory(productPath, targetProductPath);
-					}
-					copyAllProductsInOneProject=false;
-				}
-			}else{
-				//run on Jenkins server
-				targetProjectPath=projectPath;
-				targetSrcPath=sourcePath;
-			}
-			
-			arCIConfg.setMetadataPath(metadataPath);
-			arCIConfg.setSrcPath(sourcePath);
-			arCIConfg.setTargetSrcPath(targetSrcPath);
+
+            String mavenProperty = System.getProperty(CMDL_ARPRUNONMAVEN);
+            if(StringUtils.isNotEmpty(mavenProperty)){
+                setupMavenPaths(arCIConfg);
+            } else {
+                setupPaths(arCIConfg);
+            }
 			FileUtil.createDirectories(arCIConfg.getMetadataPath());
 			
 			//revise "metadataStruct"
@@ -253,38 +214,41 @@ public class ARPCISettingManager implements IComFolder {
 			if(arCIConfg.getZipSettings()!=null){
 				//revise "zipSettings"->"dpmFullPath"
 				String dpmFullName=arCIConfg.getZipSettings().getDpmFullPath();
-				FileUtil.createDirectories(targetSrcPath+DPM_PATH);
+				FileUtil.createDirectories(arCIConfg.getTargetSrcPath()+DPM_PATH);
 				if(StringUtils.isNotBlank(dpmFullName)){
 					if(!dpmFullName.contains("/") && !dpmFullName.contains("\\")){
 						//dpmFullName just a file name without path
-						dpmFullName=targetSrcPath+DPM_PATH+dpmFullName;
+						dpmFullName=arCIConfg.getTargetSrcPath()+DPM_PATH+dpmFullName;
 					}else{
 						dpmFullName=Helper.reviseFilePath(dpmFullName);
 						String dpmPathTemp=Helper.getParentPath(dpmFullName);
 						String dpmName=dpmFullName.replace(dpmPathTemp, "");
-						//copy access file
-						if(!dpmPathTemp.contains(sourcePath)){
-							FileUtil.copyFileToDirectory(dpmFullName, targetSrcPath+DPM_PATH);
+
+						if (mavenProperty== null) {
+							//copy access file
+							if (!dpmPathTemp.contains(arCIConfg.getSrcPath())) {
+								FileUtil.copyFileToDirectory(dpmFullName, arCIConfg.getTargetSrcPath() + DPM_PATH);
+							}
 						}
-						dpmFullName=targetSrcPath+DPM_PATH+dpmName;//remap its dpmFullName to target folder
+						dpmFullName=arCIConfg.getTargetSrcPath()+DPM_PATH+dpmName;//remap its dpmFullName to target folder
 					}
 				}else{
-					String accdbFileNameInManifest=Dom4jUtil.updateElement(targetSrcPath+MANIFEST_FILE,ACCESSFILE ,null);
+					String accdbFileNameInManifest=Dom4jUtil.updateElement(arCIConfg.getTargetSrcPath()+MANIFEST_FILE,ACCESSFILE ,null);
 					//dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+arCIConfg.getPrefix().toUpperCase()+DPM_FILE_SUFFIX);
-					dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+accdbFileNameInManifest);
+					dpmFullName=Helper.reviseFilePath(arCIConfg.getTargetSrcPath()+DPM_PATH+accdbFileNameInManifest);
 					List<ExternalProject> externalProjects=zipSetting.getExternalProjects();
 					if(externalProjects!=null && externalProjects.size()>0){
 						for(ExternalProject externalpro:externalProjects){
 							if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile()) ){
-								String destDir=StringUtils.isBlank(externalpro.getDestDir())?targetSrcPath:Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir());
+								String destDir=StringUtils.isBlank(externalpro.getDestDir())?arCIConfg.getTargetSrcPath():Helper.reviseFilePath(arCIConfg.getTargetSrcPath()+File.separator+externalpro.getDestDir());
 								FileUtil.copyExternalProject(Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+externalpro.getProject()+File.separator+externalpro.getSrcFile()), destDir, externalpro.getUncompress());
 								String dmpType=accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf("."));
-								List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath+"/"+DPM_PATH+"*"+dmpType),null);
+								List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(arCIConfg.getTargetSrcPath()+"/"+DPM_PATH+"*"+dmpType),null);
 								if(accdbfiles.size()>0){
 									String accdbFileName=FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
 									if(!accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)){
 										logger.info("Rename dpm name: "+ accdbFileName +" to "+accdbFileNameInManifest);
-										FileUtil.renameTo(accdbfiles.get(0), targetSrcPath+File.separator+DPM_PATH+accdbFileNameInManifest);
+										FileUtil.renameTo(accdbfiles.get(0), arCIConfg.getTargetSrcPath()+File.separator+DPM_PATH+accdbFileNameInManifest);
 									}
 								}
 							}else{
@@ -312,7 +276,65 @@ public class ARPCISettingManager implements IComFolder {
 		}
 		return arCIConfg;
 	}
-	
 
+    private static void setupMavenPaths(final ARPCISetting arCIConfg) {
+        String directory = System.getProperty("project.dir");
+        arCIConfg.setSrcPath(directory + "\\src");
+        arCIConfg.setMetadataPath(arCIConfg.getSrcPath() + "\\metadata");
+        arCIConfg.setTargetSrcPath(directory + "\\target\\");
+        FileUtil.copyDirectory(arCIConfg.getSrcPath(), arCIConfg.getTargetSrcPath());
+        arCIConfg.setZipPath(arCIConfg.getTargetSrcPath());
+    }
 
+    private static void setupPaths(final ARPCISetting arCIConfg) {
+        //revise "metadataPath"
+        String metadataPath=arCIConfg.getMetadataPath();
+        String projectPath=null;
+        String productPath=null;//subfolder under project folder
+        String targetSrcPath=null;
+        String sourcePath=null;
+        if(StringUtils.isNotBlank(metadataPath)){
+            metadataPath=Helper.reviseFilePath(metadataPath);
+            sourcePath=Helper.getParentPath(metadataPath); //src/
+            productPath=Helper.removeLastSlash(Helper.getParentPath(sourcePath));
+            projectPath=Helper.removeLastSlash(Helper.getParentPath(productPath));
+        }else{
+            projectPath=Helper.getParentPath(System.getProperty("user.dir"))+System.getProperty(CMDL_ARPPROJECTFOLDER);
+            productPath=projectPath+File.separator+arCIConfg.getPrefix();
+            sourcePath=productPath+File.separator+SOURCE_FOLDER; //src/
+            metadataPath=sourcePath+META_PATH;
+        }
+
+        if(StringUtils.isBlank(System.getProperty(CMDL_ARPRUNONJENKINS))){
+            //run on local machine
+            if(copyAllProductsInOneProject){
+                targetProjectPath=FileUtil.createNewFileWithSuffix(projectPath,null,null);
+            }
+            //get target product path
+            String targetProductPath=targetProjectPath+File.separator+arCIConfg.getPrefix();
+            targetSrcPath=targetProductPath+File.separator+SOURCE_FOLDER;//current product(prefix)'s target source path
+            metadataPath=targetSrcPath+META_PATH; //current product(prefix)'s target metadata path
+            if(StringUtils.isNotBlank(System.getProperty(CMDL_ARPRODUCTID)) && System.getProperty(CMDL_ARPRODUCTID).startsWith("*")){
+                if(copyAllProductsInOneProject){
+                    FileUtil.copyDirectory(projectPath, targetProjectPath);
+                    copyAllProductsInOneProject=false;
+                }
+
+            }else{
+                if(!FileUtil.exists(targetProductPath)){
+                    FileUtil.copyDirectory(productPath, targetProductPath);
+                }
+                copyAllProductsInOneProject=false;
+            }
+        }else{
+            //run on Jenkins server
+            targetProjectPath=projectPath;
+            targetSrcPath=sourcePath;
+        }
+
+        arCIConfg.setMetadataPath(metadataPath);
+        arCIConfg.setSrcPath(sourcePath);
+        arCIConfg.setTargetSrcPath(targetSrcPath);
+        arCIConfg.setZipPath(Helper.getParentPath(targetSrcPath));
+    }
 }

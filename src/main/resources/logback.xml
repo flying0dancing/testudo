@@ -2,7 +2,7 @@
 <!DOCTYPE xml>
 <configuration>
     <!--<statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener"/>-->
-    <property name="output_folder" value="log/"/>
+    <property name="output_folder" value="${log.dir}/"/>
     <appender name="file" class="ch.qos.logback.core.FileAppender">  
   		<file>${output_folder}testudo.log</file>
   		<Append>false</Append>

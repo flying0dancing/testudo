@@ -206,7 +206,8 @@ public class ARPPack implements IComFolder {
 		//String productPrefix=FileUtil.getFileNameWithSuffix(Helper.getParentPath(sourcePath)).toUpperCase().replaceAll("\\(\\d+\\)", "");
 		String productPrefix=Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE,PREFIX ,null);
 		if(StringUtils.isBlank(productPrefix)){
-			productPrefix=FileUtil.getFileNameWithSuffix(Helper.getParentPath(sourcePath)).toUpperCase().replaceAll("\\(\\d+\\)", "");
+			productPrefix=FileUtil.getFileNameWithSuffix(Helper.getParentPath(sourcePath))
+					.toUpperCase().replaceAll("\\(\\d+\\)", "");
 		}
 		Boolean flag=true;
 		List<String> packFileNames=zipSet.getZipFiles();
@@ -258,16 +259,21 @@ public class ARPPack implements IComFolder {
 		packageNameSuffix=StringUtils.isBlank(packageNameSuffix)?"":"_for_AR_v"+packageNameSuffix;
 		String zipFileNameWithoutSuffix=packageNamePrefix+"v"+packageVersion+packageNameSuffix;
 		String zipFullPathWithoutSuffix=Helper.reviseFilePath(zipPath+"/"+zipFileNameWithoutSuffix);
+
+
 		if(StringUtils.isNotBlank(zipFileNameWithoutSuffix)){
 			flag=FileUtil.zipFilesAndFolders(sourcePath, realFullPaths,Helper.reviseFilePath(zipFullPathWithoutSuffix+PACKAGE_SUFFIX));
 			if(!flag) return flag;
+            if (System.getProperty(CMDL_ARPRUNONMAVEN)!= null){
+                return true;
+            }
 			if(new File(PropHelper.SCRIPT_LRM_PRODUCT).isFile()){
 				String[] commons={"java","-jar",PropHelper.SCRIPT_LRM_PRODUCT,Helper.reviseFilePath(zipFullPathWithoutSuffix+PACKAGE_SUFFIX)};
-				flag=Helper.runCmdCommand(commons); 
+				flag=Helper.runCmdCommand(commons);
 			}else{
 				logger.warn("warn: cannot found file ["+PropHelper.SCRIPT_LRM_PRODUCT+"]");
 			}
-			
+
 		}else{
 			flag=false;
 		}

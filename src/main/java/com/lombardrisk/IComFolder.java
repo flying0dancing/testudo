@@ -12,7 +12,8 @@ public interface IComFolder {
 	String CMDL_ARPCIPROC="proc";
 	String CMDL_ARPBUILDTYPE="release";
 	String CMDL_ARPRUNONJENKINS="runOnJenkins";
-	
+    String CMDL_ARPRUNONMAVEN="runMaven";
+
 	String JSON_FILENAME="testudo.json";	
 	//String JSON_PATH="src/main/resources/exportSettings.json";
 	String JSON_PATH=StringUtils.isBlank(System.getProperty(CMDL_ARPPROJECTFOLDER))?JSON_FILENAME:System.getProperty(CMDL_ARPPROJECTFOLDER)+System.getProperty("file.separator")+JSON_FILENAME;
@@ -45,7 +46,7 @@ public interface IComFolder {
 	String PACKAGE_SUFFIX=".zip";
 	String PACKAGE_LRM_SUFFIX=".lrm";
 	String PACKAGE_LRM_SIGN_SUFFIX="_sign.lrm";
-	
+
 	//user-defined, access database's table schema name
 	String ACCESS_SCHEMA_INI="ACCESS_FORM_META.ini";
 	
