@@ -1,5 +1,6 @@
 package com.lombardrisk;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -260,8 +261,13 @@ public class ARPPack implements IComFolder {
 		if(StringUtils.isNotBlank(zipFileNameWithoutSuffix)){
 			flag=FileUtil.zipFilesAndFolders(sourcePath, realFullPaths,Helper.reviseFilePath(zipFullPathWithoutSuffix+PACKAGE_SUFFIX));
 			if(!flag) return flag;
-			String[] commons={"java","-jar",PropHelper.SCRIPT_LRM_PRODUCT,Helper.reviseFilePath(zipFullPathWithoutSuffix+PACKAGE_SUFFIX)};
-			flag=Helper.runCmdCommand(commons); 
+			if(new File(PropHelper.SCRIPT_LRM_PRODUCT).isFile()){
+				String[] commons={"java","-jar",PropHelper.SCRIPT_LRM_PRODUCT,Helper.reviseFilePath(zipFullPathWithoutSuffix+PACKAGE_SUFFIX)};
+				flag=Helper.runCmdCommand(commons); 
+			}else{
+				logger.warn("warn: cannot found file ["+PropHelper.SCRIPT_LRM_PRODUCT+"]");
+			}
+			
 		}else{
 			flag=false;
 		}
@@ -269,8 +275,12 @@ public class ARPPack implements IComFolder {
 		if(flag)
 		{
 			logger.info("package named: "+zipFullPathWithoutSuffix+PACKAGE_SUFFIX);
-			logger.info("package named: "+zipFullPathWithoutSuffix+PACKAGE_LRM_SUFFIX);
-			FileUtil.renameTo(zipFullPathWithoutSuffix+"_sign.lrm", zipFullPathWithoutSuffix+PACKAGE_LRM_SUFFIX);
+			if(new File(zipFullPathWithoutSuffix+PACKAGE_LRM_SUFFIX).isFile()){
+				logger.info("package named: "+zipFullPathWithoutSuffix+PACKAGE_LRM_SUFFIX);
+				FileUtil.renameTo(zipFullPathWithoutSuffix+"_sign.lrm", zipFullPathWithoutSuffix+PACKAGE_LRM_SUFFIX);
+			}else{
+				logger.warn("warn: only package zip files, because file ["+PropHelper.SCRIPT_LRM_PRODUCT+"] doesn't exist.");
+			}
 			logger.info("package successfully.");
 		}else{
 			logger.error("error: package with failures.");
