@@ -156,7 +156,7 @@ public class ARPCISettingManager implements IComFolder {
 					if(arpci==null){
 						logger.error("Not Exists id="+ids);
 					}else{
-						arCIConfgList.add(reviseARPCISetting(arpci));
+						arCIConfgList.add(arpci);
 					}
 				}
 				
