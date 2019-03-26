@@ -275,9 +275,9 @@ public class ARPPack implements IComFolder {
 		if(flag)
 		{
 			logger.info("package named: "+zipFullPathWithoutSuffix+PACKAGE_SUFFIX);
-			if(new File(zipFullPathWithoutSuffix+PACKAGE_LRM_SUFFIX).isFile()){
+			if(new File(zipFullPathWithoutSuffix+PACKAGE_LRM_SIGN_SUFFIX).isFile()){
 				logger.info("package named: "+zipFullPathWithoutSuffix+PACKAGE_LRM_SUFFIX);
-				FileUtil.renameTo(zipFullPathWithoutSuffix+"_sign.lrm", zipFullPathWithoutSuffix+PACKAGE_LRM_SUFFIX);
+				FileUtil.renameTo(zipFullPathWithoutSuffix+PACKAGE_LRM_SIGN_SUFFIX, zipFullPathWithoutSuffix+PACKAGE_LRM_SUFFIX);
 			}else{
 				logger.warn("warn: only package zip files, because file ["+PropHelper.SCRIPT_LRM_PRODUCT+"] doesn't exist.");
 			}
