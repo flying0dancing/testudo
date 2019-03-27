@@ -1,4 +1,4 @@
-package com.lombardrisk.Utils;
+package com.lombardrisk.utils;
 
 import java.io.BufferedReader;
 import java.io.IOException;

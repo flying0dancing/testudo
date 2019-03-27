@@ -1,4 +1,4 @@
-package com.lombardrisk.Utils;
+package com.lombardrisk.utils;
 
 import java.io.File;
 
@@ -33,7 +33,7 @@ public class ReviseStrHelper {
 		return dpmFullName;
 	}
 	
-	public static String revisePropsPath(String argetProjectPath, String productPropsPath,String product_prop_file){
+	public static String revisePropsPath(String argetProjectPath, String productPropsPath,String productPropFile){
 		if(StringUtils.isNotBlank(productPropsPath)){
 			if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
 				productPropsPath=Helper.reviseFilePath(argetProjectPath+File.separator+productPropsPath);
@@ -41,7 +41,7 @@ public class ReviseStrHelper {
 				productPropsPath=Helper.reviseFilePath(productPropsPath);
 			}
 		}else{
-			productPropsPath=Helper.reviseFilePath(argetProjectPath+File.separator+product_prop_file);
+			productPropsPath=Helper.reviseFilePath(argetProjectPath+File.separator+productPropFile);
 		}
 		return productPropsPath;
 	}

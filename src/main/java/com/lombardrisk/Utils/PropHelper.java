@@ -1,4 +1,4 @@
-package com.lombardrisk.Utils;
+package com.lombardrisk.utils;
 
 import static java.lang.String.format;
 

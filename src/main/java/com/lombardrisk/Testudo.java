@@ -8,11 +8,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.lombardrisk.Utils.DBInfo;
-import com.lombardrisk.Utils.FileUtil;
-import com.lombardrisk.Utils.Helper;
 import com.lombardrisk.pojo.ARPCISetting;
 import com.lombardrisk.pojo.DBAndTables;
+import com.lombardrisk.utils.DBInfo;
+import com.lombardrisk.utils.FileUtil;
+import com.lombardrisk.utils.Helper;
 
 
 /**
