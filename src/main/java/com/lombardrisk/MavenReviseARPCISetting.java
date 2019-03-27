@@ -26,60 +26,58 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 	@Override
 	public ARPCISetting reviseARPCISetting(ARPCISetting arCIConfg) {
 
-		if(arCIConfg==null){
-			return arCIConfg;
-		}
+		if(arCIConfg!=null){
 
-		//revise "prefix", make sure it is lowercase
-		String productPrefix=arCIConfg.getPrefix();
-		if(StringUtils.isBlank(productPrefix)){
-			//prefix must be set as a subfolder's name of project folder name
-			throw new JsonSyntaxException("error: prefix is null, please set it value");
-		}else{
-			arCIConfg.setPrefix(productPrefix.toLowerCase());
+			//revise "prefix", make sure it is lowercase
+			String productPrefix=arCIConfg.getPrefix();
+			if(StringUtils.isBlank(productPrefix)){
+				//prefix must be set as a subfolder's name of project folder name
+				throw new JsonSyntaxException("error: prefix is null, please set it value");
+			}else{
+				arCIConfg.setPrefix(productPrefix.toLowerCase());
+			}
+			
+			//revise "metadataPath"
+			String metadataPath=arCIConfg.getMetadataPath();
+			String projectPath=null;
+			String productPath=null;//subfolder under project folder
+			String targetSrcPath=null;
+			String sourcePath=null;
+			if(StringUtils.isNotBlank(metadataPath)){
+				metadataPath=Helper.reviseFilePath(metadataPath);
+				sourcePath=Helper.getParentPath(metadataPath); //src/
+				productPath=Helper.removeLastSlash(Helper.getParentPath(sourcePath));
+				projectPath=Helper.removeLastSlash(Helper.getParentPath(productPath));
+			}else{
+				//[maven product solution]change user.dir to project.dir
+				projectPath=Helper.removeLastSlash(Helper.getParentPath(System.getProperty("project.dir")));
+				productPath=projectPath+File.separator+arCIConfg.getPrefix();
+				sourcePath=productPath+File.separator+SOURCE_FOLDER; //src/	
+				metadataPath=sourcePath+META_PATH;
+			}
+			//[maven product solution]
+			setTargetProjectPath(projectPath);
+			//get target product path
+			String targetProductPath=getTargetProjectPath()+File.separator+arCIConfg.getPrefix()+File.separator+"target";
+			targetSrcPath=targetProductPath+File.separator+SOURCE_FOLDER;//current product(prefix)'s target source path
+			metadataPath=targetSrcPath+META_PATH; //current product(prefix)'s target metadata path
+			
+			FileUtil.copyDirectory(sourcePath, targetSrcPath);
+			
+			arCIConfg.setMetadataPath(metadataPath);
+			arCIConfg.setSrcPath(sourcePath);
+			arCIConfg.setTargetSrcPath(targetSrcPath);
+			FileUtil.createDirectories(arCIConfg.getMetadataPath());
+			
+			//revise "metadataStruct"
+			String metadataStruct=arCIConfg.getMetadataStruct();
+			if(StringUtils.isBlank(metadataStruct)){
+				arCIConfg.setMetadataStruct(arCIConfg.getPrefix().toUpperCase()+INI_FILE_SUFFIX);
+			}
+			//revise "zipSettings"
+			ZipSettings zipSetting=arCIConfg.getZipSettings();
+			arCIConfg.setZipSettings(reviseZipSettings(zipSetting,sourcePath, targetSrcPath));
 		}
-		
-		//revise "metadataPath"
-		String metadataPath=arCIConfg.getMetadataPath();
-		String projectPath=null;
-		String productPath=null;//subfolder under project folder
-		String targetSrcPath=null;
-		String sourcePath=null;
-		if(StringUtils.isNotBlank(metadataPath)){
-			metadataPath=Helper.reviseFilePath(metadataPath);
-			sourcePath=Helper.getParentPath(metadataPath); //src/
-			productPath=Helper.removeLastSlash(Helper.getParentPath(sourcePath));
-			projectPath=Helper.removeLastSlash(Helper.getParentPath(productPath));
-		}else{
-			//[maven product solution]change user.dir to project.dir
-			projectPath=Helper.removeLastSlash(Helper.getParentPath(System.getProperty("project.dir")));
-			productPath=projectPath+File.separator+arCIConfg.getPrefix();
-			sourcePath=productPath+File.separator+SOURCE_FOLDER; //src/	
-			metadataPath=sourcePath+META_PATH;
-		}
-		//[maven product solution]
-		setTargetProjectPath(projectPath);
-		//get target product path
-		String targetProductPath=getTargetProjectPath()+File.separator+arCIConfg.getPrefix()+File.separator+"target";
-		targetSrcPath=targetProductPath+File.separator+SOURCE_FOLDER;//current product(prefix)'s target source path
-		metadataPath=targetSrcPath+META_PATH; //current product(prefix)'s target metadata path
-		
-		FileUtil.copyDirectory(sourcePath, targetSrcPath);
-		
-		arCIConfg.setMetadataPath(metadataPath);
-		arCIConfg.setSrcPath(sourcePath);
-		arCIConfg.setTargetSrcPath(targetSrcPath);
-		FileUtil.createDirectories(arCIConfg.getMetadataPath());
-		
-		//revise "metadataStruct"
-		String metadataStruct=arCIConfg.getMetadataStruct();
-		if(StringUtils.isBlank(metadataStruct)){
-			arCIConfg.setMetadataStruct(arCIConfg.getPrefix().toUpperCase()+INI_FILE_SUFFIX);
-		}
-		//revise "zipSettings"
-		ZipSettings zipSetting=arCIConfg.getZipSettings();
-		arCIConfg.setZipSettings(reviseZipSettings(zipSetting,sourcePath, targetSrcPath));
-		
 		return arCIConfg;
 	
 	}
