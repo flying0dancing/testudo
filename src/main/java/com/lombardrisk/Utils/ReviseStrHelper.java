@@ -5,8 +5,7 @@ import org.apache.commons.lang3.StringUtils;
 
 
 public class ReviseStrHelper {
-	//private final static Logger logger=LoggerFactory.getLogger(ReviseStrHelper.class);
-	
+	private ReviseStrHelper(){}
 	/**
 	 * only used on IReviseARPCISetting
 	 * @param dpmFullName
