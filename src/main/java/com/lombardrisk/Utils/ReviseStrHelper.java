@@ -5,7 +5,9 @@ import org.apache.commons.lang3.StringUtils;
 
 
 public class ReviseStrHelper {
-	private ReviseStrHelper(){}
+	private ReviseStrHelper(){
+		 // ...
+	}
 	/**
 	 * only used on IReviseARPCISetting
 	 * @param dpmFullName
