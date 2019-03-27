@@ -106,8 +106,8 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 						if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile()) ){
 							String destDir=StringUtils.isBlank(externalpro.getDestDir())?targetSrcPath:
 								Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir());
-							FileUtil.copyExternalProject(Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+externalpro.getProject()+File.separator+externalpro.getSrcFile()), 
-									destDir, externalpro.getUncompress());
+							FileUtil.copyExternalProject(Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+
+									externalpro.getProject()+File.separator+externalpro.getSrcFile()), destDir, externalpro.getUncompress());
 							String dmpType=accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf('.'));
 							List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath+"/"+DPM_PATH+"*"+dmpType),null);
 							if(accdbfiles.size()>0){
