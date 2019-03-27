@@ -4,7 +4,7 @@ import java.io.File;
 import org.apache.commons.lang3.StringUtils;
 
 
-public class ReviseStrHelper {
+public final class ReviseStrHelper {
 	private ReviseStrHelper(){
 		throw new IllegalStateException("Utility class");
 	}
