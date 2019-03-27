@@ -11,6 +11,7 @@ import com.google.gson.JsonSyntaxException;
 import com.lombardrisk.Utils.Dom4jUtil;
 import com.lombardrisk.Utils.FileUtil;
 import com.lombardrisk.Utils.Helper;
+import com.lombardrisk.Utils.ReviseStrHelper;
 import com.lombardrisk.pojo.ARPCISetting;
 import com.lombardrisk.pojo.ExternalProject;
 import com.lombardrisk.pojo.ZipSettings;
@@ -129,7 +130,7 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			String dpmFullName=zipSetting.getDpmFullPath();
 			FileUtil.createDirectories(targetSrcPath+DPM_PATH);
 			if(StringUtils.isNotBlank(dpmFullName)){
-				dpmFullName=defaultDpmFullName( dpmFullName, sourcePath, targetSrcPath);
+				dpmFullName=ReviseStrHelper.defaultDpmFullName( dpmFullName, sourcePath, targetSrcPath);
 			}else{
 				String accdbFileNameInManifest=Dom4jUtil.updateElement(targetSrcPath+MANIFEST_FILE,ACCESSFILE ,null);
 				dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+accdbFileNameInManifest);
@@ -158,42 +159,12 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			
 			//revise "zipSettings"->"productProperties"
 			String productPropsPath=zipSetting.getProductProperties();
-			zipSetting.setProductProperties(revisePropsPath(productPropsPath));
+			zipSetting.setProductProperties(ReviseStrHelper.revisePropsPath(getTargetProjectPath(),productPropsPath));
 		}
 		return zipSetting;
 	}
 	
-	/**
-	 * @param dpmFullName should not be null
-	 * @return
-	 */
-	public String defaultDpmFullName(String dpmFullName,String sourcePath,String targetSrcPath){
-		if(!dpmFullName.contains("/") && !dpmFullName.contains("\\")){
-			//dpmFullName just a file name without path
-			dpmFullName=targetSrcPath+DPM_PATH+dpmFullName;
-		}else{
-			dpmFullName=Helper.reviseFilePath(dpmFullName);
-			String dpmPathTemp=Helper.getParentPath(dpmFullName);
-			String dpmName=dpmFullName.replace(dpmPathTemp, "");
-			//copy access file
-			if(!dpmPathTemp.contains(sourcePath)){
-				FileUtil.copyFileToDirectory(dpmFullName, targetSrcPath+DPM_PATH);
-			}
-			dpmFullName=targetSrcPath+DPM_PATH+dpmName;//remap its dpmFullName to target folder
-		}
-		return dpmFullName;
-	}
 	
-	public String revisePropsPath(String productPropsPath){
-		if(StringUtils.isNotBlank(productPropsPath)){
-			if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
-				productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+productPropsPath);
-			}else{
-				productPropsPath=Helper.reviseFilePath(productPropsPath);
-			}
-		}else{
-			productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+PRODUCT_PROP_FILE);
-		}
-		return productPropsPath;
-	}
+	
+	
 }
