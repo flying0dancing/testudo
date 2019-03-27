@@ -264,10 +264,8 @@ public class ARPPack implements IComFolder {
 		if(StringUtils.isNotBlank(zipFileNameWithoutSuffix)){
 			flag=FileUtil.zipFilesAndFolders(sourcePath, realFullPaths,Helper.reviseFilePath(zipFullPathWithoutSuffix+PACKAGE_SUFFIX));
 			if(!flag) return flag;
-            if (System.getProperty(CMDL_ARPRUNONMAVEN)!= null){
-                return true;
-            }
-			if(new File(PropHelper.SCRIPT_LRM_PRODUCT).isFile()){
+           
+			if(new File(PropHelper.SCRIPT_LRM_PRODUCT).isFile() && StringUtils.isBlank(CMDL_ARPRUNONMAVEN)){
 				String[] commons={"java","-jar",PropHelper.SCRIPT_LRM_PRODUCT,Helper.reviseFilePath(zipFullPathWithoutSuffix+PACKAGE_SUFFIX)};
 				flag=Helper.runCmdCommand(commons);
 			}else{

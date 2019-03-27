@@ -14,7 +14,11 @@ import com.lombardrisk.Utils.Helper;
 import com.lombardrisk.pojo.ARPCISetting;
 import com.lombardrisk.pojo.ExternalProject;
 import com.lombardrisk.pojo.ZipSettings;
-
+/**
+ * run as a jar solution
+ * @author kun shen
+ *
+ */
 public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 	private final static Logger logger = LoggerFactory.getLogger(ReviseARPCISetting.class);
 	private static Boolean copyAllProductsInOneProject=true;

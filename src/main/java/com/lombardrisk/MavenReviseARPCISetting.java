@@ -14,7 +14,11 @@ import com.lombardrisk.Utils.Helper;
 import com.lombardrisk.pojo.ARPCISetting;
 import com.lombardrisk.pojo.ExternalProject;
 import com.lombardrisk.pojo.ZipSettings;
-
+/***
+ * [maven product solution]
+ * @author kun shen
+ *
+ */
 public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 	private final static Logger logger = LoggerFactory.getLogger(MavenReviseARPCISetting.class);
 	private static String targetProjectPath=null;
@@ -54,11 +58,8 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			String targetProductPath=targetProjectPath+File.separator+arCIConfg.getPrefix()+File.separator+"target";
 			targetSrcPath=targetProductPath+File.separator+SOURCE_FOLDER;//current product(prefix)'s target source path
 			metadataPath=targetSrcPath+META_PATH; //current product(prefix)'s target metadata path
-			//if(FileUtil.exists(targetProductPath)){
-			//	FileUtil.deleteDirectory(targetProductPath);
-			//}
-			FileUtil.copyDirectory(sourcePath, targetProductPath);
 			
+			FileUtil.copyDirectory(sourcePath, targetSrcPath);
 			
 			arCIConfg.setMetadataPath(metadataPath);
 			arCIConfg.setSrcPath(sourcePath);
@@ -85,10 +86,7 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 						dpmFullName=Helper.reviseFilePath(dpmFullName);
 						String dpmPathTemp=Helper.getParentPath(dpmFullName);
 						String dpmName=dpmFullName.replace(dpmPathTemp, "");
-						//copy access file
-						if(!dpmPathTemp.contains(sourcePath)){
-							FileUtil.copyFileToDirectory(dpmFullName, targetSrcPath+DPM_PATH);
-						}
+
 						dpmFullName=targetSrcPath+DPM_PATH+dpmName;//remap its dpmFullName to target folder
 					}
 				}else{

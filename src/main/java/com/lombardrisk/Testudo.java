@@ -58,7 +58,6 @@ public class Testudo implements IComFolder
 		List<ARPCISetting> arSettingList;
 		try {
 			arSettingList = ARPCISettingManager.getARPCISettingList(iDinJoson);
-			logger.info("Settings " + arSettingList.size());
 			if(arSettingList!=null && arSettingList.size()>0){
 				for(ARPCISetting arSetting:arSettingList){
 					if(arSetting!=null){
@@ -144,8 +143,7 @@ public class Testudo implements IComFolder
 			logger.error("error: create access database unsuccessful.");
 			return;
 		}
-		List<String> metadataPaths=azipFile.importMetadataToDpm(arSetting.getZipSettings().getDpmFullPath(),
-				arSetting.getMetadataPath(),arSetting.getZipSettings().getRequiredMetadata(),iniFullName);
+		List<String> metadataPaths=azipFile.importMetadataToDpm(arSetting.getZipSettings().getDpmFullPath(),arSetting.getMetadataPath(),arSetting.getZipSettings().getRequiredMetadata(),iniFullName);
 		if(metadataPaths!=null){
 			List<String> returnNameVers=azipFile.getReturnNameAndVersions(arSetting.getZipSettings().getDpmFullPath(), metadataPaths);
 			if(returnNameVers!=null){
@@ -155,7 +153,7 @@ public class Testudo implements IComFolder
 		
 		Boolean status=azipFile.execSQLs(arSetting.getZipSettings().getDpmFullPath(),arSetting.getTargetSrcPath(),arSetting.getZipSettings().getSqlFiles(),arSetting.getZipSettings().getExcludeFileFilters());
 		if(status){
-			azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(), arSetting.getZipPath(), System.getProperty(CMDL_ARPBUILDTYPE));
+			azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(), Helper.getParentPath(arSetting.getTargetSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
 		}	
     }
   
