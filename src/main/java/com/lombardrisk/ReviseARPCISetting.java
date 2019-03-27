@@ -138,8 +138,10 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 				if(externalProjects!=null && externalProjects.size()>0){
 					for(ExternalProject externalpro:externalProjects){
 						if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile()) ){
-							String destDir=StringUtils.isBlank(externalpro.getDestDir())?targetSrcPath:Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir());
-							FileUtil.copyExternalProject(Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+externalpro.getProject()+File.separator+externalpro.getSrcFile()), destDir, externalpro.getUncompress());
+							String destDir=StringUtils.isBlank(externalpro.getDestDir())?targetSrcPath:
+								Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir());
+							FileUtil.copyExternalProject(Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+externalpro.getProject()+File.separator+externalpro.getSrcFile()), 
+									destDir, externalpro.getUncompress());
 							String dmpType=accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf('.'));
 							List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath+"/"+DPM_PATH+"*"+dmpType),null);
 							if(accdbfiles.size()>0){

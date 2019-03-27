@@ -1,19 +1,18 @@
 package com.lombardrisk.utils;
 
 import java.io.File;
-
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import com.lombardrisk.IComFolder;
 
 public class ReviseStrHelper {
-	
-	final static Logger logger=LoggerFactory.getLogger(ReviseStrHelper.class);
+	//private final static Logger logger=LoggerFactory.getLogger(ReviseStrHelper.class);
 	
 	/**
-	 * @param dpmFullName should not be null
+	 * only used on IReviseARPCISetting
+	 * @param dpmFullName
+	 * @param sourcePath
+	 * @param targetSrcPath
+	 * @param dpmPath
 	 * @return
 	 */
 	public static String defaultDpmFullName(String dpmFullName,String sourcePath,String targetSrcPath, String dpmPath){
@@ -33,6 +32,13 @@ public class ReviseStrHelper {
 		return dpmFullName;
 	}
 	
+	/**
+	 * only used on IReviseARPCISetting
+	 * @param argetProjectPath
+	 * @param productPropsPath
+	 * @param productPropFile
+	 * @return
+	 */
 	public static String revisePropsPath(String argetProjectPath, String productPropsPath,String productPropFile){
 		if(StringUtils.isNotBlank(productPropsPath)){
 			if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
