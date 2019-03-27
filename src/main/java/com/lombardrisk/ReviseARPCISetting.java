@@ -145,16 +145,7 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 				
 				//revise "zipSettings"->"productProperties"
 				String productPropsPath=arCIConfg.getZipSettings().getProductProperties();
-				if(StringUtils.isNotBlank(productPropsPath)){
-					if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
-						productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+productPropsPath);
-					}else{
-						productPropsPath=Helper.reviseFilePath(productPropsPath);
-					}
-				}else{
-					productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+PRODUCT_PROP_FILE);
-				}
-				arCIConfg.getZipSettings().setProductProperties(productPropsPath);
+				arCIConfg.getZipSettings().setProductProperties(revisePropsPath(productPropsPath));
 			}
 			
 		}
@@ -177,5 +168,19 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 	public static void setCopyAllProductsInOneProject(
 			Boolean copyAllProductsInOneProjec) {
 		ReviseARPCISetting.copyAllProductsInOneProject = copyAllProductsInOneProjec;
+	}
+	
+	public String revisePropsPath(String productPropsPath)
+	{
+		if(StringUtils.isNotBlank(productPropsPath)){
+			if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
+				productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+productPropsPath);
+			}else{
+				productPropsPath=Helper.reviseFilePath(productPropsPath);
+			}
+		}else{
+			productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+PRODUCT_PROP_FILE);
+		}
+		return productPropsPath;
 	}
 }

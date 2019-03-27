@@ -97,7 +97,7 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 							if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile()) ){
 								String destDir=StringUtils.isBlank(externalpro.getDestDir())?targetSrcPath:Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir());
 								FileUtil.copyExternalProject(Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+externalpro.getProject()+File.separator+externalpro.getSrcFile()), destDir, externalpro.getUncompress());
-								String dmpType=accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf("."));
+								String dmpType=accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf('.'));
 								List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath+"/"+DPM_PATH+"*"+dmpType),null);
 								if(accdbfiles.size()>0){
 									String accdbFileName=FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
@@ -116,16 +116,7 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 				
 				//revise "zipSettings"->"productProperties"
 				String productPropsPath=arCIConfg.getZipSettings().getProductProperties();
-				if(StringUtils.isNotBlank(productPropsPath)){
-					if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
-						productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+productPropsPath);
-					}else{
-						productPropsPath=Helper.reviseFilePath(productPropsPath);
-					}
-				}else{
-					productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+PRODUCT_PROP_FILE);
-				}
-				arCIConfg.getZipSettings().setProductProperties(productPropsPath);
+				arCIConfg.getZipSettings().setProductProperties(revisePropsPath(productPropsPath));
 			}
 			
 		}
@@ -139,6 +130,19 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 
 	public static void setTargetProjectPath(String targetProjectPatha) {
 		targetProjectPath = targetProjectPatha;
+	}
+	public String revisePropsPath(String productPropsPath)
+	{
+		if(StringUtils.isNotBlank(productPropsPath)){
+			if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
+				productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+productPropsPath);
+			}else{
+				productPropsPath=Helper.reviseFilePath(productPropsPath);
+			}
+		}else{
+			productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+PRODUCT_PROP_FILE);
+		}
+		return productPropsPath;
 	}
 
 }
