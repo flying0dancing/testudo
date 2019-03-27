@@ -26,7 +26,7 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 	@Override
 	public ARPCISetting reviseARPCISetting(ARPCISetting arCIConfg) {
 
-		if(arCIConfg!=null){
+		if(arCIConfg==null){
 			return arCIConfg;
 		}
 

@@ -6,7 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 
 public class ReviseStrHelper {
 	private ReviseStrHelper(){
-		 // ...
+		throw new IllegalStateException("Utility class");
 	}
 	/**
 	 * only used on IReviseARPCISetting
