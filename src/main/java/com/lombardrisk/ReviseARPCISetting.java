@@ -36,14 +36,8 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			//revise "prefix", make sure it is lowercase
 			String productPrefix=arCIConfg.getPrefix();
 			if(StringUtils.isBlank(productPrefix)){
-				throw new JsonSyntaxException("error: prefix is null, please set it value");//prefix must be set as a subfolder's name of project folder name
-				/*if(StringUtils.isBlank(System.getProperty(CMDL_ARPPRODUCTPREFIX))){
-					throw new JsonSyntaxException("error: prefix is null, please set it value");
-				}else
-				{
-					productPrefix=System.getProperty(CMDL_ARPPRODUCTPREFIX).toLowerCase();
-					arCIConfg.setPrefix(productPrefix);
-				}*/
+				//prefix must be set as a subfolder's name of project folder name
+				throw new JsonSyntaxException("error: prefix is null, please set it value");
 			}else{
 				arCIConfg.setPrefix(productPrefix.toLowerCase());
 			}
@@ -101,7 +95,6 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			//revise "metadataStruct"
 			String metadataStruct=arCIConfg.getMetadataStruct();
 			if(StringUtils.isBlank(metadataStruct)){
-				//arCIConfg.setMetadataStruct(arCIConfg.getPrefix()+INI_FILE_SUFFIX);
 				arCIConfg.setMetadataStruct(arCIConfg.getPrefix().toUpperCase()+INI_FILE_SUFFIX);
 			}
 			//revise "zipSettings"
@@ -126,7 +119,6 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 					}
 				}else{
 					String accdbFileNameInManifest=Dom4jUtil.updateElement(targetSrcPath+MANIFEST_FILE,ACCESSFILE ,null);
-					//dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+arCIConfg.getPrefix().toUpperCase()+DPM_FILE_SUFFIX);
 					dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+accdbFileNameInManifest);
 					List<ExternalProject> externalProjects=zipSetting.getExternalProjects();
 					if(externalProjects!=null && externalProjects.size()>0){
@@ -134,7 +126,7 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 							if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile()) ){
 								String destDir=StringUtils.isBlank(externalpro.getDestDir())?targetSrcPath:Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir());
 								FileUtil.copyExternalProject(Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+externalpro.getProject()+File.separator+externalpro.getSrcFile()), destDir, externalpro.getUncompress());
-								String dmpType=accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf("."));
+								String dmpType=accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf('.'));
 								List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath+"/"+DPM_PATH+"*"+dmpType),null);
 								if(accdbfiles.size()>0){
 									String accdbFileName=FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
