@@ -94,20 +94,8 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			String dpmFullName=zipSetting.getDpmFullPath();
 			FileUtil.createDirectories(targetSrcPath+DPM_PATH);
 			if(StringUtils.isNotBlank(dpmFullName)){
-				if(!dpmFullName.contains("/") && !dpmFullName.contains("\\")){
-					//dpmFullName just a file name without path
-					dpmFullName=targetSrcPath+DPM_PATH+dpmFullName;
-				}else{
-					dpmFullName=Helper.reviseFilePath(dpmFullName);
-					String dpmPathTemp=Helper.getParentPath(dpmFullName);
-					String dpmName=dpmFullName.replace(dpmPathTemp, "");
-					//copy access file
-					if(!dpmPathTemp.contains(sourcePath)){
-						FileUtil.copyFileToDirectory(dpmFullName, targetSrcPath+DPM_PATH);
-					}
-					dpmFullName=targetSrcPath+DPM_PATH+dpmName;//remap its dpmFullName to target folder
-				}
-			}else{	//TODO in maven solution
+				dpmFullName=defaultDpmFullName( dpmFullName, sourcePath, targetSrcPath);
+			}else{	//need to do in maven solution
 				String accdbFileNameInManifest=Dom4jUtil.updateElement(targetSrcPath+MANIFEST_FILE,ACCESSFILE ,null);
 				dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+accdbFileNameInManifest);
 				List<ExternalProject> externalProjects=zipSetting.getExternalProjects();
@@ -139,7 +127,26 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 		}
 		return zipSetting;
 	}
-	
+	/**
+	 * @param dpmFullName should not be null
+	 * @return
+	 */
+	public String defaultDpmFullName(String dpmFullName,String sourcePath,String targetSrcPath){
+		if(!dpmFullName.contains("/") && !dpmFullName.contains("\\")){
+			//dpmFullName just a file name without path
+			dpmFullName=targetSrcPath+DPM_PATH+dpmFullName;
+		}else{
+			dpmFullName=Helper.reviseFilePath(dpmFullName);
+			String dpmPathTemp=Helper.getParentPath(dpmFullName);
+			String dpmName=dpmFullName.replace(dpmPathTemp, "");
+			//copy access file
+			if(!dpmPathTemp.contains(sourcePath)){
+				FileUtil.copyFileToDirectory(dpmFullName, targetSrcPath+DPM_PATH);
+			}
+			dpmFullName=targetSrcPath+DPM_PATH+dpmName;//remap its dpmFullName to target folder
+		}
+		return dpmFullName;
+	}
 	public String revisePropsPath(String productPropsPath){
 		if(StringUtils.isNotBlank(productPropsPath)){
 			if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
