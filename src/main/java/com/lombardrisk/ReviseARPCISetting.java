@@ -33,76 +33,78 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 	@Override
 	public ARPCISetting reviseARPCISetting(ARPCISetting arCIConfg) {
 
-		if(arCIConfg!=null){
-			//revise "prefix", make sure it is lowercase
-			String productPrefix=arCIConfg.getPrefix();
-			if(StringUtils.isBlank(productPrefix)){
-				//prefix must be set as a subfolder's name of project folder name
-				throw new JsonSyntaxException("error: prefix is null, please set it value");
-			}else{
-				arCIConfg.setPrefix(productPrefix.toLowerCase());
+		if(arCIConfg==null){
+			return arCIConfg;
+		}
+		//revise "prefix", make sure it is lowercase
+		String productPrefix=arCIConfg.getPrefix();
+		if(StringUtils.isBlank(productPrefix)){
+			//prefix must be set as a subfolder's name of project folder name
+			throw new JsonSyntaxException("error: prefix is null, please set it value");
+		}else{
+			arCIConfg.setPrefix(productPrefix.toLowerCase());
+		}
+		
+		//revise "metadataPath"
+		String metadataPath=arCIConfg.getMetadataPath();
+		String projectPath=null;
+		String productPath=null;//subfolder under project folder
+		String targetSrcPath=null;
+		String sourcePath=null;
+		if(StringUtils.isNotBlank(metadataPath)){
+			metadataPath=Helper.reviseFilePath(metadataPath);
+			sourcePath=Helper.getParentPath(metadataPath); //src/
+			productPath=Helper.removeLastSlash(Helper.getParentPath(sourcePath));
+			projectPath=Helper.removeLastSlash(Helper.getParentPath(productPath));
+		}else{
+			projectPath=Helper.getParentPath(System.getProperty("user.dir"))+System.getProperty(CMDL_ARPPROJECTFOLDER);
+			productPath=projectPath+File.separator+arCIConfg.getPrefix();
+			sourcePath=productPath+File.separator+SOURCE_FOLDER; //src/	
+			metadataPath=sourcePath+META_PATH;
+		}
+		
+		if(StringUtils.isBlank(System.getProperty(CMDL_ARPRUNONJENKINS))){
+			//run on local machine
+			if(getCopyAllProductsInOneProject()){
+				setTargetProjectPath(FileUtil.createNewFileWithSuffix(projectPath,null,null));
 			}
-			
-			//revise "metadataPath"
-			String metadataPath=arCIConfg.getMetadataPath();
-			String projectPath=null;
-			String productPath=null;//subfolder under project folder
-			String targetSrcPath=null;
-			String sourcePath=null;
-			if(StringUtils.isNotBlank(metadataPath)){
-				metadataPath=Helper.reviseFilePath(metadataPath);
-				sourcePath=Helper.getParentPath(metadataPath); //src/
-				productPath=Helper.removeLastSlash(Helper.getParentPath(sourcePath));
-				projectPath=Helper.removeLastSlash(Helper.getParentPath(productPath));
-			}else{
-				projectPath=Helper.getParentPath(System.getProperty("user.dir"))+System.getProperty(CMDL_ARPPROJECTFOLDER);
-				productPath=projectPath+File.separator+arCIConfg.getPrefix();
-				sourcePath=productPath+File.separator+SOURCE_FOLDER; //src/	
-				metadataPath=sourcePath+META_PATH;
-			}
-			
-			if(StringUtils.isBlank(System.getProperty(CMDL_ARPRUNONJENKINS))){
-				//run on local machine
+			//get target product path
+			String targetProductPath=getTargetProjectPath()+File.separator+arCIConfg.getPrefix();
+			targetSrcPath=targetProductPath+File.separator+SOURCE_FOLDER;//current product(prefix)'s target source path
+			metadataPath=targetSrcPath+META_PATH; //current product(prefix)'s target metadata path
+			if(StringUtils.isNotBlank(System.getProperty(CMDL_ARPRODUCTID)) && System.getProperty(CMDL_ARPRODUCTID).startsWith("*")){
 				if(getCopyAllProductsInOneProject()){
-					setTargetProjectPath(FileUtil.createNewFileWithSuffix(projectPath,null,null));
-				}
-				//get target product path
-				String targetProductPath=getTargetProjectPath()+File.separator+arCIConfg.getPrefix();
-				targetSrcPath=targetProductPath+File.separator+SOURCE_FOLDER;//current product(prefix)'s target source path
-				metadataPath=targetSrcPath+META_PATH; //current product(prefix)'s target metadata path
-				if(StringUtils.isNotBlank(System.getProperty(CMDL_ARPRODUCTID)) && System.getProperty(CMDL_ARPRODUCTID).startsWith("*")){
-					if(getCopyAllProductsInOneProject()){
-						FileUtil.copyDirectory(projectPath, getTargetProjectPath());
-						setCopyAllProductsInOneProject(false);
-					}
-					
-				}else{
-					if(!FileUtil.exists(targetProductPath)){
-						FileUtil.copyDirectory(productPath, targetProductPath);
-					}
+					FileUtil.copyDirectory(projectPath, getTargetProjectPath());
 					setCopyAllProductsInOneProject(false);
 				}
+				
 			}else{
-				//run on Jenkins server
-				setTargetProjectPath(projectPath);
-				targetSrcPath=sourcePath;
+				if(!FileUtil.exists(targetProductPath)){
+					FileUtil.copyDirectory(productPath, targetProductPath);
+				}
+				setCopyAllProductsInOneProject(false);
 			}
-			
-			arCIConfg.setMetadataPath(metadataPath);
-			arCIConfg.setSrcPath(sourcePath);
-			arCIConfg.setTargetSrcPath(targetSrcPath);
-			FileUtil.createDirectories(arCIConfg.getMetadataPath());
-			
-			//revise "metadataStruct"
-			String metadataStruct=arCIConfg.getMetadataStruct();
-			if(StringUtils.isBlank(metadataStruct)){
-				arCIConfg.setMetadataStruct(arCIConfg.getPrefix().toUpperCase()+INI_FILE_SUFFIX);
-			}
-			//revise "zipSettings"
-			ZipSettings zipSetting=arCIConfg.getZipSettings();
-			arCIConfg.setZipSettings(reviseZipSettings(zipSetting,sourcePath, targetSrcPath));
-			
+		}else{
+			//run on Jenkins server
+			setTargetProjectPath(projectPath);
+			targetSrcPath=sourcePath;
 		}
+		
+		arCIConfg.setMetadataPath(metadataPath);
+		arCIConfg.setSrcPath(sourcePath);
+		arCIConfg.setTargetSrcPath(targetSrcPath);
+		FileUtil.createDirectories(arCIConfg.getMetadataPath());
+		
+		//revise "metadataStruct"
+		String metadataStruct=arCIConfg.getMetadataStruct();
+		if(StringUtils.isBlank(metadataStruct)){
+			arCIConfg.setMetadataStruct(arCIConfg.getPrefix().toUpperCase()+INI_FILE_SUFFIX);
+		}
+		//revise "zipSettings"
+		ZipSettings zipSetting=arCIConfg.getZipSettings();
+		arCIConfg.setZipSettings(reviseZipSettings(zipSetting,sourcePath, targetSrcPath));
+		
+	
 		return arCIConfg;
 	
 	}
