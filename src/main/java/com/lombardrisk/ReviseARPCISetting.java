@@ -68,28 +68,28 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			
 			if(StringUtils.isBlank(System.getProperty(CMDL_ARPRUNONJENKINS))){
 				//run on local machine
-				if(copyAllProductsInOneProject){
-					targetProjectPath=FileUtil.createNewFileWithSuffix(projectPath,null,null);
+				if(getCopyAllProductsInOneProject()){
+					setTargetProjectPath(FileUtil.createNewFileWithSuffix(projectPath,null,null));
 				}
 				//get target product path
-				String targetProductPath=targetProjectPath+File.separator+arCIConfg.getPrefix();
+				String targetProductPath=getTargetProjectPath()+File.separator+arCIConfg.getPrefix();
 				targetSrcPath=targetProductPath+File.separator+SOURCE_FOLDER;//current product(prefix)'s target source path
 				metadataPath=targetSrcPath+META_PATH; //current product(prefix)'s target metadata path
 				if(StringUtils.isNotBlank(System.getProperty(CMDL_ARPRODUCTID)) && System.getProperty(CMDL_ARPRODUCTID).startsWith("*")){
-					if(copyAllProductsInOneProject){
-						FileUtil.copyDirectory(projectPath, targetProjectPath);
-						copyAllProductsInOneProject=false;
+					if(getCopyAllProductsInOneProject()){
+						FileUtil.copyDirectory(projectPath, getTargetProjectPath());
+						setCopyAllProductsInOneProject(false);
 					}
 					
 				}else{
 					if(!FileUtil.exists(targetProductPath)){
 						FileUtil.copyDirectory(productPath, targetProductPath);
 					}
-					copyAllProductsInOneProject=false;
+					setCopyAllProductsInOneProject(false);
 				}
 			}else{
 				//run on Jenkins server
-				targetProjectPath=projectPath;
+				setTargetProjectPath(projectPath);
 				targetSrcPath=sourcePath;
 			}
 			
@@ -155,12 +155,12 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 				String productPropsPath=arCIConfg.getZipSettings().getProductProperties();
 				if(StringUtils.isNotBlank(productPropsPath)){
 					if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
-						productPropsPath=Helper.reviseFilePath(targetProjectPath+File.separator+productPropsPath);
+						productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+productPropsPath);
 					}else{
 						productPropsPath=Helper.reviseFilePath(productPropsPath);
 					}
 				}else{
-					productPropsPath=Helper.reviseFilePath(targetProjectPath+File.separator+PRODUCT_PROP_FILE);
+					productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+PRODUCT_PROP_FILE);
 				}
 				arCIConfg.getZipSettings().setProductProperties(productPropsPath);
 			}
@@ -168,5 +168,22 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 		}
 		return arCIConfg;
 	
+	}
+
+	public static String getTargetProjectPath() {
+		return targetProjectPath;
+	}
+
+	public static void setTargetProjectPath(String targetProjectPatha) {
+		targetProjectPath = targetProjectPatha;
+	}
+
+	public static Boolean getCopyAllProductsInOneProject() {
+		return copyAllProductsInOneProject;
+	}
+
+	public static void setCopyAllProductsInOneProject(
+			Boolean copyAllProductsInOneProjec) {
+		ReviseARPCISetting.copyAllProductsInOneProject = copyAllProductsInOneProjec;
 	}
 }

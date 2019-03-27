@@ -53,9 +53,9 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 				metadataPath=sourcePath+META_PATH;
 			}
 			//[maven product solution]
-			targetProjectPath=projectPath;
+			setTargetProjectPath(projectPath);
 			//get target product path
-			String targetProductPath=targetProjectPath+File.separator+arCIConfg.getPrefix()+File.separator+"target";
+			String targetProductPath=getTargetProjectPath()+File.separator+arCIConfg.getPrefix()+File.separator+"target";
 			targetSrcPath=targetProductPath+File.separator+SOURCE_FOLDER;//current product(prefix)'s target source path
 			metadataPath=targetSrcPath+META_PATH; //current product(prefix)'s target metadata path
 			
@@ -120,12 +120,12 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 				String productPropsPath=arCIConfg.getZipSettings().getProductProperties();
 				if(StringUtils.isNotBlank(productPropsPath)){
 					if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
-						productPropsPath=Helper.reviseFilePath(targetProjectPath+File.separator+productPropsPath);
+						productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+productPropsPath);
 					}else{
 						productPropsPath=Helper.reviseFilePath(productPropsPath);
 					}
 				}else{
-					productPropsPath=Helper.reviseFilePath(targetProjectPath+File.separator+PRODUCT_PROP_FILE);
+					productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+PRODUCT_PROP_FILE);
 				}
 				arCIConfg.getZipSettings().setProductProperties(productPropsPath);
 			}
@@ -134,4 +134,13 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 		return arCIConfg;
 	
 	}
+
+	public static String getTargetProjectPath() {
+		return targetProjectPath;
+	}
+
+	public static void setTargetProjectPath(String targetProjectPatha) {
+		targetProjectPath = targetProjectPatha;
+	}
+
 }
