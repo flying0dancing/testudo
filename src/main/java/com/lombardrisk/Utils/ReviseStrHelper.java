@@ -11,7 +11,7 @@ import com.lombardrisk.IComFolder;
 public class ReviseStrHelper {
 	
 	final static Logger logger=LoggerFactory.getLogger(ReviseStrHelper.class);
-	private ReviseStrHelper(){}
+	
 	/**
 	 * @param dpmFullName should not be null
 	 * @return
