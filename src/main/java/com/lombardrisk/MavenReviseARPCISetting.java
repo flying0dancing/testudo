@@ -95,7 +95,7 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			String dpmFullName=zipSetting.getDpmFullPath();
 			FileUtil.createDirectories(targetSrcPath+DPM_PATH);
 			if(StringUtils.isNotBlank(dpmFullName)){
-				dpmFullName=ReviseStrHelper.defaultDpmFullName( dpmFullName, sourcePath, targetSrcPath);
+				dpmFullName=ReviseStrHelper.defaultDpmFullName( dpmFullName, sourcePath, targetSrcPath,DPM_PATH);
 			}else{	//need to do in maven solution
 				String accdbFileNameInManifest=Dom4jUtil.updateElement(targetSrcPath+MANIFEST_FILE,ACCESSFILE ,null);
 				dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+accdbFileNameInManifest);
@@ -124,7 +124,7 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			
 			//revise "zipSettings"->"productProperties"
 			String productPropsPath=zipSetting.getProductProperties();
-			zipSetting.setProductProperties(ReviseStrHelper.revisePropsPath(getTargetProjectPath(),productPropsPath));
+			zipSetting.setProductProperties(ReviseStrHelper.revisePropsPath(getTargetProjectPath(),productPropsPath,PRODUCT_PROP_FILE));
 		}
 		return zipSetting;
 	}
