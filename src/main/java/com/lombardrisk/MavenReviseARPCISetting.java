@@ -73,51 +73,7 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			}
 			//revise "zipSettings"
 			ZipSettings zipSetting=arCIConfg.getZipSettings();
-			if(arCIConfg.getZipSettings()!=null){
-				//revise "zipSettings"->"dpmFullPath"
-				String dpmFullName=arCIConfg.getZipSettings().getDpmFullPath();
-				FileUtil.createDirectories(targetSrcPath+DPM_PATH);
-				if(StringUtils.isNotBlank(dpmFullName)){
-					if(!dpmFullName.contains("/") && !dpmFullName.contains("\\")){
-						//dpmFullName just a file name without path
-						dpmFullName=targetSrcPath+DPM_PATH+dpmFullName;
-					}else{
-						dpmFullName=Helper.reviseFilePath(dpmFullName);
-						String dpmPathTemp=Helper.getParentPath(dpmFullName);
-						String dpmName=dpmFullName.replace(dpmPathTemp, "");
-
-						dpmFullName=targetSrcPath+DPM_PATH+dpmName;//remap its dpmFullName to target folder
-					}
-				}else{
-					String accdbFileNameInManifest=Dom4jUtil.updateElement(targetSrcPath+MANIFEST_FILE,ACCESSFILE ,null);
-					dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+accdbFileNameInManifest);
-					List<ExternalProject> externalProjects=zipSetting.getExternalProjects();
-					if(externalProjects!=null && externalProjects.size()>0){
-						for(ExternalProject externalpro:externalProjects){
-							if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile()) ){
-								String destDir=StringUtils.isBlank(externalpro.getDestDir())?targetSrcPath:Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir());
-								FileUtil.copyExternalProject(Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+externalpro.getProject()+File.separator+externalpro.getSrcFile()), destDir, externalpro.getUncompress());
-								String dmpType=accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf('.'));
-								List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath+"/"+DPM_PATH+"*"+dmpType),null);
-								if(accdbfiles.size()>0){
-									String accdbFileName=FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
-									if(!accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)){
-										logger.info("Rename dpm name: "+ accdbFileName +" to "+accdbFileNameInManifest);
-										FileUtil.renameTo(accdbfiles.get(0), targetSrcPath+File.separator+DPM_PATH+accdbFileNameInManifest);
-									}
-								}
-							}else{
-								logger.error("externalProjects->project,srcFile cannot be null.");
-							}
-						}
-					}
-				}
-				arCIConfg.getZipSettings().setDpmFullPath(dpmFullName);
-				
-				//revise "zipSettings"->"productProperties"
-				String productPropsPath=arCIConfg.getZipSettings().getProductProperties();
-				arCIConfg.getZipSettings().setProductProperties(revisePropsPath(productPropsPath));
-			}
+			arCIConfg.setZipSettings(reviseZipSettings(zipSetting,sourcePath, targetSrcPath));
 			
 		}
 		return arCIConfg;
@@ -131,8 +87,60 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 	public static void setTargetProjectPath(String targetProjectPatha) {
 		targetProjectPath = targetProjectPatha;
 	}
-	public String revisePropsPath(String productPropsPath)
-	{
+
+	public ZipSettings reviseZipSettings(ZipSettings zipSetting,String sourcePath,String targetSrcPath){
+		if(zipSetting!=null){
+			//revise "zipSettings"->"dpmFullPath"
+			String dpmFullName=zipSetting.getDpmFullPath();
+			FileUtil.createDirectories(targetSrcPath+DPM_PATH);
+			if(StringUtils.isNotBlank(dpmFullName)){
+				if(!dpmFullName.contains("/") && !dpmFullName.contains("\\")){
+					//dpmFullName just a file name without path
+					dpmFullName=targetSrcPath+DPM_PATH+dpmFullName;
+				}else{
+					dpmFullName=Helper.reviseFilePath(dpmFullName);
+					String dpmPathTemp=Helper.getParentPath(dpmFullName);
+					String dpmName=dpmFullName.replace(dpmPathTemp, "");
+					//copy access file
+					if(!dpmPathTemp.contains(sourcePath)){
+						FileUtil.copyFileToDirectory(dpmFullName, targetSrcPath+DPM_PATH);
+					}
+					dpmFullName=targetSrcPath+DPM_PATH+dpmName;//remap its dpmFullName to target folder
+				}
+			}else{	//TODO in maven solution
+				String accdbFileNameInManifest=Dom4jUtil.updateElement(targetSrcPath+MANIFEST_FILE,ACCESSFILE ,null);
+				dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+accdbFileNameInManifest);
+				List<ExternalProject> externalProjects=zipSetting.getExternalProjects();
+				if(externalProjects!=null && externalProjects.size()>0){
+					for(ExternalProject externalpro:externalProjects){
+						if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile()) ){
+							String destDir=StringUtils.isBlank(externalpro.getDestDir())?targetSrcPath:Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir());
+							FileUtil.copyExternalProject(Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+externalpro.getProject()+File.separator+externalpro.getSrcFile()), destDir, externalpro.getUncompress());
+							String dmpType=accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf('.'));
+							List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath+"/"+DPM_PATH+"*"+dmpType),null);
+							if(accdbfiles.size()>0){
+								String accdbFileName=FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
+								if(!accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)){
+									logger.info("Rename dpm name: "+ accdbFileName +" to "+accdbFileNameInManifest);
+									FileUtil.renameTo(accdbfiles.get(0), targetSrcPath+File.separator+DPM_PATH+accdbFileNameInManifest);
+								}
+							}
+						}else{
+							logger.error("externalProjects->project,srcFile cannot be null.");
+						}
+					}
+				}
+			}
+			zipSetting.setDpmFullPath(dpmFullName);
+			
+			//revise "zipSettings"->"productProperties"
+			String productPropsPath=zipSetting.getProductProperties();
+			zipSetting.setProductProperties(revisePropsPath(productPropsPath));
+		}
+		return zipSetting;
+	}
+	
+	public String revisePropsPath(String productPropsPath){
 		if(StringUtils.isNotBlank(productPropsPath)){
 			if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
 				productPropsPath=Helper.reviseFilePath(getTargetProjectPath()+File.separator+productPropsPath);
