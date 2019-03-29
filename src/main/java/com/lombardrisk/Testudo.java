@@ -8,11 +8,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.lombardrisk.Utils.DBInfo;
-import com.lombardrisk.Utils.FileUtil;
-import com.lombardrisk.Utils.Helper;
 import com.lombardrisk.pojo.ARPCISetting;
 import com.lombardrisk.pojo.DBAndTables;
+import com.lombardrisk.utils.DBInfo;
+import com.lombardrisk.utils.FileUtil;
+import com.lombardrisk.utils.Helper;
 
 
 /**
@@ -143,7 +143,8 @@ public class Testudo implements IComFolder
 			logger.error("error: create access database unsuccessful.");
 			return;
 		}
-		List<String> metadataPaths=azipFile.importMetadataToDpm(arSetting.getZipSettings().getDpmFullPath(),arSetting.getMetadataPath(),arSetting.getZipSettings().getRequiredMetadata(),iniFullName);
+		List<String> metadataPaths=azipFile.importMetadataToDpm(arSetting.getZipSettings().getDpmFullPath(),
+				arSetting.getMetadataPath(),arSetting.getZipSettings().getRequiredMetadata(),iniFullName);
 		if(metadataPaths!=null){
 			List<String> returnNameVers=azipFile.getReturnNameAndVersions(arSetting.getZipSettings().getDpmFullPath(), metadataPaths);
 			if(returnNameVers!=null){
@@ -153,7 +154,8 @@ public class Testudo implements IComFolder
 		
 		Boolean status=azipFile.execSQLs(arSetting.getZipSettings().getDpmFullPath(),arSetting.getTargetSrcPath(),arSetting.getZipSettings().getSqlFiles(),arSetting.getZipSettings().getExcludeFileFilters());
 		if(status){
-			azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(), Helper.getParentPath(arSetting.getTargetSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
+			azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(), 
+					Helper.getParentPath(arSetting.getTargetSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
 		}	
     }
   

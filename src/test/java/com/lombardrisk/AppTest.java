@@ -1,7 +1,7 @@
 package com.lombardrisk;
 
-import com.lombardrisk.Utils.DBInfo;
 import com.lombardrisk.pojo.DatabaseServer;
+import com.lombardrisk.utils.DBInfo;
 
 import junit.framework.Test;
 import junit.framework.TestCase;

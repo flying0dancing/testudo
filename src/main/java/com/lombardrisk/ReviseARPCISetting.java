@@ -8,13 +8,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonSyntaxException;
-import com.lombardrisk.Utils.Dom4jUtil;
-import com.lombardrisk.Utils.FileUtil;
-import com.lombardrisk.Utils.Helper;
+
 import com.lombardrisk.pojo.ARPCISetting;
 import com.lombardrisk.pojo.ExternalProject;
 import com.lombardrisk.pojo.ZipSettings;
-
+import com.lombardrisk.utils.Dom4jUtil;
+import com.lombardrisk.utils.FileUtil;
+import com.lombardrisk.utils.Helper;
+import com.lombardrisk.utils.ReviseStrHelper;
+/**
+ * run as a jar solution
+ * @author kun shen
+ *
+ */
 public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 	private final static Logger logger = LoggerFactory.getLogger(ReviseARPCISetting.class);
 	private static Boolean copyAllProductsInOneProject=true;
@@ -32,14 +38,8 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			//revise "prefix", make sure it is lowercase
 			String productPrefix=arCIConfg.getPrefix();
 			if(StringUtils.isBlank(productPrefix)){
-				throw new JsonSyntaxException("error: prefix is null, please set it value");//prefix must be set as a subfolder's name of project folder name
-				/*if(StringUtils.isBlank(System.getProperty(CMDL_ARPPRODUCTPREFIX))){
-					throw new JsonSyntaxException("error: prefix is null, please set it value");
-				}else
-				{
-					productPrefix=System.getProperty(CMDL_ARPPRODUCTPREFIX).toLowerCase();
-					arCIConfg.setPrefix(productPrefix);
-				}*/
+				//prefix must be set as a subfolder's name of project folder name
+				throw new JsonSyntaxException("error: prefix is null, please set it value");
 			}else{
 				arCIConfg.setPrefix(productPrefix.toLowerCase());
 			}
@@ -64,28 +64,28 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			
 			if(StringUtils.isBlank(System.getProperty(CMDL_ARPRUNONJENKINS))){
 				//run on local machine
-				if(copyAllProductsInOneProject){
-					targetProjectPath=FileUtil.createNewFileWithSuffix(projectPath,null,null);
+				if(getCopyAllProductsInOneProject()){
+					setTargetProjectPath(FileUtil.createNewFileWithSuffix(projectPath,null,null));
 				}
 				//get target product path
-				String targetProductPath=targetProjectPath+File.separator+arCIConfg.getPrefix();
+				String targetProductPath=getTargetProjectPath()+File.separator+arCIConfg.getPrefix();
 				targetSrcPath=targetProductPath+File.separator+SOURCE_FOLDER;//current product(prefix)'s target source path
 				metadataPath=targetSrcPath+META_PATH; //current product(prefix)'s target metadata path
 				if(StringUtils.isNotBlank(System.getProperty(CMDL_ARPRODUCTID)) && System.getProperty(CMDL_ARPRODUCTID).startsWith("*")){
-					if(copyAllProductsInOneProject){
-						FileUtil.copyDirectory(projectPath, targetProjectPath);
-						copyAllProductsInOneProject=false;
+					if(getCopyAllProductsInOneProject()){
+						FileUtil.copyDirectory(projectPath, getTargetProjectPath());
+						setCopyAllProductsInOneProject(false);
 					}
 					
 				}else{
 					if(!FileUtil.exists(targetProductPath)){
 						FileUtil.copyDirectory(productPath, targetProductPath);
 					}
-					copyAllProductsInOneProject=false;
+					setCopyAllProductsInOneProject(false);
 				}
 			}else{
 				//run on Jenkins server
-				targetProjectPath=projectPath;
+				setTargetProjectPath(projectPath);
 				targetSrcPath=sourcePath;
 			}
 			
@@ -97,72 +97,74 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			//revise "metadataStruct"
 			String metadataStruct=arCIConfg.getMetadataStruct();
 			if(StringUtils.isBlank(metadataStruct)){
-				//arCIConfg.setMetadataStruct(arCIConfg.getPrefix()+INI_FILE_SUFFIX);
 				arCIConfg.setMetadataStruct(arCIConfg.getPrefix().toUpperCase()+INI_FILE_SUFFIX);
 			}
 			//revise "zipSettings"
 			ZipSettings zipSetting=arCIConfg.getZipSettings();
-			if(arCIConfg.getZipSettings()!=null){
-				//revise "zipSettings"->"dpmFullPath"
-				String dpmFullName=arCIConfg.getZipSettings().getDpmFullPath();
-				FileUtil.createDirectories(targetSrcPath+DPM_PATH);
-				if(StringUtils.isNotBlank(dpmFullName)){
-					if(!dpmFullName.contains("/") && !dpmFullName.contains("\\")){
-						//dpmFullName just a file name without path
-						dpmFullName=targetSrcPath+DPM_PATH+dpmFullName;
-					}else{
-						dpmFullName=Helper.reviseFilePath(dpmFullName);
-						String dpmPathTemp=Helper.getParentPath(dpmFullName);
-						String dpmName=dpmFullName.replace(dpmPathTemp, "");
-						//copy access file
-						if(!dpmPathTemp.contains(sourcePath)){
-							FileUtil.copyFileToDirectory(dpmFullName, targetSrcPath+DPM_PATH);
-						}
-						dpmFullName=targetSrcPath+DPM_PATH+dpmName;//remap its dpmFullName to target folder
-					}
-				}else{
-					String accdbFileNameInManifest=Dom4jUtil.updateElement(targetSrcPath+MANIFEST_FILE,ACCESSFILE ,null);
-					//dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+arCIConfg.getPrefix().toUpperCase()+DPM_FILE_SUFFIX);
-					dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+accdbFileNameInManifest);
-					List<ExternalProject> externalProjects=zipSetting.getExternalProjects();
-					if(externalProjects!=null && externalProjects.size()>0){
-						for(ExternalProject externalpro:externalProjects){
-							if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile()) ){
-								String destDir=StringUtils.isBlank(externalpro.getDestDir())?targetSrcPath:Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir());
-								FileUtil.copyExternalProject(Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+externalpro.getProject()+File.separator+externalpro.getSrcFile()), destDir, externalpro.getUncompress());
-								String dmpType=accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf("."));
-								List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath+"/"+DPM_PATH+"*"+dmpType),null);
-								if(accdbfiles.size()>0){
-									String accdbFileName=FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
-									if(!accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)){
-										logger.info("Rename dpm name: "+ accdbFileName +" to "+accdbFileNameInManifest);
-										FileUtil.renameTo(accdbfiles.get(0), targetSrcPath+File.separator+DPM_PATH+accdbFileNameInManifest);
-									}
-								}
-							}else{
-								logger.error("externalProjects->project,srcFile cannot be null.");
-							}
-						}
-					}
-				}
-				arCIConfg.getZipSettings().setDpmFullPath(dpmFullName);
-				
-				//revise "zipSettings"->"productProperties"
-				String productPropsPath=arCIConfg.getZipSettings().getProductProperties();
-				if(StringUtils.isNotBlank(productPropsPath)){
-					if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){
-						productPropsPath=Helper.reviseFilePath(targetProjectPath+File.separator+productPropsPath);
-					}else{
-						productPropsPath=Helper.reviseFilePath(productPropsPath);
-					}
-				}else{
-					productPropsPath=Helper.reviseFilePath(targetProjectPath+File.separator+PRODUCT_PROP_FILE);
-				}
-				arCIConfg.getZipSettings().setProductProperties(productPropsPath);
-			}
-			
+			arCIConfg.setZipSettings(reviseZipSettings(zipSetting,sourcePath, targetSrcPath));
 		}
+		
 		return arCIConfg;
 	
 	}
+
+	public static String getTargetProjectPath() {
+		return targetProjectPath;
+	}
+
+	public static void setTargetProjectPath(String targetProjectPatha) {
+		targetProjectPath = targetProjectPatha;
+	}
+
+	public static Boolean getCopyAllProductsInOneProject() {
+		return copyAllProductsInOneProject;
+	}
+
+	public static void setCopyAllProductsInOneProject(
+			Boolean copyAllProductsInOneProjec) {
+		ReviseARPCISetting.copyAllProductsInOneProject = copyAllProductsInOneProjec;
+	}
+	
+	public ZipSettings reviseZipSettings(ZipSettings zipSetting,String sourcePath,String targetSrcPath){
+		if(zipSetting!=null){
+			//revise "zipSettings"->"dpmFullPath"
+			String dpmFullName=zipSetting.getDpmFullPath();
+			FileUtil.createDirectories(targetSrcPath+DPM_PATH);
+			if(StringUtils.isNotBlank(dpmFullName)){
+				dpmFullName=ReviseStrHelper.defaultDpmFullName( dpmFullName, sourcePath, targetSrcPath,DPM_PATH);
+			}else{
+				String accdbFileNameInManifest=Dom4jUtil.updateElement(targetSrcPath+MANIFEST_FILE,ACCESSFILE ,null);
+				dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+accdbFileNameInManifest);
+				List<ExternalProject> externalProjects=zipSetting.getExternalProjects();
+				if(externalProjects!=null && externalProjects.size()>0){
+					for(ExternalProject externalpro:externalProjects){
+						if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile()) ){
+							String destDir=StringUtils.isBlank(externalpro.getDestDir())?targetSrcPath:
+								Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir());
+							FileUtil.copyExternalProject(Helper.reviseFilePath(Helper.getParentPath(System.getProperty("user.dir"))+
+									externalpro.getProject()+File.separator+externalpro.getSrcFile()), destDir, externalpro.getUncompress());
+							String dmpType=accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf('.'));
+							List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath+"/"+DPM_PATH+"*"+dmpType),null);
+							if(accdbfiles.size()>0){
+								String accdbFileName=FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
+								if(!accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)){
+									logger.info("Rename dpm name: "+ accdbFileName +" to "+accdbFileNameInManifest);
+									FileUtil.renameTo(accdbfiles.get(0), targetSrcPath+File.separator+DPM_PATH+accdbFileNameInManifest);
+								}
+							}
+						}else{
+							logger.error("externalProjects->project,srcFile cannot be null.");
+						}
+					}
+				}
+			}
+			zipSetting.setDpmFullPath(dpmFullName);
+			
+			//revise "zipSettings"->"productProperties"
+			String productPropsPath=zipSetting.getProductProperties();
+			zipSetting.setProductProperties(ReviseStrHelper.revisePropsPath(getTargetProjectPath(),productPropsPath,PRODUCT_PROP_FILE));
+		}
+		return zipSetting;
+	}
+
 }
