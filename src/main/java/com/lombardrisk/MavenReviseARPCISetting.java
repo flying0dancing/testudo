@@ -97,7 +97,7 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			FileUtil.createDirectories(targetSrcPath+DPM_PATH);
 			if(StringUtils.isNotBlank(dpmFullName)){
 				dpmFullName=ReviseStrHelper.defaultDpmFullName( dpmFullName, sourcePath, targetSrcPath,DPM_PATH);
-			}else{	//need to do in maven solution
+			}else{
 				String accdbFileNameInManifest=Dom4jUtil.updateElement(targetSrcPath+MANIFEST_FILE,ACCESSFILE ,null);
 				dpmFullName=Helper.reviseFilePath(targetSrcPath+DPM_PATH+accdbFileNameInManifest);
 				List<ExternalProject> externalProjects=zipSetting.getExternalProjects();
@@ -106,7 +106,7 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 						if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile()) ){
 							String destDir=StringUtils.isBlank(externalpro.getDestDir())?targetSrcPath:
 								Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir());
-							String externalProjectParent=Helper.getParentPath(Helper.getParentPath(System.getProperty("user.dir")));
+							String externalProjectParent=Helper.getParentPath(Helper.getParentPath(Helper.getParentPath(sourcePath)));
 							FileUtil.copyExternalProject(Helper.reviseFilePath(externalProjectParent+
 									externalpro.getProject()+File.separator+externalpro.getSrcFile()), destDir, externalpro.getUncompress());
 							String dmpType=accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf('.'));
