@@ -8,14 +8,7 @@ public final class ReviseStrHelper {
 	private ReviseStrHelper(){
 		throw new IllegalStateException("Utility class");
 	}
-	/**
-	 * only used on IReviseARPCISetting
-	 * @param dpmFullName
-	 * @param sourcePath
-	 * @param targetSrcPath
-	 * @param dpmPath
-	 * @return
-	 */
+	//only used on IReviseARPCISetting
 	public static String defaultDpmFullName(String dpmFullName,String sourcePath,String targetSrcPath, String dpmPath){
 		if(!dpmFullName.contains("/") && !dpmFullName.contains("\\")){
 			//dpmFullName just a file name without path
@@ -33,13 +26,7 @@ public final class ReviseStrHelper {
 		return dpmFullName;
 	}
 	
-	/**
-	 * only used on IReviseARPCISetting
-	 * @param argetProjectPath
-	 * @param productPropsPath
-	 * @param productPropFile
-	 * @return
-	 */
+	//only used on IReviseARPCISetting
 	public static String revisePropsPath(String argetProjectPath, String productPropsPath,String productPropFile){
 		if(StringUtils.isNotBlank(productPropsPath)){
 			if(!productPropsPath.contains("/") && !productPropsPath.contains("\\")){

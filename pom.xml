@@ -138,47 +138,42 @@
   	<profile>
   		<id>packagejar</id>
   		<build>
-  			<plugins>
+  		<plugins>
   			<plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.1.1</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>3.1.1</version>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>shade</goal>
+                </goals>
+                <configuration>
+                  <transformers>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                      <mainClass>com.lombardrisk.Testudo</mainClass>
+                    </transformer>
+                  </transformers>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+		 <plugin>
+            <artifactId>maven-jar-plugin</artifactId>
+            <version>3.1.0</version>
             <configuration>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+              <archive>
+                <manifest>
                   <mainClass>com.lombardrisk.Testudo</mainClass>
-                </transformer>
-              </transformers>
+                  <addClasspath>true</addClasspath>
+                  <classpathPrefix>lib/</classpathPrefix>
+                </manifest>
+              </archive>
+              <outputDirectory>${project.build.directory}</outputDirectory>
             </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>3.1.0</version>
-        <configuration>
-          <archive>
-            <manifest>
-              <mainClass>com.lombardrisk.Testudo</mainClass>
-              <addClasspath>true</addClasspath>
-              <classpathPrefix>lib/</classpathPrefix>
-            </manifest>
-
-          </archive>
-          <outputDirectory>${project.build.directory}</outputDirectory>
-        </configuration>
-      </plugin>
+          </plugin>
   			
-  			</plugins>
+  		</plugins>
   		</build>
   	</profile>
   </profiles>
