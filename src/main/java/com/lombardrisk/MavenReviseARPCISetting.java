@@ -15,14 +15,12 @@ import com.lombardrisk.utils.Dom4jUtil;
 import com.lombardrisk.utils.FileUtil;
 import com.lombardrisk.utils.Helper;
 import com.lombardrisk.utils.ReviseStrHelper;
-/***
- * [maven product solution]
- * @author kun shen
- *
- */
+
+
 public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
+	//[maven product solution]
 	private final static Logger logger = LoggerFactory.getLogger(MavenReviseARPCISetting.class);
-	private static String targetProjectPath=null;
+	
 	@Override
 	public ARPCISetting reviseARPCISetting(ARPCISetting arCIConfg) {
 
@@ -56,9 +54,8 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 				metadataPath=sourcePath+META_PATH;
 			}
 			//[maven product solution]
-			setTargetProjectPath(projectPath);
 			//get target product path
-			String targetProductPath=getTargetProjectPath()+File.separator+arCIConfg.getPrefix()+File.separator+"target";
+			String targetProductPath=projectPath+File.separator+arCIConfg.getPrefix()+File.separator+"target";
 			targetSrcPath=targetProductPath+File.separator+SOURCE_FOLDER;//current product(prefix)'s target source path
 			metadataPath=targetSrcPath+META_PATH; //current product(prefix)'s target metadata path
 			
@@ -82,16 +79,10 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 	
 	}
 
-	public static String getTargetProjectPath() {
-		return targetProjectPath;
-	}
-
-	public static void setTargetProjectPath(String targetProjectPatha) {
-		targetProjectPath = targetProjectPatha;
-	}
-
+	
 	public ZipSettings reviseZipSettings(ZipSettings zipSetting,String sourcePath,String targetSrcPath){
 		if(zipSetting!=null){
+			String targetProjectPath=Helper.getParentPath(Helper.getParentPath(sourcePath));
 			//revise "zipSettings"->"dpmFullPath"
 			String dpmFullName=zipSetting.getDpmFullPath();
 			FileUtil.createDirectories(targetSrcPath+DPM_PATH);
@@ -106,7 +97,7 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 						if(StringUtils.isNoneBlank(externalpro.getProject(),externalpro.getSrcFile()) ){
 							String destDir=StringUtils.isBlank(externalpro.getDestDir())?targetSrcPath:
 								Helper.reviseFilePath(targetSrcPath+File.separator+externalpro.getDestDir());
-							String externalProjectParent=Helper.getParentPath(Helper.getParentPath(Helper.getParentPath(sourcePath)));
+							String externalProjectParent=Helper.getParentPath(targetProjectPath);
 							FileUtil.copyExternalProject(Helper.reviseFilePath(externalProjectParent+
 									externalpro.getProject()+File.separator+externalpro.getSrcFile()), destDir, externalpro.getUncompress());
 							String dmpType=accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf('.'));
@@ -128,7 +119,7 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			
 			//revise "zipSettings"->"productProperties"
 			String productPropsPath=zipSetting.getProductProperties();
-			zipSetting.setProductProperties(ReviseStrHelper.revisePropsPath(getTargetProjectPath(),productPropsPath,PRODUCT_PROP_FILE));
+			zipSetting.setProductProperties(ReviseStrHelper.revisePropsPath(targetProjectPath,productPropsPath,PRODUCT_PROP_FILE));
 		}
 		return zipSetting;
 	}
