@@ -21,34 +21,24 @@ import com.lombardrisk.utils.ReviseStrHelper;
  *
  */
 public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
-	private final static Logger logger = LoggerFactory.getLogger(ReviseARPCISetting.class);
+	private static final Logger logger = LoggerFactory.getLogger(ReviseARPCISetting.class);
 	private static Boolean copyAllProductsInOneProject=true;
 	private static String targetProjectPath=null;
 	
 	/**
 	 * adding default value for ARPCISetting
-	 * @param arCIConfg
-	 * @return
 	 */
 	@Override
 	public ARPCISetting reviseARPCISetting(ARPCISetting arCIConfg) {
 
 		if(arCIConfg!=null){
-			//revise "prefix", make sure it is lowercase
-			String productPrefix=arCIConfg.getPrefix();
-			if(StringUtils.isBlank(productPrefix)){
-				//prefix must be set as a subfolder's name of project folder name
-				throw new JsonSyntaxException("error: prefix is null, please set it value");
-			}else{
-				arCIConfg.setPrefix(productPrefix.toLowerCase());
-			}
-			
-			//revise "metadataPath"
+			arCIConfg.setPrefix(revisePrefix(arCIConfg.getPrefix()));
+
 			String metadataPath=arCIConfg.getMetadataPath();
-			String projectPath=null;
-			String productPath=null;//subfolder under project folder
-			String targetSrcPath=null;
-			String sourcePath=null;
+			String projectPath;
+			String productPath;//subfolder under project folder
+			String targetSrcPath;
+			String sourcePath;
 			if(StringUtils.isNotBlank(metadataPath)){
 				metadataPath=Helper.reviseFilePath(metadataPath);
 				sourcePath=Helper.getParentPath(metadataPath); //src/
@@ -75,7 +65,6 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 						FileUtil.copyDirectory(projectPath, getTargetProjectPath());
 						setCopyAllProductsInOneProject(false);
 					}
-					
 				}else{
 					if(!FileUtil.exists(targetProductPath)){
 						FileUtil.copyDirectory(productPath, targetProductPath);
@@ -98,33 +87,40 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 			if(StringUtils.isBlank(metadataStruct)){
 				arCIConfg.setMetadataStruct(arCIConfg.getPrefix().toUpperCase()+INI_FILE_SUFFIX);
 			}
-			//revise "zipSettings"
-			ZipSettings zipSetting=arCIConfg.getZipSettings();
-			arCIConfg.setZipSettings(reviseZipSettings(zipSetting,sourcePath, targetSrcPath));
+			arCIConfg.setZipSettings(reviseZipSettings(arCIConfg.getZipSettings(),
+					sourcePath,
+					targetSrcPath));
 		}
-		
 		return arCIConfg;
 	
 	}
 
-	public static String getTargetProjectPath() {
+	private String revisePrefix(final String productPrefix) {
+		if(StringUtils.isBlank(productPrefix)){
+			//prefix must be set as a subfolder's name of project folder name
+			throw new JsonSyntaxException("error: prefix is null, please set it value");
+		}
+		return productPrefix.toLowerCase();
+	}
+
+	private static String getTargetProjectPath() {
 		return targetProjectPath;
 	}
 
-	public static void setTargetProjectPath(String targetProjectPatha) {
+	private static void setTargetProjectPath(String targetProjectPatha) {
 		targetProjectPath = targetProjectPatha;
 	}
 
-	public static Boolean getCopyAllProductsInOneProject() {
+	private static Boolean getCopyAllProductsInOneProject() {
 		return copyAllProductsInOneProject;
 	}
 
-	public static void setCopyAllProductsInOneProject(
+	private static void setCopyAllProductsInOneProject(
 			Boolean copyAllProductsInOneProjec) {
 		ReviseARPCISetting.copyAllProductsInOneProject = copyAllProductsInOneProjec;
 	}
-	
-	public ZipSettings reviseZipSettings(ZipSettings zipSetting,String sourcePath,String targetSrcPath){
+
+	private ZipSettings reviseZipSettings(ZipSettings zipSetting,String sourcePath,String targetSrcPath){
 		if(zipSetting!=null){
 			//revise "zipSettings"->"dpmFullPath"
 			String dpmFullName=zipSetting.getDpmFullPath();
