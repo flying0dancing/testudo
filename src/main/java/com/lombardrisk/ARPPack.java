@@ -10,9 +10,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.lombardrisk.Utils.*;
 import com.lombardrisk.pojo.DatabaseServer;
 import com.lombardrisk.pojo.ZipSettings;
+import com.lombardrisk.utils.*;
 
 
 public class ARPPack implements IComFolder {
@@ -254,7 +254,7 @@ public class ARPPack implements IComFolder {
 		
 		//zipped and lrm product
 		String packageNamePrefix=PropHelper.getProperty(PACKAGE_NAME_PREFIX);
-		packageNamePrefix=StringUtils.isBlank(packageNamePrefix)?productPrefix+"_":packageNamePrefix+productPrefix;
+		packageNamePrefix=StringUtils.isBlank(packageNamePrefix)?productPrefix+"_":packageNamePrefix+productPrefix+"_";
 		String packageNameSuffix=null;//PropHelper.getProperty(AR_INSTALLER_VERSION);
 		packageNameSuffix=StringUtils.isBlank(packageNameSuffix)?"":"_for_AR_v"+packageNameSuffix;
 		String zipFileNameWithoutSuffix=packageNamePrefix+"v"+packageVersion+packageNameSuffix;
@@ -264,10 +264,7 @@ public class ARPPack implements IComFolder {
 		if(StringUtils.isNotBlank(zipFileNameWithoutSuffix)){
 			flag=FileUtil.zipFilesAndFolders(sourcePath, realFullPaths,Helper.reviseFilePath(zipFullPathWithoutSuffix+PACKAGE_SUFFIX));
 			if(!flag) return flag;
-            if (System.getProperty(CMDL_ARPRUNONMAVEN)!= null){
-                return true;
-            }
-			if(new File(PropHelper.SCRIPT_LRM_PRODUCT).isFile()){
+			if(new File(PropHelper.SCRIPT_LRM_PRODUCT).isFile() && StringUtils.isBlank(System.getProperty(CMDL_ARPRUNONMAVEN))){
 				String[] commons={"java","-jar",PropHelper.SCRIPT_LRM_PRODUCT,Helper.reviseFilePath(zipFullPathWithoutSuffix+PACKAGE_SUFFIX)};
 				flag=Helper.runCmdCommand(commons);
 			}else{

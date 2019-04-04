@@ -1,4 +1,4 @@
-package com.lombardrisk.Utils;
+package com.lombardrisk.utils;
 
 import static java.lang.String.format;
 
@@ -18,9 +18,9 @@ public class PropHelper {
 	private static boolean hasLoaded = false;
 	
 	public static final String SCRIPT_PATH = getScriptPath(getProperty("script.path"),"ci-script");
-	public static final String SCRIPT_GEN_DPM= getScriptGenDPMPath("GenProductDPM.vbs");
 	//public static final String SCRIPT_GEN_PRODUCT= getScriptGenProdPath(getProperty("script.zipProduct"));
 	
+	//[maven product solution: change getProperty("script.lrmProduct") to this]
 	public static final String SCRIPT_LRM_PRODUCT= getScriptGenDPMPath("ocelot-config-sign-1.15.jar");
 	
 	
@@ -103,6 +103,5 @@ public class PropHelper {
 		return value;
 	}
 	
-
 
 }

@@ -8,11 +8,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.lombardrisk.Utils.DBInfo;
-import com.lombardrisk.Utils.FileUtil;
-import com.lombardrisk.Utils.Helper;
 import com.lombardrisk.pojo.ARPCISetting;
 import com.lombardrisk.pojo.DBAndTables;
+import com.lombardrisk.utils.DBInfo;
+import com.lombardrisk.utils.FileUtil;
+import com.lombardrisk.utils.Helper;
 
 
 /**
@@ -58,7 +58,6 @@ public class Testudo implements IComFolder
 		List<ARPCISetting> arSettingList;
 		try {
 			arSettingList = ARPCISettingManager.getARPCISettingList(iDinJoson);
-			logger.info("Settings " + arSettingList.size());
 			if(arSettingList!=null && arSettingList.size()>0){
 				for(ARPCISetting arSetting:arSettingList){
 					if(arSetting!=null){
@@ -155,7 +154,8 @@ public class Testudo implements IComFolder
 		
 		Boolean status=azipFile.execSQLs(arSetting.getZipSettings().getDpmFullPath(),arSetting.getTargetSrcPath(),arSetting.getZipSettings().getSqlFiles(),arSetting.getZipSettings().getExcludeFileFilters());
 		if(status){
-			azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(), arSetting.getZipPath(), System.getProperty(CMDL_ARPBUILDTYPE));
+			azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(), 
+					Helper.getParentPath(arSetting.getTargetSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
 		}	
     }
   

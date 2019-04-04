@@ -18,7 +18,6 @@ public class ARPCISetting {
     private String notes;
     private transient String srcPath;
     private transient String targetSrcPath;
-    private transient String zipPath;
 
     
     public String getID() {
@@ -105,11 +104,4 @@ public class ARPCISetting {
 		
     }
 
-    public String getZipPath() {
-        return zipPath;
-    }
-
-    public void setZipPath(final String zipPath) {
-        this.zipPath = zipPath;
-    }
 }
