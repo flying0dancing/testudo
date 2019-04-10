@@ -33,8 +33,12 @@ public class CreatePackageMojo extends TestudoMojo {
         ConfigPackageSIG.main(new String[]{file()});
     }
 
+    private String getFileSeperator(){
+        return System.getProperty("file.separator");
+    }
+
     private String file(){
-        String targetFolder = getProject().getBasedir() + "\\target";
+        String targetFolder = getProject().getBasedir() + getFileSeperator()+"target";
         logger.debug("Target folder {}",targetFolder);
         try (Stream<Path> stream = Files.find(
                 Paths.get(targetFolder), 1,
@@ -44,7 +48,7 @@ public class CreatePackageMojo extends TestudoMojo {
             if (first.isPresent()){
                 String zipFileName = first.get().getFileName().toString();
                 logger.info("Found zip file to sign {}",zipFileName);
-                return targetFolder + "\\"+zipFileName;
+                return targetFolder + getFileSeperator()+zipFileName;
             } else{
                 logger.info("No zip files found in target folder {}",targetFolder);
             }
