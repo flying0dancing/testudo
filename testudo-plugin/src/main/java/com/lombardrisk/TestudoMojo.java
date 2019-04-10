@@ -30,4 +30,8 @@ public class TestudoMojo extends AbstractMojo {
     private String getBaseDirectory() {
         return project.getBasedir().toString();
     }
+
+    MavenProject getProject() {
+        return project;
+    }
 }
