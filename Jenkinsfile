@@ -1,7 +1,7 @@
 @Library('pipeline-libs') _
 
 MVN = maven.initialiseMvn()
-BUILD_VERSION = "3.${env.BUILD_NUMBER}.0"
+BUILD_VERSION = "2.${env.BUILD_NUMBER}.0"
 BUILD_INFO = maven.newBuildInfo()
 
 pipeline{
