@@ -16,7 +16,6 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Stream;
 
-import static org.apache.commons.lang.StringUtils.isNotBlank;
 
 @SuppressWarnings("unused")
 @Mojo(name = "createPackage", defaultPhase = LifecyclePhase.COMPILE)
@@ -68,7 +67,7 @@ public class CreatePackageMojo extends TestudoMojo {
     void addProperties(final Properties properties) {
         super.addProperties(properties);
         properties.setProperty("release", releaseParam);
-        if(isNotBlank(confParam)){
+        if(StringUtils.isNotBlank(confParam)){
             properties.setProperty("conf", getProject().getBasedir()+getFileSeperator()+confParam);
         }
     }
