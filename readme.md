@@ -2,7 +2,9 @@ usage
 ===
 testudo can generates metadata files from many databases(Sql Server, Oracle, Access Database), and then compress necessary files into package(*.zip and *.lrm). It can use on Linux and Windows Oses.
 ------
-	java -jar testudo.jar -Dconf="d:\abc\foo\testudo.json" -Dproject=fed -Did=bbb -Dproc=2 -Drelease -DrunOnJenkins
+    maven solution: cd to product project; run "mvn clean package"
+	old sulution: java -jar testudo.jar -Dconf="d:\abc\foo\testudo.json" -Dproject=fed -Did=bbb -Dproc=2 -Drelease -DrunOnJenkins
+	
 
 * [conf]
 	* optional
@@ -200,3 +202,17 @@ sql instruction
 we use UCanAccess for pure read/write Access database, sql statements's format need like [test.sql](test.sql)
 
 ![workflow](Testudo-workflow.png "testudo workflow")
+
+
+maven solution
+--------------------------------------------
+    * supported maven plugin 
+    * artifactId testudo-plugin
+    * goal createPackage, 
+       configuration arguments:
+        * releaseParam 
+            identify buildnumber
+        * confParam 
+            identify json file name, default value is testudo.json
+    * goal databaseExport, this can extract data to metadata folder.
+    
