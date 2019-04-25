@@ -1,0 +1,147 @@
+#!groovy
+
+server = Artifactory.server '-2131115395@1455437299997'
+rtMaven = Artifactory.newMavenBuild()
+rtMaven.tool = 'mvn-3.3.9' // Tool name from Jenkins configuration
+rtMaven.deployer( releaseRepo: 'plugins-release-local', snapshotRepo: 'plugins-snapshot-local', server: server)
+rtMaven.resolver( releaseRepo: 'plugins-release', snapshotRepo: 'plugins-snapshot', server: server)
+rtMaven.deployer.deployArtifacts = false // Disable artifacts deployment during Maven run
+buildInfo = Artifactory.newBuildInfo()
+buildInfo.env.capture = true
+BUILD_VERSION = "2.${env.BUILD_NUMBER}.0"
+pipeline {
+    agent { label 'SHA-AR-PRODUCT-CI-TEST' }
+    environment {
+        JAVA_HOME = tool 'JDK8'
+        TEAMS_CHANNEL_URL ='https://outlook.office.com/webhook/faaeef7d-d836-45a5-9b07-0f1f13d0c25b@4a78f2c0-297f-426d-b09f-5986924d38e7/IncomingWebhook/a33daad345b74ad29ecc77c000f42df3/ab2c9d48-0305-4d56-9959-8c7215573a5a'
+     }
+    stages {
+        stage('Setup') {
+            steps {
+                echo "start job ${JOB_URL}..."
+                echo "path:${PATH}"
+                checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://jenkins@bitbucket.lombardrisk.com/scm/cprod/testudo.git']]])
+            }
+        }
+        stage('Version') {
+        	steps {
+        		generateVersion()
+        	}
+        }
+        stage('Unit Tests & S3 Temp') {
+        	steps {
+        		runBuild()
+        	}
+        }
+        stage('Sonar & Release') {
+        	parallel {
+        		stage('SonarQube Analysis') {
+        			steps {
+        			    echo 'moke sonar'
+        				//runSonarAnalysis()
+        			}
+        		}
+        		stage('Deploy & Tag') {
+        			steps {
+        				deployToArtifactory()
+
+        				//tagBuild()
+        			}
+        		}
+        	}
+        }
+    }
+}
+
+void runAndNotifyOnFailure(String failureMessage, Closure body) {
+    try {
+        body()
+    } catch (exp) {
+        sendFailure(failureMessage)
+
+        error exp.message
+    }
+}
+void sendFailure(String message) {
+    if (message) {
+        send message: message, status: 'FAILURE', color: '#FF4136'
+    } else {
+        send status: 'FAILURE', color: '#FF4136'
+    }
+}
+void send(Map args = [color: '', message: '', status: '']) {
+    def hasMessageOrStatus = isNotBlank(args.message) || isNotBlank(args.status)
+    verify([
+            'Environment variable [TEAMS_CHANNEL_URL] cannot be blank': isNotBlank(env.TEAMS_CHANNEL_URL),
+            "'message' or 'status' args cannot be blank"              : hasMessageOrStatus
+    ])
+
+    office365ConnectorSend([
+            color     : args.color,
+            message   : args.message,
+            status    : args.status,
+            webhookUrl: env.TEAMS_CHANNEL_URL
+    ])
+}
+boolean isNotBlank(String str) {
+        return str != null
+    }
+def verify(Map conditionsByErrorMessage) {
+    def errorMessages =
+            conditionsByErrorMessage.collectMany {
+                errorMessage, conditionPassed -> !conditionPassed ? [errorMessage] : []
+            }
+    if (!errorMessages.isEmpty()) {
+        error errorMessages.join('\n ')
+    }
+}
+void generateVersion() {
+    echo "Update artifacts to version [$BUILD_VERSION]"
+
+	runAndNotifyOnFailure('Failed to generate and update versions') {
+		def commitBuildVersion = "versions:set versions:commit -DnewVersion=$BUILD_VERSION".toString()
+
+		rtMaven.run goals: commitBuildVersion, pom: 'pom.xml'
+	}
+}
+
+void runBuild() {
+	rtMaven.run goals: 'clean install -U -DskipITs -DskipTests', pom: 'pom.xml', buildInfo: buildInfo
+}
+void runSonarAnalysis() {
+	runAndNotifyOnFailure('Failed Sonar analysis') {
+		rtMaven.run goals: 'sonar:sonar', pom: 'pom.xml'
+	}
+}
+
+void deployToArtifactory() {
+	runAndNotifyOnFailure('Failed deploying to Artifactory') {
+		mavenDeploy()
+	}
+}
+
+void mavenDeploy(){
+	rtMaven.deployer.deployArtifacts buildInfo
+	server.publishBuildInfo buildInfo
+}
+void tagBuild() {
+
+	def projectPath='projects/CPROD/repos/testudo'
+    def commitHash = sh(returnStdout: true, script: "git rev-parse HEAD").trim()
+
+     echo "Tag commit [$commitHash] with [$BUILD_VERSION]"
+
+     def createTagJson = JsonOutput.toJson([name: BUILD_VERSION, startPoint: commitHash])
+
+     withCredentials([usernameColonPassword(credentialsId: 'jenkins', variable: 'BITBUCKET_USRPASS')]) {
+        sh("""
+               curl --insecure --silent --fail --show-error \
+                    --user '$BITBUCKET_USRPASS' \
+                    --request POST \
+                    --header 'Content-Type: application/json' \
+                    --data '$createTagJson' \
+                    https://bitbucket.lombardrisk.com/rest/api/1.0/${projectPath}/tags
+         """)
+    }
+	currentBuild.displayName = BUILD_VERSION
+}
