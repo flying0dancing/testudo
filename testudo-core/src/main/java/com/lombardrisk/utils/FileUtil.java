@@ -1232,10 +1232,11 @@ public class FileUtil extends FileUtils{
 				File[] files=parentPath.listFiles(new FilenameFilter(){
 					@Override
 					public boolean accept(File dir, String name) {
+						boolean flag=false;
 						if(new File(dir,name).isDirectory() && !name.startsWith(".")){
-							return true;
+							flag=true;
 						}
-						return false;
+						return flag;
 					}
 				});
 				for(int i=0;i<files.length;i++){

@@ -153,7 +153,8 @@ public class Testudo implements IComFolder
 			}
 		}
 		
-		Boolean status=azipFile.execSQLs(arSetting.getTargetSrcPath(),arSetting.getZipSettings().getSqlFiles(),arSetting.getZipSettings().getExcludeFileFilters());
+		Boolean status=azipFile.execSQLs(arSetting.getTargetSrcPath(),
+				arSetting.getZipSettings().getSqlFiles(),arSetting.getZipSettings().getExcludeFileFilters());
 		if(status){
 			azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(), 
 					Helper.getParentPath(arSetting.getTargetSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
