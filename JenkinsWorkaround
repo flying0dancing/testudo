@@ -1,0 +1,92 @@
+@Library('pipeline-libs') _
+server = Artifactory.server '-2131115395@1455437299997'
+rtMaven = Artifactory.newMavenBuild()
+rtMaven.tool = 'mvn-3.3.9' // Tool name from Jenkins configuration
+rtMaven.deployer( releaseRepo: 'plugins-release-local', snapshotRepo: 'plugins-snapshot-local', server: server)
+rtMaven.resolver( releaseRepo: 'plugins-release', snapshotRepo: 'plugins-snapshot', server: server)
+rtMaven.deployer.deployArtifacts = false // Disable artifacts deployment during Maven run
+buildInfo = Artifactory.newBuildInfo()
+buildInfo.env.capture = true
+BUILD_VERSION = "2.${env.BUILD_NUMBER}.0"
+pipeline {
+    agent { label 'SHA-AR-PRODUCT-CI-TEST' }
+    options { skipDefaultCheckout true }
+    environment {
+        JAVA_HOME = tool 'JDK8'
+        TEAMS_CHANNEL_URL ='https://outlook.office.com/webhook/faaeef7d-d836-45a5-9b07-0f1f13d0c25b@4a78f2c0-297f-426d-b09f-5986924d38e7/IncomingWebhook/a33daad345b74ad29ecc77c000f42df3/ab2c9d48-0305-4d56-9959-8c7215573a5a'
+     }
+    stages {
+        stage('Setup') {
+            steps {
+                echo "start job ${JOB_URL}..."
+                echo "path:${PATH}"
+                checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://jenkins@bitbucket.lombardrisk.com/scm/cprod/testudo.git']]])
+            }
+        }
+        stage('Version') {
+        	steps {
+        		generateVersion()
+        	}
+        }
+        stage('Unit Tests & S3 Temp') {
+        	steps {
+        		runBuild()
+        	}
+        }
+        stage('Sonar & Release') {
+        	parallel {
+        		stage('SonarQube Analysis') {
+        			steps {
+        			    echo 'moke sonar'
+        				//runSonarAnalysis()
+        			}
+        		}
+        		stage('Deploy & Tag') {
+        			steps {
+        				deployToArtifactory()
+
+        				//tagBuild()
+        			}
+        		}
+        	}
+        }
+    }
+}
+void generateVersion() {
+	echo "Update artifacts to version [$BUILD_VERSION]"
+
+	notifier.runAndNotifyOnFailure('Failed to generate and update versions') {
+		def commitBuildVersion = "versions:set versions:commit -DnewVersion=$BUILD_VERSION".toString()
+
+		rtMaven.run goals: commitBuildVersion, pom: 'pom.xml'
+	}
+}
+
+
+void runBuild() {
+	rtMaven.run goals: 'clean install', pom: 'pom.xml', buildInfo: buildInfo
+}
+
+void runSonarAnalysis() {
+	notifier.runAndNotifyOnFailure('Failed Sonar analysis') {
+		rtMaven.run goals: 'sonar:sonar', pom: 'pom.xml'
+	}
+}
+
+void deployToArtifactory() {
+	notifier.runAndNotifyOnFailure('Failed deploying to Artifactory') {
+		mavenDeploy()
+	}
+}
+
+void tagBuild() {
+	bitbucketTag tag: BUILD_VERSION, projectPath: 'projects/CPROD/repos/testudo'
+
+	currentBuild.displayName = BUILD_VERSION
+}
+
+
+void mavenDeploy(){
+	rtMaven.deployer.deployArtifacts buildInfo
+	server.publishBuildInfo buildInfo
+}

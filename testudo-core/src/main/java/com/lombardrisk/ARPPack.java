@@ -53,18 +53,17 @@ public class ARPPack implements IComFolder {
 	 */
 	public List<String> importMetadataToDpm(DBInfo db,String csvParentPath,List<String> csvPaths, String schemaFullName)
 	{
-		return importMetadataToDpm(db.getDbHelper().getDatabaseServer().getSchema(),csvParentPath, csvPaths, schemaFullName);
+		return importMetadataToDpm(csvParentPath, csvPaths, schemaFullName);
 	}
 	
 	/***
 	 * import all filtered metadata (*.csv files) to access database
-	 * @param dbFullPath it should be get value from <I>json file</I>->"zipSettings"->"dpmFullPath"
 	 * @param csvParentPath it gets value from <I>json file</I> ->"exportPath"
 	 * @param csvPaths it gets value from <I>json file</I>->"zipSettings"->"requiredMetadata"
 	 * @param schemaFullName It's a configuration file, which contains all tables' definition.
 	 * @return return metadata (*.csv files) full paths, return null if error occurs.
 	 */
-	public List<String> importMetadataToDpm(String dbFullPath,String csvParentPath,List<String> csvPaths, String schemaFullName)
+	public List<String> importMetadataToDpm(String csvParentPath,List<String> csvPaths, String schemaFullName)
 	{
 		if(StringUtils.isBlank(csvParentPath)){return null;}
 		DBInfo dbInfo=DBInfoSingle.INSTANCE.getDbInfo();
@@ -72,6 +71,8 @@ public class ARPPack implements IComFolder {
 		if(csvPaths==null || csvPaths.size()<=0){return null;}
 		List<String> realCsvFullPaths=new ArrayList<String>();
 		String name_returnId;
+		String folderregex=FileUtil.getFolderRegex(csvParentPath);
+
 		logger.info("================= import metadata into DPM =================");
 		for(String pathTmp:csvPaths)
 		{
@@ -93,15 +94,13 @@ public class ARPPack implements IComFolder {
 					if(!tableName.contains("_")){
 						tableName=tableNameWithDB.replaceAll("#.*", "");
 					}
-					Pattern p = Pattern.compile("(GridKey|GridRef|List|Ref|Sums|Vals|XVals)(_.*)", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+					Pattern p = Pattern.compile(folderregex, Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
 					Matcher m = p.matcher(tableName);
 					if(m.find())
 					{
 						tableName=m.group(1);
 						name_returnId=m.group(2);
 					}
-					/*String[] commons={"cscript",PropHelper.SCRIPT_GEN_DPM, Helper.reviseFilePath(schemaFullName), Helper.reviseFilePath(dbFullPath), Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(PropHelper.SCRIPT_PATH+"/log/GenerateProductDPM.log"), tableName};
-					Helper.runCmdCommand(commons);*/
 					tableNameWithDB=tableNameWithDB.replace(name_returnId, "");
 					if(name_returnId.equals("") && tableNameWithDB.contains("_")){
 						tableName=tableNameWithDB.split("#")[0];
@@ -123,16 +122,14 @@ public class ARPPack implements IComFolder {
 
 	/***
 	 * read metadata (*.csv file) name's returnId, and then through dbFullName and its tableName(rets which stored definition of all returns), find its return name and version
-	 * @param dbFullName full name of accessdb
 	 * @param csvFullPaths metadata (*.csv files) full paths
 	 * @return return a list of all returns' <I>name_version</I>, return null if error occurs.
 	 */
-	public List<String> getReturnNameAndVersions(String dbFullName,List<String> csvFullPaths)
+	public List<String> getReturnNameAndVersions(List<String> csvFullPaths)
 	{
 		if(csvFullPaths==null || csvFullPaths.size()<=0) return null;
 		List<String> nameAndVers=new ArrayList<String>();
 		
-		//DBInfo dbInfo=new DBInfo(new DatabaseServer("accessdb","", dbFullName,"",""));
 		DBInfo dbInfo=DBInfoSingle.INSTANCE.getDbInfo();
 		for(String csvPath : csvFullPaths){
 			String csvName=FileUtil.getFileNameWithoutSuffix(csvPath);
@@ -150,7 +147,7 @@ public class ARPPack implements IComFolder {
 	}
 	
 	
-	public Boolean execSQLs(String dbFullName,String sourcePath,List<String> sqlFileNames,String excludeFileFilters)
+	public Boolean execSQLs(String sourcePath,List<String> sqlFileNames,String excludeFileFilters)
 	{
 		Boolean flag=true;
 		if(sqlFileNames==null || sqlFileNames.size()<=0) return true;//means testudo.json doesn't provide sqlFiles.
@@ -160,7 +157,6 @@ public class ARPPack implements IComFolder {
 			logger.error("error: sqlFiles are invalid files or filters.");
 			return false;//illegal, no invalid files need to execute if it set sqlFiles
 		}
-		//DBInfo dbInfo=new DBInfo(new DatabaseServer("accessdb","", dbFullName,"",""));
 		DBInfo dbInfo=DBInfoSingle.INSTANCE.getDbInfo();
 		for(String fileFullPath:realFullPaths){
 			logger.info("sql statements in file: "+fileFullPath);
@@ -234,19 +230,9 @@ public class ARPPack implements IComFolder {
 		}
 		//modify implementationVersion in manifest.xml
 		String packageVersion=Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE, IMP_VERSION, arpbuild);
-		//modify accessFile in manifest.xml
-		/*List<String> accdbfiles=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+"/"+DPM_PATH+"*"+DPM_FILE_TYPE),null);
-		if(accdbfiles.size()>0)
-		  {
-			String accdbFileName=FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
-			Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE,ACCESSFILE ,accdbFileName);
-		  }*/
-		
-		
+				
 		if(FileUtil.exists(propFullPath)){
 			PropHelper.loading(propFullPath);
-			//modify manifest.xml mappingVersion by gen.product.dpm.version in package.properties
-			//Dom4jUtil.updateElement(sourcePath+MANIFEST_FILE, MAPPING_VERSION, PropHelper.getProperty(GEN_PRODUCT_DPM_VERSION));//no need to update it
 			
 		}else{
 			logger.warn("warn: cannot found file ["+propFullPath+"]");
