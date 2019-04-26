@@ -1198,7 +1198,7 @@ public class FileUtil extends FileUtils{
 	}
 	
 	public static void copyExternalProject(String srcFile,String destDir,String uncompress){
-		//TODO
+
 		File srcFileHd=new File(srcFile);
 		if(srcFileHd.exists()){
 			createDirectories(destDir);
@@ -1222,6 +1222,46 @@ public class FileUtil extends FileUtils{
 		}else{
 			logger.error("File Not Found: "+srcFile);
 		}
+	}
+
+	public static List<String> getSubFolderNames(String path){
+		List<String> filenames=new ArrayList<String>();
+		if(StringUtils.isNotBlank(path)){
+			File parentPath=new File(path);
+			if(parentPath.isDirectory()){
+				File[] files=parentPath.listFiles(new FilenameFilter(){
+					@Override
+					public boolean accept(File dir, String name) {
+						if(new File(dir,name).isDirectory() && !name.startsWith(".")){
+							return true;
+						}
+						return false;
+					}
+				});
+				for(int i=0;i<files.length;i++){
+					filenames.add(files[i].getName());
+				}
+			}else{
+				logger.error("File is not Directory: "+path);
+			}
+
+		}
+		return filenames;
+	}
+
+	public static String getFolderRegex(String path){
+		List<String> filenames=getSubFolderNames(path);
+		String names="";
+		for (String filename:filenames
+			 ) {
+			names=names+filename+"|";
+		}
+		if(StringUtils.isNotBlank(names)){
+			names="("+names.substring(0,names.length()-1)+")(_.*)";
+		}else{
+			names="(GridKey|GridRef|List|Ref|Sums|Vals|XVals|RefReturns)(_.*)";
+		}
+		return names;
 	}
 
 }

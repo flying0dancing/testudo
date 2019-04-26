@@ -144,16 +144,16 @@ public class Testudo implements IComFolder
 			logger.error("error: create access database unsuccessful.");
 			return;
 		}
-		List<String> metadataPaths=azipFile.importMetadataToDpm(arSetting.getZipSettings().getDpmFullPath(),
-				arSetting.getMetadataPath(),arSetting.getZipSettings().getRequiredMetadata(),iniFullName);
+		List<String> metadataPaths=azipFile.importMetadataToDpm(arSetting.getMetadataPath(),
+				arSetting.getZipSettings().getRequiredMetadata(),iniFullName);
 		if(metadataPaths!=null){
-			List<String> returnNameVers=azipFile.getReturnNameAndVersions(arSetting.getZipSettings().getDpmFullPath(), metadataPaths);
+			List<String> returnNameVers=azipFile.getReturnNameAndVersions(metadataPaths);
 			if(returnNameVers!=null){
 				arSetting.getZipSettings().getZipFiles().addAll(returnNameVers);
 			}
 		}
 		
-		Boolean status=azipFile.execSQLs(arSetting.getZipSettings().getDpmFullPath(),arSetting.getTargetSrcPath(),arSetting.getZipSettings().getSqlFiles(),arSetting.getZipSettings().getExcludeFileFilters());
+		Boolean status=azipFile.execSQLs(arSetting.getTargetSrcPath(),arSetting.getZipSettings().getSqlFiles(),arSetting.getZipSettings().getExcludeFileFilters());
 		if(status){
 			azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(), 
 					Helper.getParentPath(arSetting.getTargetSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
