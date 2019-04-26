@@ -1251,17 +1251,19 @@ public class FileUtil extends FileUtils{
 
 	public static String getFolderRegex(String path){
 		List<String> filenames=getSubFolderNames(path);
-		String names="";
-		for (String filename:filenames
-			 ) {
-			names=names+filename+"|";
-		}
-		if(StringUtils.isNotBlank(names)){
-			names="("+names.substring(0,names.length()-1)+")(_.*)";
+		StringBuilder names=new StringBuilder();
+		if(filenames!=null && filenames.size()>0){
+			names.append("(");
+			for (String filename:filenames
+					 ) {
+					names.append(filename+"|");
+				}
+			names.deleteCharAt(names.length()-1);
+			names.append(")(_.*)");
 		}else{
-			names="(GridKey|GridRef|List|Ref|Sums|Vals|XVals|RefReturns)(_.*)";
+			names.append("(GridKey|GridRef|List|Ref|Sums|Vals|XVals|RefReturns)(_.*)");
 		}
-		return names;
+		return names.toString();
 	}
 
 }
