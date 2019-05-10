@@ -1,6 +1,8 @@
 package com.lombardrisk;
 
+import com.lombardrisk.status.BuildStatus;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
@@ -12,11 +14,18 @@ public class TestudoMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", readonly = true)
     private MavenProject project;
 
-    public void execute() {
+    @SuppressWarnings("unused")
+    @Parameter
+    private Boolean failBuild = true;
+
+    public void execute() throws MojoFailureException{
         Properties properties = System.getProperties();
         addProperties(properties);
         System.setProperties(properties);
         Testudo.main(new String[]{});
+        if (failBuild && BuildStatus.getInstance().hasErrors()){
+            throw new MojoFailureException("Build failed");
+        }
     }
 
     void addProperties(Properties properties) {

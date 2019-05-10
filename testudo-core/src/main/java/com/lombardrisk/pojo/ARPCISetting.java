@@ -1,11 +1,11 @@
 package com.lombardrisk.pojo;
 
-import java.util.List;
-
+import com.google.gson.GsonBuilder;
+import com.lombardrisk.status.BuildStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.gson.GsonBuilder;
+import java.util.List;
 
 public class ARPCISetting {
 	private static final Logger logger = LoggerFactory.getLogger(ARPCISetting.class);
@@ -95,9 +95,9 @@ public class ARPCISetting {
 	@Override
     public String toString() {
 		try{
-			//return new Gson().toJson(this);
 			return new GsonBuilder().setPrettyPrinting().create().toJson(this);
 		}catch(Exception e){
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage());
 			return "";
 		}

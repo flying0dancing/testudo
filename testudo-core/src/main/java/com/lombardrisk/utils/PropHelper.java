@@ -1,15 +1,16 @@
 package com.lombardrisk.utils;
 
-import static java.lang.String.format;
+import com.lombardrisk.status.BuildStatus;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static java.lang.String.format;
 
 
 public class PropHelper {
@@ -33,6 +34,7 @@ public class PropHelper {
                 logger.warn(format("%s was not provided", file));
             }
 		}catch(IOException e){
+			BuildStatus.getInstance().recordError();
 			logger.error(file, e);
 		}
 	}
@@ -46,6 +48,7 @@ public class PropHelper {
 				logger.warn(format("%s was not provided", file));
 			}
 		}catch(IOException e){
+			BuildStatus.getInstance().recordError();
 			logger.error(file, e);
 		}
 	}

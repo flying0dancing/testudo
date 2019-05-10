@@ -1,20 +1,20 @@
 package com.lombardrisk;
 
-import java.io.File;
-import java.util.List;
-
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.gson.JsonSyntaxException;
 import com.lombardrisk.pojo.ARPCISetting;
 import com.lombardrisk.pojo.ExternalProject;
 import com.lombardrisk.pojo.ZipSettings;
+import com.lombardrisk.status.BuildStatus;
 import com.lombardrisk.utils.Dom4jUtil;
 import com.lombardrisk.utils.FileUtil;
 import com.lombardrisk.utils.Helper;
 import com.lombardrisk.utils.ReviseStrHelper;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.util.List;
 /**
  * run as a jar solution
  * @author kun shen
@@ -149,6 +149,7 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder{
 								}
 							}
 						}else{
+							BuildStatus.getInstance().recordError();
 							logger.error("externalProjects->project,srcFile cannot be null.");
 						}
 					}

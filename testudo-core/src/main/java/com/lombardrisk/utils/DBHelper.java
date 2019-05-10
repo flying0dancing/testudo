@@ -1,5 +1,26 @@
 package com.lombardrisk.utils;
 
+import com.healthmarketscience.jackcess.ColumnBuilder;
+import com.healthmarketscience.jackcess.Cursor;
+import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.DatabaseBuilder;
+import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.TableBuilder;
+import com.healthmarketscience.jackcess.util.ImportUtil;
+import com.healthmarketscience.jackcess.util.ImportUtil.Builder;
+import com.lombardrisk.pojo.DatabaseServer;
+import com.lombardrisk.pojo.TableProps;
+import com.lombardrisk.status.BuildStatus;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.dbutils.DbUtils;
+import org.apache.commons.dbutils.QueryRunner;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -22,27 +43,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
-import org.apache.commons.dbutils.DbUtils;
-import org.apache.commons.dbutils.QueryRunner;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.healthmarketscience.jackcess.ColumnBuilder;
-import com.healthmarketscience.jackcess.Cursor;
-import com.healthmarketscience.jackcess.Database;
-import com.healthmarketscience.jackcess.DatabaseBuilder;
-import com.healthmarketscience.jackcess.Row;
-import com.healthmarketscience.jackcess.Table;
-import com.healthmarketscience.jackcess.TableBuilder;
-import com.healthmarketscience.jackcess.util.ImportUtil;
-import com.healthmarketscience.jackcess.util.ImportUtil.Builder;
-import com.lombardrisk.pojo.DatabaseServer;
-import com.lombardrisk.pojo.TableProps;
 
 public class DBHelper {
 
@@ -131,6 +131,7 @@ public class DBHelper {
 		}
 		catch (SQLException e)
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error("Database connection failed!");
 			logger.error(e.getMessage(),e);
 			flag=false;
@@ -150,6 +151,7 @@ public class DBHelper {
 			}
 		}catch (SQLException e)
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error("Database close failed!");
 			logger.error(e.getMessage(),e);
 		}
@@ -186,6 +188,7 @@ public class DBHelper {
 		}
 		catch (SQLException e)
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error("SQLException in [" + sql + "]");
 			logger.error(e.getMessage(),e);
 			value = null;
@@ -220,12 +223,14 @@ public class DBHelper {
 		}
 		catch(IndexOutOfBoundsException e)
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error("ResultSet is null in [" + sql + "]");
 			logger.error(e.getMessage(),e);
 			rst=null;
 		}
 		catch (SQLException e)
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error("SQLException in [" + sql + "]");
 			logger.error(e.getMessage(),e);
 			rst=null;
@@ -343,10 +348,12 @@ public class DBHelper {
 
 		}catch(SQLException e)
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error("error: SQLException in [" + sql + "]");
 			logger.error(e.getMessage(),e);
 		}
 		catch(Exception e){
+			BuildStatus.getInstance().recordError();
 			logger.error("error: Exception in [" + sql + "]");
 			logger.error(e.getMessage(),e);
 		}finally{
@@ -375,9 +382,11 @@ public class DBHelper {
 			}
 		}catch(SQLException e)
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error("error: SQLException in [" + sql + "]");
 			logger.error(e.getMessage(),e);
 		}catch(Exception e){
+			BuildStatus.getInstance().recordError();
 			logger.error("error: Exception in [" + sql + "]");
 			logger.error(e.getMessage(),e);
 		}finally{
@@ -459,10 +468,12 @@ public class DBHelper {
 			logger.info("export to csv completely.");
 		}catch(SQLException e)
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error("error: SQLException in [" + sql + "]");
 			logger.error(e.getMessage(),e);
 		}
 		catch(Exception e){
+			BuildStatus.getInstance().recordError();
 			logger.error("error: Exception in [" + sql + "]");
 			logger.error(e.getMessage(),e);
 		}finally{
@@ -471,6 +482,7 @@ public class DBHelper {
 				bufOutFile.close();
 				csvName.close();
 			} catch (IOException e) {
+				BuildStatus.getInstance().recordError();
 				logger.error("error: fail to closing file handlers.");
 				logger.error(e.getMessage(),e);
 			}
@@ -517,6 +529,7 @@ public class DBHelper {
 			}
 			getConn().commit();
 		} catch (SQLException e) {
+			BuildStatus.getInstance().recordError();
 			logger.error("SQLException in [" + sql + "]");
 			logger.error(e.getMessage(),e);
 			flag=false;
@@ -541,6 +554,7 @@ public class DBHelper {
 		}
 		catch (SQLException e)
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error("SQLException in [" + sql + "]");
 			logger.error(e.getMessage(),e);
 		}
@@ -587,6 +601,7 @@ public class DBHelper {
 				db.close();
 				
 			} catch (IOException e) {
+				BuildStatus.getInstance().recordError();
 				logger.error(e.getMessage(),e);
 			}
 			
@@ -708,7 +723,11 @@ public class DBHelper {
 								lineBuffer.setLength(0);//clear
 								logger.debug(sql);
 								flag=addBatch(sql);
-								if(!flag){logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");break;}
+								if(!flag){
+									BuildStatus.getInstance().recordError();
+									logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");
+									break;
+								}
 							}
 							lineno++;
 						}
@@ -718,6 +737,7 @@ public class DBHelper {
 							logger.debug(sql);
 							flag=addBatch(sql);
 							if(!flag){
+								BuildStatus.getInstance().recordError();
 								if(lineno>=100){
 									logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");
 								}else{
@@ -740,6 +760,7 @@ public class DBHelper {
 				}
 				
 			} catch (IOException e) {
+				BuildStatus.getInstance().recordError();
 				logger.error(e.getMessage(),e);
 			}
 			return flag;
@@ -789,14 +810,21 @@ public class DBHelper {
 								lineBuffer.setLength(0);//clear
 								logger.debug(sql);
 								flag=addBatch(sql);
-								if(!flag){logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");break;}
+								if(!flag){
+									BuildStatus.getInstance().recordError();
+									logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");
+									break;
+								}
 							}
 						}
 						if(lineBuffer.length()>0){
 							sql=header+lineBuffer.substring(0, lineBuffer.length()-1);
 							logger.debug(sql);
 							flag=addBatch(sql);
-							if(!flag){logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");}
+							if(!flag){
+								BuildStatus.getInstance().recordError();
+								logger.error("fail to import data into:"+tableName+" ( "+(lineno-100)+"-"+lineno+" )");
+							}
 						}
 						if(lineno==1){
 							flag=true;
@@ -813,6 +841,7 @@ public class DBHelper {
 				}
 				
 			} catch (IOException e) {
+				BuildStatus.getInstance().recordError();
 				logger.error(e.getMessage(),e);
 			}
 			return flag;
@@ -831,6 +860,7 @@ public class DBHelper {
 				flag=true;
 				
 			} catch (IOException e) {
+				BuildStatus.getInstance().recordError();
 				logger.error(e.getMessage(),e);
 			} 
 			return flag;
@@ -905,8 +935,10 @@ public class DBHelper {
 				
 				db.close();
 			} catch (IOException e) {
+				BuildStatus.getInstance().recordError();
 				logger.error(e.getMessage(),e);
 			} catch (SQLException e) {
+				BuildStatus.getInstance().recordError();
 				logger.error(e.getMessage(),e);
 			}
 		}
@@ -952,6 +984,7 @@ public class DBHelper {
 				String sql=sqlBuilder.deleteCharAt(sqlBuilder.length()-1).append(")").toString();
 				flag=addBatch(sql);//create table
 			} catch (Exception e) {
+				BuildStatus.getInstance().recordError();
 				logger.error(e.getMessage(),e);
 			} 
 			return flag;
@@ -988,6 +1021,7 @@ public class DBHelper {
 				String sql=sqlBuilder.deleteCharAt(sqlBuilder.length()-1).append(")").toString();
 				flag=addBatch(sql);//create table
 			} catch (Exception e) {
+				BuildStatus.getInstance().recordError();
 				logger.error(e.getMessage(),e);
 			} 
 			return flag;
@@ -1016,6 +1050,7 @@ public class DBHelper {
 				}
 				db.close();
 			}catch(Exception e){
+				BuildStatus.getInstance().recordError();
 				logger.error(e.getMessage(),e);
 			}
 			return flag;
@@ -1043,6 +1078,7 @@ public class DBHelper {
 				}
 				db.close();
 			}catch(Exception e){
+				BuildStatus.getInstance().recordError();
 				logger.error(e.getMessage(),e);
 			}
 			return flag;

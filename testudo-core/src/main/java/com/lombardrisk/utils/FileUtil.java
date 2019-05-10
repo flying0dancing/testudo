@@ -1,28 +1,7 @@
 package com.lombardrisk.utils;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
-
+import com.lombardrisk.pojo.TableProps;
+import com.lombardrisk.status.BuildStatus;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.archivers.jar.JarArchiveEntry;
@@ -42,7 +21,27 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.lombardrisk.pojo.TableProps;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 
 public class FileUtil extends FileUtils{
@@ -82,6 +81,7 @@ public class FileUtil extends FileUtils{
 			}
 			File sourcePathHd=new File(sourcePath);
 			if(!sourcePathHd.exists()){
+				BuildStatus.getInstance().recordError();
 				logger.error("error:source path cannot be found ["+sourcePath+"]");
 				return false;
 			}
@@ -112,6 +112,7 @@ public class FileUtil extends FileUtils{
 			os.close();
 		}catch(Exception e){
 			flag=false;
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		}
 		return flag;
@@ -143,6 +144,7 @@ public class FileUtil extends FileUtils{
 			}
 			File sourcePathHd=new File(sourcePath);
 			if(!sourcePathHd.exists()){
+				BuildStatus.getInstance().recordError();
 				logger.error("error:source path cannot be found ["+sourcePath+"]");
 				return false;
 			}
@@ -173,6 +175,7 @@ public class FileUtil extends FileUtils{
 		catch (IOException e)
 		{
 			flag=false;
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		}
 		return flag;
@@ -206,6 +209,7 @@ public class FileUtil extends FileUtils{
 		catch (Exception e)
 		{
 			e.printStackTrace();
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage());
 			throw e;
 		}
@@ -255,6 +259,7 @@ public class FileUtil extends FileUtils{
 		catch (Exception e)
 		{
 			e.printStackTrace();
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage());
 			throw e;
 		}
@@ -431,6 +436,7 @@ public class FileUtil extends FileUtils{
 		}
 		catch (Exception e)
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage());
 			throw e;
 		}
@@ -470,6 +476,7 @@ public class FileUtil extends FileUtils{
 		}
 		catch (Exception e)
 		{
+			BuildStatus.getInstance().recordError();
 			e.printStackTrace();
 			logger.error(e.getMessage());
 		}
@@ -527,6 +534,7 @@ public class FileUtil extends FileUtils{
 				source.renameTo(dest);
 			}else
 			{
+				BuildStatus.getInstance().recordError();
 				logger.error("error: failed to find source file["+fileFullName+"].");
 			}
 		}
@@ -545,6 +553,7 @@ public class FileUtil extends FileUtils{
 					file.createNewFile();
 				}
 			} catch (IOException e) {
+				BuildStatus.getInstance().recordError();
 				logger.error("error: failed to create new file.");
 				logger.error(e.getMessage(),e);
 			}
@@ -562,6 +571,7 @@ public class FileUtil extends FileUtils{
 				}
 				file.createNewFile();
 			} catch (IOException e) {
+				BuildStatus.getInstance().recordError();
 				logger.error("error: failed to create new file.");
 				logger.error(e.getMessage(),e);
 			}
@@ -605,6 +615,7 @@ public class FileUtil extends FileUtils{
 				}
 			}catch(Exception e)
 			{
+				BuildStatus.getInstance().recordError();
 				logger.error("error: failed to create directories.");
 				logger.error(e.getMessage(),e);
 			}
@@ -658,6 +669,7 @@ public class FileUtil extends FileUtils{
 			}
 			
 		} catch (IOException e) {
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		}
 		return flag;
@@ -715,6 +727,7 @@ public class FileUtil extends FileUtils{
 				{listFilesByFilter(file.getAbsolutePath(),fileName,exfilterStr,filePaths);}
 				
 			}else{
+				BuildStatus.getInstance().recordError();
 				logger.error("error: invalid path["+filePath+"]");
 			}
 		}
@@ -820,13 +833,16 @@ public class FileUtil extends FileUtils{
 			}
 			bufReader.close();
 		} catch (FileNotFoundException e) {
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		} catch (IOException e) {
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		}finally{
 			try {
 				bufReader.close();
 			} catch (IOException e) {
+				BuildStatus.getInstance().recordError();
 				logger.error(e.getMessage(),e);
 			}
 		}
@@ -863,6 +879,7 @@ public class FileUtil extends FileUtils{
 				bufReader.close();
 			}
 		}catch(Exception e){
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		}
 		return tableDefinition;
@@ -902,6 +919,7 @@ public class FileUtil extends FileUtils{
 				bufReader.close();
 			}
 		}catch(Exception e){
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		}
 		return tablesDefinition;
@@ -947,6 +965,7 @@ public class FileUtil extends FileUtils{
 				bufReader.close();
 			}
 		}catch(Exception e){
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		}
 		return tablesDefinition;
@@ -1045,8 +1064,10 @@ public class FileUtil extends FileUtils{
 			bufWriter.close();
 			
 		} catch (FileNotFoundException e) {
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		} catch (IOException e) {
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		}
 		return flag;
@@ -1073,6 +1094,7 @@ public class FileUtil extends FileUtils{
 				bufReader.close();
 			}
 		}catch(Exception e){
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		}
 		return contents;
@@ -1100,6 +1122,7 @@ public class FileUtil extends FileUtils{
 				bufReader.close();
 			}
 		}catch(Exception e){
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		}
 		return contents;
@@ -1125,6 +1148,7 @@ public class FileUtil extends FileUtils{
 				bufReader.close();
 			}
 		}catch(Exception e){
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		}
 		return contents.toString();
@@ -1174,6 +1198,7 @@ public class FileUtil extends FileUtils{
 			logger.info("new file name is {}.",newFileFullName);
 		}else
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error("argument:fileFullName[{}] doesn't exist.",fileFullName);
 		}
 		
@@ -1193,7 +1218,10 @@ public class FileUtil extends FileUtils{
 			}
 		
 		}catch(Exception e)
-		{logger.error(e.getMessage(),e);}
+		{
+			BuildStatus.getInstance().recordError();
+			logger.error(e.getMessage(),e);
+		}
 
 	}
 	
@@ -1213,6 +1241,7 @@ public class FileUtil extends FileUtils{
 						List<String> unCompressFiles=unCompress(srcFile,destDir);
 						//logger.info("Debug external projects:"+unCompressFiles.toString());
 					} catch (Exception e) {
+						BuildStatus.getInstance().recordError();
 						logger.error(e.getMessage(),e);
 					}
 				}else{
@@ -1220,6 +1249,7 @@ public class FileUtil extends FileUtils{
 				}
 			}
 		}else{
+			BuildStatus.getInstance().recordError();
 			logger.error("File Not Found: "+srcFile);
 		}
 	}
@@ -1243,6 +1273,7 @@ public class FileUtil extends FileUtils{
 					filenames.add(files[i].getName());
 				}
 			}else{
+				BuildStatus.getInstance().recordError();
 				logger.error("File is not Directory: "+path);
 			}
 

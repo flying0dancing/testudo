@@ -1,7 +1,9 @@
 package com.lombardrisk;
 
 import com.lombardrisk.ocelot.config.ConfigPackageSIG;
+import com.lombardrisk.status.BuildStatus;
 import org.apache.commons.lang.StringUtils;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -33,7 +35,7 @@ public class CreatePackageMojo extends TestudoMojo {
     private String confParam;
 
     @Override
-    public void execute() {
+    public void execute() throws MojoFailureException {
         super.execute();
         ConfigPackageSIG.main(new String[]{file()});
     }
@@ -58,6 +60,7 @@ public class CreatePackageMojo extends TestudoMojo {
                 logger.info("No zip files found in target folder {}",targetFolder);
             }
         } catch (IOException e) {
+            BuildStatus.getInstance().recordError();
             logger.error("Error finding zip file", e);
         }
         throw new IllegalStateException("Unable to find zip");

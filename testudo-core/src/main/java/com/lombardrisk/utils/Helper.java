@@ -1,5 +1,10 @@
 package com.lombardrisk.utils;
 
+import com.lombardrisk.status.BuildStatus;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,12 +16,6 @@ import java.sql.Blob;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class Helper {
 	private final static Logger logger = LoggerFactory.getLogger(Helper.class);
@@ -204,6 +203,7 @@ public class Helper {
 			logger.debug("Here is the standard error of the command (if any):");
 			while((str=stdError.readLine())!=null)
 			{
+				BuildStatus.getInstance().recordError();
 				logger.error(str);
 				if(str.toLowerCase().contains("error")) 
 				{
@@ -214,11 +214,13 @@ public class Helper {
 			
 		} catch (InterruptedException |IOException e) {
 			flag=false;
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		} 
 		if(flag){
 			logger.info("cmd run OK.");
 		}else{
+			BuildStatus.getInstance().recordError();
 			logger.error("cmd run failed.");
 		}
 		return flag;
