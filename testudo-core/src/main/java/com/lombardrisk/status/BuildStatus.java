@@ -1,6 +1,6 @@
 package com.lombardrisk.status;
 
-public class BuildStatus {
+public final class BuildStatus {
 
     private static final BuildStatus instance = new BuildStatus();
 
