@@ -1,15 +1,6 @@
 package com.lombardrisk.utils;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.Iterator;
-
-
-
-import java.util.List;
-
+import com.lombardrisk.status.BuildStatus;
 import org.apache.commons.lang3.StringUtils;
 import org.dom4j.Attribute;
 import org.dom4j.Document;
@@ -19,6 +10,13 @@ import org.dom4j.io.SAXReader;
 import org.dom4j.io.XMLWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 public class Dom4jUtil {
 
@@ -41,6 +39,7 @@ public class Dom4jUtil {
 	    	Element root=null;
 	    	if(!xmlFile.exists())
 	    	{
+				BuildStatus.getInstance().recordError();
 	    		logger.error("error: invalid xml file["+xmlFileStr+"]");
 	    		return paths;
 	        	
@@ -83,6 +82,7 @@ public class Dom4jUtil {
 	    	
 	    }catch(Exception e)
 	    {
+			BuildStatus.getInstance().recordError();
 	    	logger.error(e.getMessage(),e);
 	    } 
 	    return paths;
@@ -187,6 +187,7 @@ public class Dom4jUtil {
 	    	Element root=null;
 	    	if(!xmlFile.exists())
 	    	{
+				BuildStatus.getInstance().recordError();
 	    		logger.error("error: invalid xml file["+xmlFileStr+"]");
 	    		return value;
 	        	
@@ -199,6 +200,7 @@ public class Dom4jUtil {
 	    	writeDocumentToXml(doc,xmlFileStr);
 	    }catch(Exception e)
 	    {
+			BuildStatus.getInstance().recordError();
 	    	logger.error(e.getMessage(),e);
 	    } 
 	    return value;
@@ -276,6 +278,7 @@ public class Dom4jUtil {
 			
 		}catch(Exception e)
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage(),e);
 		}
 		

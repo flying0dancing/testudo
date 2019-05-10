@@ -1,9 +1,9 @@
 package com.lombardrisk.pojo;
 
+import com.google.gson.GsonBuilder;
+import com.lombardrisk.status.BuildStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.gson.GsonBuilder;
 
 public class DatabaseServer {
 	private static final Logger logger = LoggerFactory.getLogger(DatabaseServer.class);
@@ -113,6 +113,7 @@ public class DatabaseServer {
 		try{
 			return new GsonBuilder().setPrettyPrinting().create().toJson(this);
 		}catch(Exception e){
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage());
 			return "";
 		}

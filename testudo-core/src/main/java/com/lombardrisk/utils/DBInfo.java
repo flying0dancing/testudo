@@ -1,17 +1,17 @@
 package com.lombardrisk.utils;
 
-import java.io.File;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.lombardrisk.IComFolder;
+import com.lombardrisk.pojo.DatabaseServer;
+import com.lombardrisk.pojo.TableProps;
+import com.lombardrisk.status.BuildStatus;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.lombardrisk.IComFolder;
-import com.lombardrisk.pojo.DatabaseServer;
-import com.lombardrisk.pojo.TableProps;
+import java.io.File;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 
 public class DBInfo  implements IComFolder{
@@ -431,6 +431,7 @@ public class DBInfo  implements IComFolder{
 			DBHelper.AccessdbHelper accdb=dbHelper.new AccessdbHelper();
 			if(!accdb.accessTableExistence(tableName))
 			{
+				BuildStatus.getInstance().recordError();
 				logger.error("cannot found "+tableName);
 			}else{
 				String SQL="SELECT Return & \"_v\" & Version AS Expr1 from ["+tableName+"] WHERE ReturnId="+returnId;
@@ -440,6 +441,7 @@ public class DBInfo  implements IComFolder{
 			dbHelper.close();
 		}else
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error("this function should be worked on access database.");
 		}
 		if(returnAndVer==null)returnAndVer="";
@@ -461,11 +463,15 @@ public class DBInfo  implements IComFolder{
 			Map<String,List<String>> allTableDefs=FileUtil.getAllTableDefinitions(schemaFullName);
 			for(String key:allTableDefs.keySet()){
 				Boolean flagT=accdb.createAccessDBTable(key, allTableDefs.get(key));
-				if(!flagT){flag=false;logger.error("error: fail to create table ["+key+"]");}
+				if(!flagT){
+					flag=false;
+					BuildStatus.getInstance().recordError();
+					logger.error("error: fail to create table ["+key+"]");}
 			}
 			dbHelper.close();
 		}else
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error("this method should be worked on access database.");
 			flag=false;
 		}
@@ -509,8 +515,12 @@ public class DBInfo  implements IComFolder{
 				if(flag){
 					flag=accdb.importCsvToAccessDB(tableName,columns,csvPath);
 					
-				}else{logger.error("error: fail to create table ["+tableName+"]");}
+				}else{
+					BuildStatus.getInstance().recordError();
+					logger.error("error: fail to create table ["+tableName+"]");
+				}
 			}else{
+				BuildStatus.getInstance().recordError();
 				logger.error("error: invalid table definition ["+tableName+"]");
 				flag=false;
 			}
@@ -518,6 +528,7 @@ public class DBInfo  implements IComFolder{
 			dbHelper.close();
 		}else
 		{
+			BuildStatus.getInstance().recordError();
 			logger.error("this method should be worked on access database.");
 		}
 		

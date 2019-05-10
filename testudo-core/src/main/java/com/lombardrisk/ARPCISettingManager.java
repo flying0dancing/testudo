@@ -3,6 +3,7 @@ package com.lombardrisk;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.lombardrisk.pojo.ARPCISetting;
+import com.lombardrisk.status.BuildStatus;
 import com.lombardrisk.utils.Helper;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -46,6 +47,7 @@ public final class ARPCISettingManager implements IComFolder {
             }
             return new ArrayList<>();
         } catch (Exception e) {
+            BuildStatus.getInstance().recordError();
             logger.error(e.getMessage(), e);
             return new ArrayList<>();
         }
@@ -62,6 +64,7 @@ public final class ARPCISettingManager implements IComFolder {
         } catch (NoSuchMethodException | SecurityException
                 | IllegalAccessException | IllegalArgumentException
                 | InvocationTargetException e) {
+            BuildStatus.getInstance().recordError();
             logger.error(e.getMessage(), e);
         }
         return null;
@@ -83,6 +86,7 @@ public final class ARPCISettingManager implements IComFolder {
                     }
                     ARPCISetting arpci = getARPCISetting(allSettings, ids);
                     if (arpci == null) {
+                        BuildStatus.getInstance().recordError();
                         logger.error("Not Exists id=" + ids);
                     } else {
                         arCIConfgList.add(arpci);
@@ -92,6 +96,7 @@ public final class ARPCISettingManager implements IComFolder {
             }
         } catch (SecurityException
                 | IllegalArgumentException e) {
+            BuildStatus.getInstance().recordError();
             logger.error(e.getMessage(), e);
         }
         return null;
@@ -118,6 +123,7 @@ public final class ARPCISettingManager implements IComFolder {
                 }
             }
             if (!flag) {
+                BuildStatus.getInstance().recordError();
                 logger.error("Not Exists id=" + id.trim());
                 logger.error("testudo's json might contains error, details see readme's json instruction.");
                 throw new IllegalStateException("please check your json file.");

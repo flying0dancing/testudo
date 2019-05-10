@@ -1,18 +1,22 @@
 package com.lombardrisk;
 
+import com.lombardrisk.pojo.DatabaseServer;
+import com.lombardrisk.pojo.ZipSettings;
+import com.lombardrisk.status.BuildStatus;
+import com.lombardrisk.utils.DBInfo;
+import com.lombardrisk.utils.Dom4jUtil;
+import com.lombardrisk.utils.FileUtil;
+import com.lombardrisk.utils.Helper;
+import com.lombardrisk.utils.PropHelper;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.lombardrisk.pojo.DatabaseServer;
-import com.lombardrisk.pojo.ZipSettings;
-import com.lombardrisk.utils.*;
 
 
 public class ARPPack implements IComFolder {
@@ -79,6 +83,7 @@ public class ARPPack implements IComFolder {
 			List<String> realCsvFullPathsTmp=FileUtil.getFilesByFilter(Helper.reviseFilePath(csvParentPath+System.getProperty("file.separator")+pathTmp),null);
 			if(realCsvFullPathsTmp.size()<=0)
 			{
+                BuildStatus.getInstance().recordError();
 				logger.error("error: invalid path ["+csvParentPath+System.getProperty("file.separator")+pathTmp+"]");
 				continue;
 			}
@@ -107,6 +112,7 @@ public class ARPPack implements IComFolder {
 					}
 					Boolean flag=dbInfo.importCsvToAccess(tableName,tableNameWithDB, Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(schemaFullName));
 					if(!flag){
+                        BuildStatus.getInstance().recordError();
 						logger.error("import metadata["+pathTmp2+"] to "+tableName+" fail.");
 					}else{
 						logger.info("import metadata["+pathTmp2+"] to "+tableName+" successfully.");
@@ -154,6 +160,7 @@ public class ARPPack implements IComFolder {
 		logger.info("================= execute SQLs =================");
 		List<String> realFullPaths=getFileFullPaths(sourcePath, sqlFileNames,excludeFileFilters);
 		if(realFullPaths==null || realFullPaths.size()<=0) {
+            BuildStatus.getInstance().recordError();
 			logger.error("error: sqlFiles are invalid files or filters.");
 			return false;//illegal, no invalid files need to execute if it set sqlFiles
 		}
@@ -168,6 +175,7 @@ public class ARPPack implements IComFolder {
 						logger.info("execute sql:"+sql.trim());
 						Boolean status=dbInfo.executeSQL(sql.trim());
 						if(!status){
+                            BuildStatus.getInstance().recordError();
 							logger.error("execute failed.");
 							flag=false;
 						}else{logger.info("execute OK.");}
@@ -177,9 +185,12 @@ public class ARPPack implements IComFolder {
 				logger.info("execute sql:"+fileContent);
 				Boolean status=dbInfo.executeSQL(fileContent.trim());
 				if(!status){
+                    BuildStatus.getInstance().recordError();
 					logger.error("execute failed.");
 					flag=false;
-				}else{logger.info("execute OK.");}
+				}else{
+				    logger.info("execute OK.");
+				}
 			}
 		}
 		
@@ -209,6 +220,7 @@ public class ARPPack implements IComFolder {
 		List<String> packFileNames=zipSet.getZipFiles();
 		List<String> realFullPaths=getFileFullPaths(sourcePath, packFileNames,zipSet.getExcludeFileFilters());
 		if(realFullPaths==null){
+            BuildStatus.getInstance().recordError();
 			logger.error("error: zipFiles are invalid files or filters.");
 			return false;
 		}
@@ -272,6 +284,7 @@ public class ARPPack implements IComFolder {
 			}
 			logger.info("package successfully.");
 		}else{
+            BuildStatus.getInstance().recordError();
 			logger.error("error: package with failures.");
 		}
 		
@@ -293,8 +306,8 @@ public class ARPPack implements IComFolder {
 		for(String filter:filters){
 			
 			List<String> realFullPathsTmp=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+filter),null);
-			if(realFullPathsTmp.size()<=0)
-			{
+			if(realFullPathsTmp.size()<=0){
+                BuildStatus.getInstance().recordError();
 				logger.error("error: cannot search ["+filter+"] under path ["+sourcePath+"]");
 				continue;
 			}
@@ -323,8 +336,8 @@ public class ARPPack implements IComFolder {
 		for(String filter:filters){
 			
 			List<String> realFullPathsTmp=FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath+filter),excludeFilters);
-			if(realFullPathsTmp.size()<=0)
-			{
+			if(realFullPathsTmp.size()<=0){
+                BuildStatus.getInstance().recordError();
 				logger.error("error: cannot search ["+filter+"] under path ["+sourcePath+"]");
 				continue;
 			}

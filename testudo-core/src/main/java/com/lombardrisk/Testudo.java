@@ -1,18 +1,16 @@
 package com.lombardrisk;
 
-
-import java.util.List;
-
-import org.apache.commons.lang3.ArrayUtils;
+import com.lombardrisk.pojo.ARPCISetting;
+import com.lombardrisk.pojo.DBAndTables;
+import com.lombardrisk.status.BuildStatus;
+import com.lombardrisk.utils.DBInfo;
+import com.lombardrisk.utils.FileUtil;
+import com.lombardrisk.utils.Helper;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.lombardrisk.pojo.ARPCISetting;
-import com.lombardrisk.pojo.DBAndTables;
-import com.lombardrisk.utils.DBInfo;
-import com.lombardrisk.utils.FileUtil;
-import com.lombardrisk.utils.Helper;
+import java.util.List;
 
 
 /**
@@ -75,6 +73,7 @@ public class Testudo implements IComFolder
 						
 					}else{
 						HelperDoc();
+						BuildStatus.getInstance().recordError();
 						logger.error("testudo's json might contains error, details see readme's json instruction.");
 						
 					}
@@ -82,6 +81,7 @@ public class Testudo implements IComFolder
 			}
 			
 		} catch (Exception e) {
+			BuildStatus.getInstance().recordError();
 			logger.error(e.getMessage());
 		}
 		
@@ -90,7 +90,7 @@ public class Testudo implements IComFolder
     }
 
     private static void HelperDoc(){
-    	//Helper.readme("readme.md");
+		BuildStatus.getInstance().recordError();
     	logger.error("please see readme.md.");
 	}
     
@@ -109,6 +109,7 @@ public class Testudo implements IComFolder
 			readDBToMetadata(arSetting);
 			packMetadataAndFiles(arSetting);
 		}else{
+			BuildStatus.getInstance().recordError();
 			logger.error("argument proc is wrong, should be 1 or 2 or all, details see readme's [proc] instruction.");
 		}
     }
@@ -141,6 +142,7 @@ public class Testudo implements IComFolder
     	ARPPack azipFile=new ARPPack();
 		Boolean flag=azipFile.createNewDpm(arSetting.getZipSettings().getDpmFullPath());
 		if(!flag){
+			BuildStatus.getInstance().recordError();
 			logger.error("error: create access database unsuccessful.");
 			return;
 		}
