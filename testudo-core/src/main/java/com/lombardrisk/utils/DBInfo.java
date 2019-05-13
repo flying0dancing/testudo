@@ -485,55 +485,52 @@ public class DBInfo  implements IComFolder{
 	 * @param schemaFullName
 	 * @return
 	 */
-	public Boolean importCsvToAccess(String tableName,String tableNameWithDB, String csvPath, String schemaFullName)
-	{
-		Boolean flag=false;
-		if(dbHelper.getDatabaseServer().getDriver().startsWith("access"))
-		{
-			dbHelper.connect();
-			String userSchemaFullName=schemaFullName.replace(FileUtil.getFileNameWithSuffix(schemaFullName), ACCESS_SCHEMA_INI);
-			List<TableProps> columns=null;
-			columns=findDbTableColumns(tableName);
-			if(columns==null){
-				flag=FileUtil.search(userSchemaFullName,"["+tableName+"]");
-				if(flag){
-					columns=FileUtil.getMixedTablesDefinition(FileUtil.searchTablesDefinition(userSchemaFullName, tableName));
-					setDbTableColumns(tableName,columns);
-				}else{
-					flag=FileUtil.search(schemaFullName, "["+tableNameWithDB+"]");
-					//List<String> columns=FileUtil.searchTableDefinition(schemaFullName,tableNameWithDB);
-					//List<String> columns=FileUtil.getMaxTablesDefinition(FileUtil.searchTablesDefinitionold(schemaFullName, tableName));
-					columns=FileUtil.getMixedTablesDefinition(FileUtil.searchTablesDefinition(schemaFullName, tableName));
-					setDbTableColumns(tableName,columns);
-				}
-			}
-			if(columns!=null && columns.size()>0)
-			{
-				DBHelper.AccessdbHelper accdb=dbHelper.new AccessdbHelper();
-				
-				flag=accdb.createAccessDBTab(tableName, columns);
-				if(flag){
-					flag=accdb.importCsvToAccessDB(tableName,columns,csvPath);
-					
-				}else{
-					BuildStatus.getInstance().recordError();
-					logger.error("error: fail to create table ["+tableName+"]");
-				}
-			}else{
-				BuildStatus.getInstance().recordError();
-				logger.error("error: invalid table definition ["+tableName+"]");
-				flag=false;
-			}
-			
-			dbHelper.close();
-		}else
-		{
-			BuildStatus.getInstance().recordError();
-			logger.error("this method should be worked on access database.");
-		}
-		
-		return flag;
-	}
+  public Boolean importCsvToAccess(String tableName, String tableNameWithDB, String csvPath, String schemaFullName) {
+      Boolean flag = false;
+      if (dbHelper.getDatabaseServer().getDriver().startsWith("access")) {
+          dbHelper.connect();
+          String userSchemaFullName = schemaFullName.replace(FileUtil.getFileNameWithSuffix(schemaFullName),
+                  ACCESS_SCHEMA_INI);
+          List<TableProps> columns = findDbTableColumns(tableName);
+          logger.debug("initial columns {}", columns);
+          if (columns == null) {
+              if (FileUtil.search(userSchemaFullName, "[" + tableName + "]")) {
+                  logger.debug("using user schema: {}", userSchemaFullName);
+                  columns = FileUtil.getMixedTablesDefinition(FileUtil.searchTablesDefinition(userSchemaFullName,
+                          tableName));
+                  logger.debug("user schema columns {}", columns);
+                  setDbTableColumns(tableName, columns);
+              } else {
+                  logger.debug("using full schema: {}", schemaFullName);
+                  FileUtil.search(schemaFullName, "[" + tableNameWithDB + "]");
+                  columns = FileUtil.getMixedTablesDefinition(FileUtil.searchTablesDefinition(schemaFullName,
+                          tableName));
+                  logger.debug("full schema columns {}", columns);
+                  setDbTableColumns(tableName, columns);
+              }
+          }
+          if (columns != null && columns.size() > 0) {
+              DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
+
+              flag = accdb.createAccessDBTab(tableName, columns);
+              if (flag) {
+                  flag = accdb.importCsvToAccessDB(tableName, columns, csvPath);
+              } else {
+                  BuildStatus.getInstance().recordError();
+                  logger.error("error: fail to create table [" + tableName + "]");
+              }
+          } else {
+              BuildStatus.getInstance().recordError();
+              logger.error("error: invalid table definition [" + tableName + "]");
+              flag = false;
+          }
+          dbHelper.close();
+      } else {
+          BuildStatus.getInstance().recordError();
+          logger.error("this method should be worked on access database.");
+      }
+      return flag;
+  }
 
 	public DBDriverType getDbDriverFlag() {
 		return dbDriverFlag;

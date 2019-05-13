@@ -67,63 +67,72 @@ public class ARPPack implements IComFolder {
 	 * @param schemaFullName It's a configuration file, which contains all tables' definition.
 	 * @return return metadata (*.csv files) full paths, return null if error occurs.
 	 */
-	public List<String> importMetadataToDpm(String csvParentPath,List<String> csvPaths, String schemaFullName)
-	{
-		if(StringUtils.isBlank(csvParentPath)){return null;}
-		DBInfo dbInfo=DBInfoSingle.INSTANCE.getDbInfo();
-		//dbInfo.createAccessTables(schemaFullName);
-		if(csvPaths==null || csvPaths.size()<=0){return null;}
-		List<String> realCsvFullPaths=new ArrayList<String>();
-		String name_returnId;
-		String folderregex=FileUtil.getFolderRegex(csvParentPath);
+  public List<String> importMetadataToDpm(String csvParentPath, List<String> csvPaths, String schemaFullName) {
+      if (StringUtils.isBlank(csvParentPath)) {
+          return null;
+      }
+      DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
+      //dbInfo.createAccessTables(schemaFullName);
+      if (csvPaths == null || csvPaths.size() <= 0) {
+          return null;
+      }
+      List<String> realCsvFullPaths = new ArrayList<>();
+      String name_returnId;
+      String folderregex = FileUtil.getFolderRegex(csvParentPath);
 
-		logger.info("================= import metadata into DPM =================");
-		for(String pathTmp:csvPaths)
-		{
-			List<String> realCsvFullPathsTmp=FileUtil.getFilesByFilter(Helper.reviseFilePath(csvParentPath+System.getProperty("file.separator")+pathTmp),null);
-			if(realCsvFullPathsTmp.size()<=0)
-			{
-                BuildStatus.getInstance().recordError();
-				logger.error("error: invalid path ["+csvParentPath+System.getProperty("file.separator")+pathTmp+"]");
-				continue;
-			}
-			for(String pathTmp2:realCsvFullPathsTmp)
-			{
-				if(!realCsvFullPaths.contains(pathTmp2))
-				{
-					name_returnId="";
-					realCsvFullPaths.add(pathTmp2);
-					logger.info("import metadata file:"+pathTmp2);
-					String tableNameWithDB=FileUtil.getFileNameWithoutSuffix(pathTmp2);
-					String tableName=tableNameWithDB.replaceAll("#.*?_", "_");
-					if(!tableName.contains("_")){
-						tableName=tableNameWithDB.replaceAll("#.*", "");
-					}
-					Pattern p = Pattern.compile(folderregex, Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
-					Matcher m = p.matcher(tableName);
-					if(m.find())
-					{
-						tableName=m.group(1);
-						name_returnId=m.group(2);
-					}
-					tableNameWithDB=tableNameWithDB.replace(name_returnId, "");
-					if(name_returnId.equals("") && tableNameWithDB.contains("_")){
-						tableName=tableNameWithDB.split("#")[0];
-					}
-					Boolean flag=dbInfo.importCsvToAccess(tableName,tableNameWithDB, Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(schemaFullName));
-					if(!flag){
-                        BuildStatus.getInstance().recordError();
-						logger.error("import metadata["+pathTmp2+"] to "+tableName+" fail.");
-					}else{
-						logger.info("import metadata["+pathTmp2+"] to "+tableName+" successfully.");
-					}
-					
-				}
-			}
-		}
-		if(realCsvFullPaths.size()<=0){return null;}
-		return realCsvFullPaths;
-	}
+      logger.info("================= import metadata into DPM =================");
+      for (String pathTmp : csvPaths) {
+          List<String> realCsvFullPathsTmp =
+                  FileUtil.getFilesByFilter(Helper.reviseFilePath(csvParentPath + System.getProperty("file" +
+                          ".separator") + pathTmp), null);
+          if (realCsvFullPathsTmp.size() <= 0) {
+              BuildStatus.getInstance().recordError();
+              logger.error("error: invalid path [" + csvParentPath + System.getProperty("file.separator") + pathTmp + "]");
+              continue;
+          }
+          for (String pathTmp2 : realCsvFullPathsTmp) {
+              if (!realCsvFullPaths.contains(pathTmp2)) {
+                  name_returnId = "";
+                  realCsvFullPaths.add(pathTmp2);
+                  logger.info("import metadata file:" + pathTmp2);
+                  String tableNameWithDB = FileUtil.getFileNameWithoutSuffix(pathTmp2);
+                  logger.debug("1 table name with DB {}", tableNameWithDB);
+                  String tableName = tableNameWithDB.replaceAll("#.*?_", "_");
+                  logger.debug("1 table name {}", tableName);
+
+                  if (!tableName.contains("_")) {
+                      tableName = tableNameWithDB.replaceAll("#.*", "");
+                      logger.debug("2 table name {}", tableName);
+                  }
+                  Pattern p = Pattern.compile(folderregex, Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+                  Matcher m = p.matcher(tableName);
+                  if (m.find()) {
+                      tableName = m.group(1);
+                      logger.debug("3 table name {}", tableName);
+                      name_returnId = m.group(2);
+                  }
+                  tableNameWithDB = tableNameWithDB.replace(name_returnId, "");
+                  if (name_returnId.equals("") && tableNameWithDB.contains("_")) {
+                      tableName = tableNameWithDB.split("#")[0];
+                      logger.debug("4 table name {}", tableName);
+                  }
+                  logger.debug("X table name {}", tableName);
+                  Boolean flag = dbInfo.importCsvToAccess(tableName, tableNameWithDB,
+                          Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(schemaFullName));
+                  if (!flag) {
+                      BuildStatus.getInstance().recordError();
+                      logger.error("import metadata[" + pathTmp2 + "] to " + tableName + " fail.");
+                  } else {
+                      logger.info("import metadata[" + pathTmp2 + "] to " + tableName + " successfully.");
+                  }
+              }
+          }
+      }
+      if (realCsvFullPaths.size() <= 0) {
+          return null;
+      }
+      return realCsvFullPaths;
+  }
 	
 
 	/***
