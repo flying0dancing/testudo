@@ -47,6 +47,7 @@ import java.util.regex.Pattern;
 public class DBHelper {
 
     private static final Logger logger = LoggerFactory.getLogger(DBHelper.class);
+    public static final int BATCH_SIZE = 50;
     private String dbmsDriver;
     private Connection conn = null;
     private DatabaseServer databaseServer;
@@ -661,14 +662,14 @@ public class DBHelper {
                             }
                             line = line.replaceAll(",$", ")");
                             lineBuffer.append(line + ",");
-                            if (lineno % 200 == 0) {
+                            if (lineno % BATCH_SIZE == 0) {
                                 sql = header + lineBuffer.substring(0, lineBuffer.length() - 1);
                                 lineBuffer.setLength(0);//clear
                                 logger.debug(sql);
                                 flag = addBatch(sql);
                                 if (!flag) {
                                     BuildStatus.getInstance().recordError();
-                                    logger.error("fail to import data into:" + tableName + " ( " + (lineno - 100) + "-" + lineno + " )");
+                                    logger.error("fail to import data into:" + tableName + " ( " + (lineno - BATCH_SIZE) + "-" + lineno + " )");
                                     break;
                                 }
                             }
@@ -681,8 +682,8 @@ public class DBHelper {
                             flag = addBatch(sql);
                             if (!flag) {
                                 BuildStatus.getInstance().recordError();
-                                if (lineno >= 100) {
-                                    logger.error("fail to import data into:" + tableName + " ( " + (lineno - 100) + "-" + lineno + " )");
+                                if (lineno >= BATCH_SIZE) {
+                                    logger.error("fail to import data into:" + tableName + " ( " + (lineno - BATCH_SIZE) + "-" + lineno + " )");
                                 } else {
                                     logger.error("fail to import data into:" + tableName + " ( 0-" + lineno + " )");
                                 }
