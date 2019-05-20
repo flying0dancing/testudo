@@ -539,7 +539,7 @@ public class DBHelper {
          */
         public Boolean accessTableExistence(String tableName) {
             String dbFullName = getDatabaseServer().getSchema();
-            try (Database db = DatabaseBuilder.open(new File(dbFullName));){
+            try (Database db = DatabaseBuilder.open(new File(dbFullName));) {
                 if (db.getTable(tableName) != null) {
                     logger.debug("accessdb table[" + tableName + "] already exists.");
                     return true;

@@ -18,7 +18,6 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Stream;
 
-
 @SuppressWarnings("unused")
 @Mojo(name = "createPackage", defaultPhase = LifecyclePhase.COMPILE)
 public class CreatePackageMojo extends TestudoMojo {
@@ -40,24 +39,24 @@ public class CreatePackageMojo extends TestudoMojo {
         ConfigPackageSIG.main(new String[]{file()});
     }
 
-    private String getFileSeperator(){
+    private String getFileSeperator() {
         return System.getProperty("file.separator");
     }
 
-    private String file(){
-        String targetFolder = getProject().getBasedir() + getFileSeperator()+"target";
-        logger.debug("Target folder {}",targetFolder);
+    private String file() {
+        String targetFolder = getProject().getBasedir() + getFileSeperator() + "target";
+        logger.debug("Target folder {}", targetFolder);
         try (Stream<Path> stream = Files.find(
                 Paths.get(targetFolder), 1,
                 (path, attr) ->
-                        path.toString().endsWith(releaseParam+".zip"))) {
+                        path.toString().endsWith(releaseParam + ".zip"))) {
             Optional<Path> first = stream.findFirst();
-            if (first.isPresent()){
+            if (first.isPresent()) {
                 String zipFileName = first.get().getFileName().toString();
-                logger.info("Found zip file to sign {}",zipFileName);
-                return targetFolder + getFileSeperator()+zipFileName;
-            } else{
-                logger.info("No zip files found in target folder {}",targetFolder);
+                logger.info("Found zip file to sign {}", zipFileName);
+                return targetFolder + getFileSeperator() + zipFileName;
+            } else {
+                logger.info("No zip files found in target folder {}", targetFolder);
             }
         } catch (IOException e) {
             BuildStatus.getInstance().recordError();
@@ -70,8 +69,8 @@ public class CreatePackageMojo extends TestudoMojo {
     void addProperties(final Properties properties) {
         super.addProperties(properties);
         properties.setProperty("release", releaseParam);
-        if(StringUtils.isNotBlank(confParam)){
-            properties.setProperty("conf", getProject().getBasedir()+getFileSeperator()+confParam);
+        if (StringUtils.isNotBlank(confParam)) {
+            properties.setProperty("conf", getProject().getBasedir() + getFileSeperator() + confParam);
         }
     }
 }

@@ -15,7 +15,17 @@ gradlew.bat
 *.log
 
 # IntelliJ IDEA Project files
-.idea
+!.idea/
+.idea/*
+
+!.idea/codeStyleSettings.xml
+!.idea/codeStyles/
+.idea/codeStyles/*
+!.idea/codeStyles/Project.xml
+# !.idea/misc.xml
+# !.idea/sonarlint.xml
+# !.idea/inspectionProfiles/
+# !.idea/inspectionProfiles/*
 *.iml
 *.ipr
 *.iws
