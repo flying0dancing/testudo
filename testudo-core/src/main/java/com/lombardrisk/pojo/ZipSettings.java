@@ -8,88 +8,90 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 public class ZipSettings {
-	private static final Logger logger = LoggerFactory.getLogger(ZipSettings.class);
-	
-	private String excludeFileFilters;
-	private List<String> requiredMetadata;
-	private List<ExternalProject> externalProjects;
-	private String dpmFullPath;
-	private String productProperties;
-	private List<String> sqlFiles;
-	private List<String> zipFiles;
-	private String notes;
-	public String getNotes() {
-		return notes;
-	}
 
-	public void setNotes(String notes) {
-		this.notes = notes;
-	}
-	
-	public String getDpmFullPath() {
-		return dpmFullPath;
-	}
+    private static final Logger logger = LoggerFactory.getLogger(ZipSettings.class);
 
-	public void setDpmFullPath(String accessDBFullPath) {
-		this.dpmFullPath = accessDBFullPath;
-	}
+    private String excludeFileFilters;
+    private List<String> requiredMetadata;
+    private List<ExternalProject> externalProjects;
+    private String dpmFullPath;
+    private String productProperties;
+    private List<String> sqlFiles;
+    private List<String> zipFiles;
+    private String notes;
 
-	public List<String> getRequiredMetadata() {
-		return requiredMetadata;
-	}
+    public String getNotes() {
+        return notes;
+    }
 
-	public void setRequiredMetadata(List<String> requiredMetadata) {
-		this.requiredMetadata = requiredMetadata;
-	}
-	public List<String> getZipFiles() {
-		return zipFiles;
-	}
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
 
-	public void setZipFiles(List<String> zipFiles) {
-		this.zipFiles = zipFiles;
-	}
-	
-	public String getProductProperties() {
-		return productProperties;
-	}
+    public String getDpmFullPath() {
+        return dpmFullPath;
+    }
 
-	public void setProductProperties(String productProperties) {
-		this.productProperties = productProperties;
-	}
-	
-	@Override
-	public String toString()
-	{
-		try{
-			return new GsonBuilder().setPrettyPrinting().create().toJson(this);
-		}catch(Exception e){
-			BuildStatus.getInstance().recordError();
-			logger.error(e.getMessage());
-			return "";
-		}
-	}
+    public void setDpmFullPath(String accessDBFullPath) {
+        this.dpmFullPath = accessDBFullPath;
+    }
 
-	public List<String> getSqlFiles() {
-		return sqlFiles;
-	}
+    public List<String> getRequiredMetadata() {
+        return requiredMetadata;
+    }
 
-	public void setSqlFiles(List<String> sqlFiles) {
-		this.sqlFiles = sqlFiles;
-	}
+    public void setRequiredMetadata(List<String> requiredMetadata) {
+        this.requiredMetadata = requiredMetadata;
+    }
 
-	public String getExcludeFileFilters() {
-		return excludeFileFilters;
-	}
+    public List<String> getZipFiles() {
+        return zipFiles;
+    }
 
-	public void setExcludeFileFilters(String excludeFileFilters) {
-		this.excludeFileFilters = excludeFileFilters;
-	}
+    public void setZipFiles(List<String> zipFiles) {
+        this.zipFiles = zipFiles;
+    }
 
-	public List<ExternalProject> getExternalProjects() {
-		return externalProjects;
-	}
+    public String getProductProperties() {
+        return productProperties;
+    }
 
-	public void setExternalProjects(List<ExternalProject> externalProjects) {
-		this.externalProjects = externalProjects;
-	}
+    public void setProductProperties(String productProperties) {
+        this.productProperties = productProperties;
+    }
+
+    @Override
+    public String toString() {
+        try {
+            return new GsonBuilder().setPrettyPrinting().create().toJson(this);
+        } catch (Exception e) {
+            BuildStatus.getInstance().recordError();
+            logger.error(e.getMessage());
+            return "";
+        }
+    }
+
+    public List<String> getSqlFiles() {
+        return sqlFiles;
+    }
+
+    public void setSqlFiles(List<String> sqlFiles) {
+        this.sqlFiles = sqlFiles;
+    }
+
+    public String getExcludeFileFilters() {
+        return excludeFileFilters;
+    }
+
+    public void setExcludeFileFilters(String excludeFileFilters) {
+        this.excludeFileFilters = excludeFileFilters;
+    }
+
+    public List<ExternalProject> getExternalProjects() {
+        return externalProjects;
+    }
+
+    public void setExternalProjects(List<ExternalProject> externalProjects) {
+        this.externalProjects = externalProjects;
+    }
 }

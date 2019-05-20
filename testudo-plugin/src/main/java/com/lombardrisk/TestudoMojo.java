@@ -18,12 +18,12 @@ public class TestudoMojo extends AbstractMojo {
     @Parameter
     private Boolean failBuild = true;
 
-    public void execute() throws MojoFailureException{
+    public void execute() throws MojoFailureException {
         Properties properties = System.getProperties();
         addProperties(properties);
         System.setProperties(properties);
         Testudo.main(new String[]{});
-        if (failBuild && BuildStatus.getInstance().hasErrors()){
+        if (failBuild && BuildStatus.getInstance().hasErrors()) {
             throw new MojoFailureException("Build failed");
         }
     }
