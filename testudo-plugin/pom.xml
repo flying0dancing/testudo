@@ -22,14 +22,14 @@
     </dependency>
     <dependency>
       <groupId>com.lombardrisk</groupId>
-      <artifactId>ocelot-config-sign</artifactId>
-      <version>${ocelot.config.sign.version}</version>
-      <classifier>jar-with-dependencies</classifier>
+      <artifactId>testudo-core</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>com.lombardrisk</groupId>
-      <artifactId>testudo-core</artifactId>
-      <version>${project.version}</version>
+      <artifactId>ocelot-config-sign</artifactId>
+      <version>${ocelot.config.sign.version}</version>
+      <classifier>jar-with-dependencies</classifier>
     </dependency>
     <dependency>
       <groupId>org.apache.maven.reporting</groupId>
