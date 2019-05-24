@@ -244,48 +244,22 @@ public class DBInfo implements IComFolder {
         idOfDBAndTable=StringUtils.isBlank(idOfDBAndTable)?emptyStr:idOfDBAndTable;
 
         String sharpFlag="#";
-        String sQL;
-        String dividedTableField;
-        String typeReturnId;
         String tabName;
         String tableName;
-        String metadataName;
-        String quoteFlag="\"";
-        String csvSuffix=".csv";
-        String underlineFlag="_";
-        String top1SQL="select top 1 * from ";
-        String subPath;
+
         logger.info("================= export tables need to be divided by ReturnId =================");
         for (String tab : tableList) {
             tabName=tab.replace(sharpFlag, prefix);
             tableName = getTableNameFromDB(tabName);
             if (StringUtils.isNotBlank(tableName)) {
-                dividedTableField=DivideTableFieldList.getDividedField(tableName);
 
                 logger.info("----------- " + tableName + " ----------- ");
                 tab = tab.replace(sharpFlag, emptyStr);
-                subPath = new File(exportPath).getPath() + fileSeparator + tab;
 
-                logger.info("export metadata struct to " + iNIName);
-                sQL = selectSQL + quoteFlag + tableName + quoteFlag+" where rownum=1";//
-                if (getDbDriverFlag() == DBDriverType.SQLSERVER || getDbDriverFlag() == DBDriverType.ACCESSDB) {
-                    sQL = top1SQL + tableName;
-                }
-                dbHelper.exportToINI(tab + idOfDBAndTable, sQL, new File(exportPath).getPath() + fileSeparator + iNIName);
-                typeReturnId = dbHelper.getColumnType(sQL, dividedTableField);
+                exportDividedMetadata(new File(exportPath).getPath(), tab,tableName,iNIName,
+                        excludeReturnIds,
+                        idOfDBAndTable);
 
-                List<String> returnIds = getReturnIds(tableName, dividedTableField, excludeReturnIds);
-                if (returnIds != null) {
-                    FileUtil.createDirectories(subPath);//with idOfDBAndTable or not
-                    for (String returnId : returnIds) {
-                        if (StringUtils.isNotBlank(returnId) && !returnId.equalsIgnoreCase("null")) {
-                            metadataName= tab + idOfDBAndTable + underlineFlag + returnId + csvSuffix;
-                            exportDividedMetadata(subPath, metadataName, tableName, returnId, dividedTableField, typeReturnId);
-                        }
-                    }
-                } else {
-                    logger.warn(warnTable + tableName + "] doesn't contains any ReturnId.");
-                }
             } else {
                 logger.warn(warnTable + tabName + "] doesn't exist.");
             }
@@ -316,38 +290,57 @@ public class DBInfo implements IComFolder {
         return queryRecords(sQL);
     }
 
-    /***
-     * used on exportToDivides
-     * @param subPath
-     * @param metadataName
-     * @param tableName
-     * @param returnId
-     * @param dividedTableField
-     * @param typeReturnId
-     */
-    private void exportDividedMetadata(String subPath,String metadataName,String tableName,
-                                       String returnId,String dividedTableField,String typeReturnId){
+
+
+    private void exportDividedMetadata(String exportPath,String tab,String tableName,String iNIName,
+                                       List<String> excludeReturnIds,
+                                       String idOfDBAndTable){
         String sQL;
+        String top1SQL="select top 1 * from ";
         String quoteFlag="\"";
         String whereSQL=" where ";
         String quoteSingleFlag="'";
         String equalFlag="=";
         StringBuilder sqlBuilder;
-        logger.info("metadata exports to:" + metadataName);
-        sQL = selectSQL + quoteFlag  + tableName + quoteFlag + whereSQL + quoteFlag + dividedTableField + quoteFlag +
-                equalFlag+quoteSingleFlag + returnId + quoteSingleFlag;
-        if(getDbDriverFlag() == DBDriverType.ACCESSDB){
-            sqlBuilder=new StringBuilder(selectSQL + tableName + whereSQL + dividedTableField + equalFlag);
-            if(typeReturnId.contains("VARCHAR")){
-                sqlBuilder.append(quoteSingleFlag + returnId + quoteSingleFlag);
-            }else{
-                sqlBuilder.append(returnId);
-            }
-            sQL=sqlBuilder.toString();
+        String metadataName;
+        String csvSuffix=".csv";
+        String underlineFlag="_";
+        String dividedTableField=DivideTableFieldList.getDividedField(tableName);
+        String subPath = exportPath + fileSeparator + tab;
+        logger.info("export metadata struct to " + iNIName);
+        sQL = selectSQL + quoteFlag + tableName + quoteFlag+" where rownum=1";//
+        if (getDbDriverFlag() == DBDriverType.SQLSERVER || getDbDriverFlag() == DBDriverType.ACCESSDB) {
+            sQL = top1SQL + tableName;
         }
+        dbHelper.exportToINI(tab + idOfDBAndTable, sQL, exportPath + fileSeparator + iNIName);
+        String typeReturnId = dbHelper.getColumnType(sQL, dividedTableField);
+        List<String> returnIds = getReturnIds(tableName, dividedTableField, excludeReturnIds);
+        if (returnIds != null) {
+            FileUtil.createDirectories(subPath);//with idOfDBAndTable or not
+            for (String returnId : returnIds) {
+                if (StringUtils.isNotBlank(returnId) && !returnId.equalsIgnoreCase("null")) {
+                    metadataName= tab + idOfDBAndTable + underlineFlag + returnId + csvSuffix;
+                    logger.info("metadata exports to:" + metadataName);
+                    sQL = selectSQL + quoteFlag  + tableName + quoteFlag + whereSQL + quoteFlag + dividedTableField + quoteFlag +
+                            equalFlag+quoteSingleFlag + returnId + quoteSingleFlag;
+                    if(getDbDriverFlag() == DBDriverType.ACCESSDB){
+                        sqlBuilder=new StringBuilder(selectSQL + tableName + whereSQL + dividedTableField + equalFlag);
+                        if(typeReturnId.contains("VARCHAR")){
+                            sqlBuilder.append(quoteSingleFlag + returnId + quoteSingleFlag);
+                        }else{
+                            sqlBuilder.append(returnId);
+                        }
+                        sQL=sqlBuilder.toString();
+                    }
 
-        dbHelper.exportToCsv(sQL,subPath + fileSeparator + metadataName);
+                    dbHelper.exportToCsv(sQL,subPath + fileSeparator + metadataName);
+                }
+            }
+        } else {
+            logger.warn(warnTable + tableName + "] doesn't contains any ReturnId.");
+        }
     }
+
     @Deprecated
     public void exportToCsv() {
         dbHelper.connect();
