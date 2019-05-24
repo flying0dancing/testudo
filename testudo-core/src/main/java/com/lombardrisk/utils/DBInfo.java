@@ -95,41 +95,47 @@ public class DBInfo implements IComFolder {
             String idOfDBAndTable) {
         if (StringUtils.isBlank(exportPath)) return;
         if (tableList == null || tableList.size() <= 0) return;
+        String emptyStr="";
         if (StringUtils.isBlank(prefix)) {
-            prefix = "";
+            prefix = emptyStr;
         }
         if(StringUtils.isBlank(idOfDBAndTable)){
-            idOfDBAndTable="";
+            idOfDBAndTable=emptyStr;
         }
-        String SQL;
-        String sqlCondition;
-        String dividedTableField;
+        String fileSeparator=System.getProperty("file.separator");
+        String sharpFlag="#";
+        String sQL,sqlCondition,dividedTableField,tabName,tableName,metadataName,exportFullPath;
+        String selectSQL="select * from ";
+        String quoteFlag="\"";
+        String csvSuffix=".csv";
         logger.info("================= export single tables =================");
         for (String tab : tableList) {
-
-            String tableName = getTableNameFromDB(tab.replace("#", prefix));
+            tabName=tab.replace(sharpFlag, prefix);
+            tableName = getTableNameFromDB(tabName);
             if (StringUtils.isNotBlank(tableName)) {
                 dividedTableField=DivideTableFieldList.getDividedField(tableName);
                 sqlCondition = combineSqlCondition(dividedTableField, excludeReturnIds);
                 logger.info("----------- " + tableName + " ----------- ");
-                tab = tab.replace("#", "");
-                String exportFullPath = exportPath + System.getProperty("file.separator") + tab + idOfDBAndTable + ".csv";
+                tab = tab.replace(sharpFlag, emptyStr);
+                metadataName= tab + idOfDBAndTable + csvSuffix;
+                exportFullPath = exportPath + fileSeparator + metadataName;
                 if (new File(exportFullPath).exists()) {
                     logger.warn("warn: duplicated [" + tab + idOfDBAndTable + "] in metadata, overwriting existed one.");
                 }
                 logger.info("export metadata struct to " + iNIName);
 
                 if (getDbDriverFlag() == DBDriverType.SQLSERVER || getDbDriverFlag() == DBDriverType.ACCESSDB) {
-                    SQL = "select * from " + tableName + judgeReturnIdExist(tableName, dividedTableField, sqlCondition);
+                    sQL = selectSQL + tableName;
                 } else {
-                    SQL = "select * from \"" + tableName + "\"" + judgeReturnIdExist(tableName, dividedTableField, sqlCondition);//
+                    sQL = selectSQL + quoteFlag + tableName + quoteFlag;
                 }
-                dbHelper.exportToINI(tab + idOfDBAndTable, SQL, new File(exportPath).getPath() + System.getProperty("file.separator") + iNIName);
-                logger.info("metadata exports to:" + tab + idOfDBAndTable + ".csv");
-                dbHelper.exportToCsv(SQL, exportFullPath);
+                sQL=sQL+judgeReturnIdExist(tableName, dividedTableField, sqlCondition);
+
+                dbHelper.exportToINI(tab + idOfDBAndTable, sQL, new File(exportPath).getPath() + fileSeparator + iNIName);
+                logger.info("metadata exports to:" + metadataName);
+                dbHelper.exportToCsv(sQL, exportFullPath);
             } else {
-                logger.warn("warn: table[" + tab.replace("#", prefix) + "] doesn't exist.");
-                //logger.debug(" Sql Statement:"+SQL);
+                logger.warn("warn: table[" + tabName + "] doesn't exist.");
             }
         }
         dbHelper.close();
@@ -192,66 +198,79 @@ public class DBInfo implements IComFolder {
         //Boolean flag=false;
         if (StringUtils.isBlank(exportPath)) return;
         if (tableList == null || tableList.size() <= 0) return;
+        String emptyStr="";
         if (StringUtils.isBlank(prefix)) {
-            prefix = "";
+            prefix = emptyStr;
         }
         if(StringUtils.isBlank(idOfDBAndTable)){
-            idOfDBAndTable="";
+            idOfDBAndTable=emptyStr;
         }
-        String SQL;
-        String sqlCondition;
-        String dividedTableField;
+        String fileSeparator=System.getProperty("file.separator");
+        String sharpFlag="#";
+        String sQL,sqlCondition,dividedTableField,typeReturnId,tabName,tableName,metadataName;
+        String selectSQL="select * from ";
+        String quoteFlag="\"";
+        String fromSQL=" from ";
+        String selectDistinct="select distinct ";
+        String whereSQL=" where ";
+        String quoteSingleFlag="'";
+        String equalFlag="=";
+        String csvSuffix=".csv";
+        String nullFlag="null";
+        String varcharFlag="VARCHAR";
+        String underlineFlag="_";
+        String top1SQL="select top 1 * from ";
+        String uniqueSQL="select unique ";
         logger.info("================= export tables need to be divided by ReturnId =================");
         for (String tab : tableList) {
-
-            String tableName = getTableNameFromDB(tab.replace("#", prefix));
+            tabName=tab.replace(sharpFlag, prefix);
+            tableName = getTableNameFromDB(tabName);
             if (StringUtils.isNotBlank(tableName)) {
                 dividedTableField=DivideTableFieldList.getDividedField(tableName);
                 sqlCondition = combineSqlCondition(dividedTableField, excludeReturnIds);
                 logger.info("----------- " + tableName + " ----------- ");
-                tab = tab.replace("#", "");
-                String subPath = new File(exportPath).getPath() + System.getProperty("file.separator") + tab;
+                tab = tab.replace(sharpFlag, emptyStr);
+                String subPath = new File(exportPath).getPath() + fileSeparator + tab;
 
                 logger.info("export metadata struct to " + iNIName);
-                SQL = "select * from \"" + tableName + "\" where rownum=1";//
+                sQL = selectSQL + quoteFlag + tableName + quoteFlag+" where rownum=1";//
                 if (getDbDriverFlag() == DBDriverType.SQLSERVER || getDbDriverFlag() == DBDriverType.ACCESSDB) {
-                    SQL = "select top 1 * from " + tableName;
+                    sQL = top1SQL + tableName;
                 }
-                dbHelper.exportToINI(tab + idOfDBAndTable, SQL, new File(exportPath).getPath() + System.getProperty("file.separator") + iNIName);
-                String typeReturnId = dbHelper.getColumnType(SQL, dividedTableField);
-                SQL = "select unique \"" + dividedTableField + "\" from \"" + tableName + "\"" + sqlCondition;
+                dbHelper.exportToINI(tab + idOfDBAndTable, sQL, new File(exportPath).getPath() + fileSeparator + iNIName);
+                typeReturnId = dbHelper.getColumnType(sQL, dividedTableField);
+                sQL = uniqueSQL+ quoteFlag + dividedTableField + quoteFlag + fromSQL + quoteFlag+ tableName + quoteFlag + sqlCondition;
                 if (getDbDriverFlag() == DBDriverType.SQLSERVER) {
-                    SQL = "select distinct \""+dividedTableField+"\" from \"" + tableName + "\"" + sqlCondition;
+                    sQL = selectDistinct +quoteFlag+ dividedTableField + quoteFlag + fromSQL + quoteFlag+ tableName + quoteFlag + sqlCondition;
                 } else if (getDbDriverFlag() == DBDriverType.ACCESSDB) {
-                    SQL = "SELECT distinct "+dividedTableField+" FROM " + tableName + sqlCondition;
+                    sQL = selectDistinct + dividedTableField + fromSQL + tableName + sqlCondition;
                 }
-                List<String> returnIds = queryRecords(SQL);
+                List<String> returnIds = queryRecords(sQL);
                 if (returnIds != null) {
                     FileUtil.createDirectories(subPath);//with idOfDBAndTable or not
                     for (String returnId : returnIds) {
-                        if (StringUtils.isNotBlank(returnId) && !returnId.equalsIgnoreCase("null")) {
-                            logger.info("metadata exports to:" + tab + idOfDBAndTable + "_" + returnId + ".csv");
-                            SQL = "select * from \"" + tableName + "\" where \""+dividedTableField+"\"='" + returnId + "'";
-                            if (getDbDriverFlag() == DBDriverType.SQLSERVER) {
-                                SQL = "select * from \"" + tableName + "\" where \""+dividedTableField+"\"='" + returnId + "'";
-                            } else if (getDbDriverFlag() == DBDriverType.ACCESSDB && typeReturnId.contains("VARCHAR")) {
-                                SQL = "select * from " + tableName + " where "+dividedTableField+"='" + returnId + "'";
-                            } else if (getDbDriverFlag() == DBDriverType.ACCESSDB && !typeReturnId.contains("VARCHAR")) {
-                                SQL = "select * from " + tableName + " where "+dividedTableField+"=" + returnId;
+                        if (StringUtils.isNotBlank(returnId) && !returnId.equalsIgnoreCase(nullFlag)) {
+                            metadataName= tab + idOfDBAndTable + underlineFlag + returnId + csvSuffix;
+                            logger.info("metadata exports to:" + metadataName);
+                            sQL = selectSQL + quoteFlag  + tableName + quoteFlag + whereSQL + quoteFlag + dividedTableField + quoteFlag +
+                                    equalFlag+quoteSingleFlag + returnId + quoteSingleFlag;
+                            if(getDbDriverFlag() == DBDriverType.ACCESSDB){
+                                sQL=selectSQL + tableName + whereSQL + dividedTableField + equalFlag;
+                                if(typeReturnId.contains(varcharFlag)){
+                                    sQL = sQL + quoteSingleFlag + returnId + quoteSingleFlag;
+                                }else{
+                                    sQL = sQL + returnId;
+                                }
                             }
 
-                            dbHelper.exportToCsv(
-                                    SQL,
-                                    subPath + System.getProperty("file.separator") + tab + idOfDBAndTable + "_" + returnId + ".csv");
+                            dbHelper.exportToCsv(sQL,subPath + fileSeparator + metadataName);
                         }
                     }
                 } else {
                     logger.warn("warn: table[" + tableName + "] doesn't contains any ReturnId.");
-                    //logger.debug(" Sql Statement:"+SQL);
                 }
             } else {
-                logger.warn("warn: table[" + tab.replace("#", prefix) + "] doesn't exist.");
-                //logger.debug(" Sql Statement:"+SQL);
+                logger.warn("warn: table[" + tabName + "] doesn't exist.");
             }
         }
         dbHelper.close();
@@ -304,8 +323,8 @@ public class DBInfo implements IComFolder {
                 BuildStatus.getInstance().recordError();
                 logger.error("cannot found " + tableName);
             } else {
-                String SQL = "SELECT Return & \"_v\" & Version AS Expr1 from [" + tableName + "] WHERE ReturnId=" + returnId;
-                returnAndVer = dbHelper.query(SQL);
+                String sQL = "SELECT Return & \"_v\" & Version AS Expr1 from [" + tableName + "] WHERE ReturnId=" + returnId;
+                returnAndVer = dbHelper.query(sQL);
             }
 
             dbHelper.close();
@@ -434,12 +453,12 @@ public class DBInfo implements IComFolder {
     }
 
     public String getTableNameFromDB(String tab){
-        String SQL = "select unique t.table_name from user_tab_cols t where lower(t.table_name)='" + tab + "'";
+        String sQL = "select unique t.table_name from user_tab_cols t where lower(t.table_name)='" + tab + "'";
         if (getDbDriverFlag() == DBDriverType.SQLSERVER) {
-            SQL = "select name from sysobjects where xtype='u' and lower(name)=lower('" + tab + "')";
+            sQL = "select name from sysobjects where xtype='u' and lower(name)=lower('" + tab + "')";
         } else if (getDbDriverFlag() == DBDriverType.ACCESSDB) {
-            SQL = "SELECT Name FROM sys.MSysObjects WHERE LCase(Name)='" + tab + "'";
+            sQL = "SELECT Name FROM sys.MSysObjects WHERE LCase(Name)='" + tab + "'";
         }
-        return queryRecord(SQL);
+        return queryRecord(sQL);
     }
 }

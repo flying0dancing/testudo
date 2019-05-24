@@ -7,9 +7,10 @@ public final class DivideTableFieldList {
     private static List<DivideTableField> divideTableFieldList=new ArrayList<DivideTableField>(){
         //for solve ARPA-70:Split by Return ID for CFG_Page_Schedules and CFG_Schedules tables
         {
-            add(new DivideTableField("CFG_Page_Schedules","Return_ID"));
-            add(new DivideTableField("CFG_Schedules","Return_ID"));
-            add(new DivideTableField("CFG_VALIDATION_RULE","Return_ID"));
+            String returnID="Return_ID";
+            add(new DivideTableField("CFG_Page_Schedules",returnID));
+            add(new DivideTableField("CFG_Schedules",returnID));
+            add(new DivideTableField("CFG_VALIDATION_RULE",returnID));
         }
     };
 
