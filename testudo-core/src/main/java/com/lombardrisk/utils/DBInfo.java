@@ -3,6 +3,7 @@ package com.lombardrisk.utils;
 import com.lombardrisk.IComFolder;
 import com.lombardrisk.pojo.DatabaseServer;
 import com.lombardrisk.pojo.TableProps;
+import com.lombardrisk.pojo.DivideTableFieldList;
 import com.lombardrisk.status.BuildStatus;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -102,11 +103,14 @@ public class DBInfo implements IComFolder {
         }
         String SQL;
         String sqlCondition;
+        String dividedTableField;
         logger.info("================= export single tables =================");
         for (String tab : tableList) {
+
             String tableName = getTableNameFromDB(tab.replace("#", prefix));
             if (StringUtils.isNotBlank(tableName)) {
-                sqlCondition = combineSqlCondition(excludeReturnIds);//TODO
+                dividedTableField=DivideTableFieldList.getDividedField(tableName);
+                sqlCondition = combineSqlCondition(dividedTableField, excludeReturnIds);
                 logger.info("----------- " + tableName + " ----------- ");
                 tab = tab.replace("#", "");
                 String exportFullPath = exportPath + System.getProperty("file.separator") + tab + idOfDBAndTable + ".csv";
@@ -116,9 +120,9 @@ public class DBInfo implements IComFolder {
                 logger.info("export metadata struct to " + iNIName);
 
                 if (getDbDriverFlag() == DBDriverType.SQLSERVER || getDbDriverFlag() == DBDriverType.ACCESSDB) {
-                    SQL = "select * from " + tableName + judgeReturnIdExist(tableName, sqlCondition);
+                    SQL = "select * from " + tableName + judgeReturnIdExist(tableName, dividedTableField, sqlCondition);
                 } else {
-                    SQL = "select * from \"" + tableName + "\"" + judgeReturnIdExist(tableName, sqlCondition);//
+                    SQL = "select * from \"" + tableName + "\"" + judgeReturnIdExist(tableName, dividedTableField, sqlCondition);//
                 }
                 dbHelper.exportToINI(tab + idOfDBAndTable, SQL, new File(exportPath).getPath() + System.getProperty("file.separator") + iNIName);
                 logger.info("metadata exports to:" + tab + idOfDBAndTable + ".csv");
@@ -131,21 +135,21 @@ public class DBInfo implements IComFolder {
         dbHelper.close();
     }
 
-    public String judgeReturnIdExist(String tableName, String sqlCondition) {
+    public String judgeReturnIdExist(String tableName,String dividedField, String sqlCondition) {
         String exist = null;
-        String SQL = "";
+        String SQL;
         if (getDbDriverFlag() == DBDriverType.ORACLE) {
-            SQL = "select column_name from user_tab_cols where table_name='" + tableName + "' and column_name='ReturnId'";
+            SQL = "select column_name from user_tab_cols where table_name='" + tableName + "' and column_name='"+dividedField+"'";
             exist = queryRecord(SQL);
         } else if (getDbDriverFlag() == DBDriverType.SQLSERVER) {
             SQL = "select b.name from sysobjects a, syscolumns b where a.xtype='u' and a.id=b.id and a.name='"
                     + tableName
-                    + "' and b.name='ReturnId'";
+                    + "' and b.name='"+dividedField+"'";
             exist = queryRecord(SQL);
         } else if (getDbDriverFlag() == DBDriverType.ACCESSDB) {
             SQL = "SELECT * FROM " + tableName + " where false";
-            if (StringUtils.isNotBlank(getDbHelper().getColumnType(SQL, "ReturnId"))) {
-                exist = "ReturnId";
+            if (StringUtils.isNotBlank(getDbHelper().getColumnType(SQL, dividedField))) {
+                exist = dividedField;
             }
         }
 
@@ -155,12 +159,12 @@ public class DBInfo implements IComFolder {
         return sqlCondition;
     }
 
-    public String combineSqlCondition(List<String> excludeReturnIds) {
+    public String combineSqlCondition(String dividedField,List<String> excludeReturnIds) {
         String sqlCondition = "";
         if (excludeReturnIds != null && excludeReturnIds.size() > 0) {
-            sqlCondition = " where \"ReturnId\" not in (";
+            sqlCondition = " where \""+dividedField+"\" not in (";
             if (getDbDriverFlag() == DBDriverType.ACCESSDB) {
-                sqlCondition = " where CStr(ReturnId) not in (";
+                sqlCondition = " where CStr("+dividedField+") not in (";
             }
             for (int i = 0; i < excludeReturnIds.size(); i++) {
                 sqlCondition = sqlCondition + "'" + excludeReturnIds.get(i) + "',";
@@ -194,12 +198,16 @@ public class DBInfo implements IComFolder {
         if(StringUtils.isBlank(idOfDBAndTable)){
             idOfDBAndTable="";
         }
-        String sqlCondition = combineSqlCondition(excludeReturnIds);
+        String SQL;
+        String sqlCondition;
+        String dividedTableField;
         logger.info("================= export tables need to be divided by ReturnId =================");
         for (String tab : tableList) {
-            String SQL;
+
             String tableName = getTableNameFromDB(tab.replace("#", prefix));
             if (StringUtils.isNotBlank(tableName)) {
+                dividedTableField=DivideTableFieldList.getDividedField(tableName);
+                sqlCondition = combineSqlCondition(dividedTableField, excludeReturnIds);
                 logger.info("----------- " + tableName + " ----------- ");
                 tab = tab.replace("#", "");
                 String subPath = new File(exportPath).getPath() + System.getProperty("file.separator") + tab;
@@ -210,12 +218,12 @@ public class DBInfo implements IComFolder {
                     SQL = "select top 1 * from " + tableName;
                 }
                 dbHelper.exportToINI(tab + idOfDBAndTable, SQL, new File(exportPath).getPath() + System.getProperty("file.separator") + iNIName);
-                String typeReturnId = dbHelper.getColumnType(SQL, "ReturnId");
-                SQL = "select unique \"ReturnId\" from \"" + tableName + "\"" + sqlCondition;
+                String typeReturnId = dbHelper.getColumnType(SQL, dividedTableField);
+                SQL = "select unique \"" + dividedTableField + "\" from \"" + tableName + "\"" + sqlCondition;
                 if (getDbDriverFlag() == DBDriverType.SQLSERVER) {
-                    SQL = "select distinct \"ReturnId\" from \"" + tableName + "\"" + sqlCondition;
+                    SQL = "select distinct \""+dividedTableField+"\" from \"" + tableName + "\"" + sqlCondition;
                 } else if (getDbDriverFlag() == DBDriverType.ACCESSDB) {
-                    SQL = "SELECT distinct ReturnId FROM " + tableName + sqlCondition;
+                    SQL = "SELECT distinct "+dividedTableField+" FROM " + tableName + sqlCondition;
                 }
                 List<String> returnIds = queryRecords(SQL);
                 if (returnIds != null) {
@@ -223,17 +231,15 @@ public class DBInfo implements IComFolder {
                     for (String returnId : returnIds) {
                         if (StringUtils.isNotBlank(returnId) && !returnId.equalsIgnoreCase("null")) {
                             logger.info("metadata exports to:" + tab + idOfDBAndTable + "_" + returnId + ".csv");
-                            SQL = "select * from \"" + tableName + "\" where \"ReturnId\"='" + returnId + "'";
+                            SQL = "select * from \"" + tableName + "\" where \""+dividedTableField+"\"='" + returnId + "'";
                             if (getDbDriverFlag() == DBDriverType.SQLSERVER) {
-                                SQL = "select * from \"" + tableName + "\" where \"ReturnId\"='" + returnId + "'";
+                                SQL = "select * from \"" + tableName + "\" where \""+dividedTableField+"\"='" + returnId + "'";
                             } else if (getDbDriverFlag() == DBDriverType.ACCESSDB && typeReturnId.contains("VARCHAR")) {
-                                SQL = "select * from " + tableName + " where ReturnId='" + returnId + "'";
+                                SQL = "select * from " + tableName + " where "+dividedTableField+"='" + returnId + "'";
                             } else if (getDbDriverFlag() == DBDriverType.ACCESSDB && !typeReturnId.contains("VARCHAR")) {
-                                SQL = "select * from " + tableName + " where ReturnId=" + returnId;
+                                SQL = "select * from " + tableName + " where "+dividedTableField+"=" + returnId;
                             }
-                            //else if(getDbDriverFlag()==DBDriverType.ACCESSDB){
-                            //	SQL="select * from "+tableName+" where CStr(ReturnId)=CStr('"+returnId+"')";
-                            //}
+
                             dbHelper.exportToCsv(
                                     SQL,
                                     subPath + System.getProperty("file.separator") + tab + idOfDBAndTable + "_" + returnId + ".csv");
@@ -285,7 +291,6 @@ public class DBInfo implements IComFolder {
     /***
      * according to returnId, search its return name and version in Rets table.
      * this function should be worked on access database.
-     * @param tableName
      * @param returnId
      * @return returnName_returnVersion, return "" if error occurs.
      */
