@@ -118,24 +118,26 @@ public class Testudo implements IComFolder {
                     dbAndTable.getRequiredTables().getDividedByReturnIds(),
                     arSetting.getMetadataPath(),
                     arSetting.getMetadataStruct(),
-                    dbAndTable.getRequiredTables().getExcludeReturnIds());
+                    dbAndTable.getRequiredTables().getExcludeReturnIds(),
+                    null);
             db.exportToSingle(arSetting.getPrefix(),
                     dbAndTable.getRequiredTables().getSingles(),
                     arSetting.getMetadataPath(),
                     arSetting.getMetadataStruct(),
-                    dbAndTable.getRequiredTables().getExcludeReturnIds());
+                    dbAndTable.getRequiredTables().getExcludeReturnIds(),
+                    null);
 
             for (int i = 1; i < dbAndTables.size(); i++) {
                 dbAndTable = dbAndTables.get(i);
                 db = new DBInfo(dbAndTable.getDatabaseServer());
                 String idOfDBAndTable = "#" + dbAndTable.getID();
-                db.exportToDivides1(arSetting.getPrefix(),
+                db.exportToDivides(arSetting.getPrefix(),
                         dbAndTable.getRequiredTables().getDividedByReturnIds(),
                         arSetting.getMetadataPath(),
                         arSetting.getMetadataStruct(),
                         dbAndTable.getRequiredTables().getExcludeReturnIds(),
                         idOfDBAndTable);
-                db.exportToSingle1(arSetting.getPrefix(),
+                db.exportToSingle(arSetting.getPrefix(),
                         dbAndTable.getRequiredTables().getSingles(),
                         arSetting.getMetadataPath(),
                         arSetting.getMetadataStruct(),
