@@ -205,7 +205,7 @@ public class ARPPack implements IComFolder {
 
     /**
      * @param sourcePath    should follow AR for product's folder structure
-     * @param packFileNames the file names which need to be packaged
+     * @param zipSet
      * @param propFullPath  the full path of package.properties, it should be get value from <I>json file</I>->"zipSettings"-> "productProperties"
      * @param zipPath       the path of package(.zip, .lrm)
      * @param buildType     blank(null) represents it is internal build, true represents it is release build
@@ -283,7 +283,7 @@ public class ARPPack implements IComFolder {
                 logger.info("package named: " + zipFullPathWithoutSuffix + PACKAGE_LRM_SUFFIX);
                 FileUtil.renameTo(zipFullPathWithoutSuffix + PACKAGE_LRM_SIGN_SUFFIX, zipFullPathWithoutSuffix + PACKAGE_LRM_SUFFIX);
             } else {
-                logger.warn("warn: only package zip files, because file [" + PropHelper.SCRIPT_LRM_PRODUCT + "] doesn't exist.");
+                logger.info("only generate .zip package.");
             }
             logger.info("package successfully.");
         } else {
@@ -309,8 +309,8 @@ public class ARPPack implements IComFolder {
 
             List<String> realFullPathsTmp = FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath + filter), null);
             if (realFullPathsTmp.size() <= 0) {
-                BuildStatus.getInstance().recordError();
-                logger.error("error: cannot search [" + filter + "] under path [" + sourcePath + "]");
+                //BuildStatus.getInstance().recordError(); //solve ARPA-72
+                logger.warn("error: cannot search [" + filter + "] under path [" + sourcePath + "]");
                 continue;
             }
             for (String pathTmp : realFullPathsTmp) {
@@ -338,8 +338,8 @@ public class ARPPack implements IComFolder {
 
             List<String> realFullPathsTmp = FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath + filter), excludeFilters);
             if (realFullPathsTmp.size() <= 0) {
-                BuildStatus.getInstance().recordError();
-                logger.error("error: cannot search [" + filter + "] under path [" + sourcePath + "]");
+                //BuildStatus.getInstance().recordError(); //solve ARPA-72
+                logger.warn("error: cannot search [" + filter + "] under path [" + sourcePath + "]");
                 continue;
             }
             for (String pathTmp : realFullPathsTmp) {
