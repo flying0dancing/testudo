@@ -1,10 +1,14 @@
 package com.lombardrisk.pojo;
 
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 
-public class TableProps {
+public final class TableProps {
+
+    private static final Logger logger = LoggerFactory.getLogger(RequiredTables.class);
 
     private String name;
     private String typeSize;
@@ -28,7 +32,7 @@ public class TableProps {
 
     @Override
     public String toString() {
-        StringBuffer stringBuffer = new StringBuffer();
+        StringBuilder stringBuilder = new StringBuilder();
         Field[] fields = getClass().getDeclaredFields();
         for (Field field : fields) {
             try {
@@ -36,15 +40,15 @@ public class TableProps {
                 Object obj = field.get(this);
                 if (obj == null || StringUtils.isBlank(obj.toString())) {
                     continue;
-                } else value = field.get(this).toString();
-                stringBuffer.append(field.getName() + "[" + value + "] ");
-            } catch (IllegalArgumentException e) {
-                e.printStackTrace();
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
+                } else {
+                    value = field.get(this).toString();
+                }
+                stringBuilder.append(field.getName() + "[" + value + "] ");
+            } catch (IllegalArgumentException|IllegalAccessException e) {
+                logger.error("Unable to display TableProps", e);
             }
         }
-        return stringBuffer.toString();
+        return stringBuilder.toString();
     }
 
     public String getTypeSize() {

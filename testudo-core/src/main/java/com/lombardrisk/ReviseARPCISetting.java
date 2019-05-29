@@ -80,7 +80,6 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder {
             }
 
             arCIConfg.setMetadataPath(metadataPath);
-            arCIConfg.setSrcPath(sourcePath);
             arCIConfg.setTargetSrcPath(targetSrcPath);
             FileUtil.createDirectories(arCIConfg.getMetadataPath());
 

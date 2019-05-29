@@ -17,38 +17,19 @@ import java.util.List;
  */
 public class Testudo implements IComFolder {
 
-    private final static Logger logger = LoggerFactory.getLogger(Testudo.class);
+    private static final Logger logger = LoggerFactory.getLogger(Testudo.class);
+    private static final float MILLISECONDS_PER_SECOND = 1000.00F;
 
     public static void main(String[] args) {
         long begin = System.currentTimeMillis();
-        long end = begin;
+
         logger.info("start running testudo:");
         logger.info("Log dir" + System.getProperty("log.dir"));
-        //read args from command-line
-        if (args.length > 0) {
-            for (String s : args) {
-                if (s.contains("=")) {
-                    String[] argKeyValue = s.split("=");
-                    argKeyValue[0] = argKeyValue[0].replaceAll("^\\-D?(.*)$", "$1");
-                    System.setProperty(argKeyValue[0], argKeyValue[1]);
-                } else {
-                    s = s.replaceAll("^\\-D?(.*)$", "$1");
-                    System.setProperty(s, "true");
-                }
-            }
-        }
+
+        convertArgumentsToSystemProperties(args);
 
         String iDinJoson = System.getProperty(CMDL_ARPRODUCTID);
         String proc = System.getProperty(CMDL_ARPCIPROC);
-		/*String arpbuildtype=System.getProperty(CMDL_ARPBUILDTYPE);
-		System.out.println("product Folder"+System.getProperty(CMDL_ARPPRODUCTPREFIX));
-		System.out.println("product ID"+System.getProperty(CMDL_ARPRODUCTID));
-		System.out.println("process"+proc);
-		System.out.println("build type:"+arpbuildtype);*/
-
-        //if(StringUtils.isBlank(iDinJoson)){
-        //	logger.warn("argument id is not setted, get the fist by default in json.");
-        //}
 
         List<ARPCISetting> arSettingList;
         try {
@@ -67,7 +48,7 @@ public class Testudo implements IComFolder {
                             jobproc(arSetting, "2");
                         }
                     } else {
-                        HelperDoc();
+                        logger.error("please see readme.md.");
                         BuildStatus.getInstance().recordError();
                         logger.error("testudo's json might contains error, details see readme's json instruction.");
                     }
@@ -75,16 +56,26 @@ public class Testudo implements IComFolder {
             }
         } catch (Exception e) {
             BuildStatus.getInstance().recordError();
-            logger.error(e.getMessage());
+            logger.error(e.getMessage(), e);
         }
-
-        end = System.currentTimeMillis();
-        logger.info("total time(sec):" + (end - begin) / 1000.00F);
+        long end = System.currentTimeMillis();
+        logger.info("total time(sec):" + (end - begin) / MILLISECONDS_PER_SECOND);
     }
 
-    private static void HelperDoc() {
-        BuildStatus.getInstance().recordError();
-        logger.error("please see readme.md.");
+    private static void convertArgumentsToSystemProperties(final String[] args) {
+        //read args from command-line
+        if (args.length > 0) {
+            for (String s : args) {
+                if (s.contains("=")) {
+                    String[] argKeyValue = s.split("=");
+                    argKeyValue[0] = argKeyValue[0].replaceAll("^\\-D?(.*)$", "$1");
+                    System.setProperty(argKeyValue[0], argKeyValue[1]);
+                } else {
+                    s = s.replaceAll("^\\-D?(.*)$", "$1");
+                    System.setProperty(s, "true");
+                }
+            }
+        }
     }
 
     private static void jobproc(ARPCISetting arSetting, String proc) {
