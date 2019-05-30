@@ -14,23 +14,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class DBInfo implements IComFolder {
+public final class DBInfo implements IComFolder {
 
-    private final static Logger logger = LoggerFactory.getLogger(DBInfo.class);
+    private static final Logger logger = LoggerFactory.getLogger(DBInfo.class);
     private DBHelper dbHelper;
     private DBDriverType dbDriverFlag;
 
-    private String fileSeparator=System.getProperty("file.separator"); //fixed sonar
-    private String selectSQL="select * from "; //fixed sonar
-    private String warnTable="warn: table[";
+    private final String fileSeparator=System.getProperty("file.separator"); //fixed sonar
+    private final String selectSQL="select * from "; //fixed sonar
+    private final String warnTable="warn: table[";
 
     public enum DBDriverType {
         ORACLE,
         SQLSERVER,
-        ACCESSDB;
+        ACCESSDB
     }
 
-    private static Map<String, List<TableProps>> dbTableColumns = new HashMap<String, List<TableProps>>();
+    private static final Map<String, List<TableProps>> dbTableColumns = new HashMap<>();
 
     public DBInfo(DatabaseServer databaseServer) {
         setDbHelper(databaseServer);
@@ -86,7 +86,7 @@ public class DBInfo implements IComFolder {
      * export data in database into *.csv files
      * @param prefix product prefix, use to replace # defined in tableList
      * @param tableList defined in json file
-     * @param exportPath
+     * @param exportPath export location
      * @param iNIName table structures
      * @param idOfDBAndTable this value starts with "#", following databaseServerAndTables's ID
      */
@@ -152,10 +152,6 @@ public class DBInfo implements IComFolder {
 
     /**
      * used for exportToSingle, generate sql statement
-     * @param tableName
-     * @param dividedTableField
-     * @param excludeReturnIds
-     * @return
      */
     private String getSQLForExportToSingle(String tableName,String dividedTableField,List<String> excludeReturnIds){
         StringBuilder sqlBuilder;
@@ -173,10 +169,6 @@ public class DBInfo implements IComFolder {
 
     /**
      * judge returnId exist or not, return sql condition if exists.
-     * @param tableName
-     * @param dividedField
-     * @param sqlCondition
-     * @return
      */
     public String judgeReturnIdExist(String tableName,String dividedField, String sqlCondition) {
         String exist = null;
@@ -209,8 +201,8 @@ public class DBInfo implements IComFolder {
             if (getDbDriverFlag() == DBDriverType.ACCESSDB) {
                 sqlCondition = " where CStr("+dividedField+") not in (";
             }
-            for (int i = 0; i < excludeReturnIds.size(); i++) {
-                sqlCondition = sqlCondition + "'" + excludeReturnIds.get(i) + "',";
+            for (String excludeReturnId : excludeReturnIds) {
+                sqlCondition = sqlCondition + "'" + excludeReturnId + "',";
             }
             sqlCondition = sqlCondition.replaceAll(",$", ")");
         }
@@ -221,8 +213,8 @@ public class DBInfo implements IComFolder {
      * export data in database into *.csv files divided by field ReturnId
      * @param prefix product prefix, use to replace # defined in tableList
      * @param tableList defined in json file
-     * @param exportPath
-     * @param iNIName
+     * @param exportPath Path to export
+     * @param iNIName Name of Ini file
      * @param idOfDBAndTable this value starts with "#", following databaseServerAndTables's ID
      */
     public void exportToDivides(
@@ -269,10 +261,6 @@ public class DBInfo implements IComFolder {
 
     /**
      * used on exportToDivides, get returnIds
-     * @param tableName
-     * @param dividedTableField
-     * @param excludeReturnIds
-     * @return
      */
     private List<String> getReturnIds(String tableName, String dividedTableField, List<String> excludeReturnIds){
         String sQL;
@@ -341,35 +329,18 @@ public class DBInfo implements IComFolder {
         }
     }
 
-    @Deprecated
-    public void exportToCsv() {
-        dbHelper.connect();
-        //String SQL="SELECT * FROM [DataScheduleView] ";
-        //dbHelper.exportToCsv(SQL, "E:\\tmp2\\test.csv");
-        //dbHelper.tset("E:\\abc\\fed\\meta.accdb","List");
-        //dbHelper.importCsvToAccessDB("E:\\abc\\fed\\meta.accdb","List",true,"E:\\tmp2\\ECRList\\ECRList_360002.csv");
-        //dbHelper.createAccessTable("E:\\abc\\fed\\meta.accdb","aa","E:\\tmp2\\ECRList\\ECRList_360002.csv");
-        //dbHelper.aasdf("E:\\abc\\fed\\meta.accdb","aa");
-        dbHelper.close();
-    }
-
     /**
      * create a accessDatabase, no need to create a new one if existed.
      *
      * @return
      */
-    public Boolean createAccessDB() {
-        Boolean flag = false;
+    public boolean createAccessDB() {
         String dbFullName = dbHelper.getDatabaseServer().getSchema();
-		/*if(new File(dbFullName).exists())
-		{new File(dbFullName).delete();}*/
         if (!new File(dbFullName).exists()) {
             DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
-            flag = accdb.createAccessDB(dbHelper.getDatabaseServer().getSchema());
-        } else {
-            flag = true;
+            return accdb.createAccessDB(dbHelper.getDatabaseServer().getSchema());
         }
-        return flag;
+        return true;
     }
 
     /***
@@ -397,7 +368,9 @@ public class DBInfo implements IComFolder {
             BuildStatus.getInstance().recordError();
             logger.error("this function should be worked on access database.");
         }
-        if (returnAndVer == null) returnAndVer = "";
+        if (returnAndVer == null) {
+            returnAndVer = "";
+        }
 
         return returnAndVer;
     }
@@ -467,10 +440,6 @@ public class DBInfo implements IComFolder {
 
     public void setDbDriverFlag(DBDriverType dbDriverFlag) {
         this.dbDriverFlag = dbDriverFlag;
-    }
-
-    public static Map<String, List<TableProps>> getDbTableColumns() {
-        return dbTableColumns;
     }
 
     public static void setDbTableColumns(String tableName, List<TableProps> columns) {
