@@ -403,35 +403,6 @@ public class DBInfo implements IComFolder {
     }
 
     /**
-     * create all tables which defined in the schemaFullName.
-     *
-     * @param schemaFullName
-     * @return
-     */
-    public Boolean createAccessTables(String schemaFullName) {
-        Boolean flag = true;
-        if (dbHelper.getDatabaseServer().getDriver().startsWith("access")) {
-            dbHelper.connect();
-            DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
-            Map<String, List<String>> allTableDefs = FileUtil.getAllTableDefinitions(schemaFullName);
-            for (String key : allTableDefs.keySet()) {
-                Boolean flagT = accdb.createAccessDBTable(key, allTableDefs.get(key));
-                if (!flagT) {
-                    flag = false;
-                    BuildStatus.getInstance().recordError();
-                    logger.error("error: fail to create table [" + key + "]");
-                }
-            }
-            dbHelper.close();
-        } else {
-            BuildStatus.getInstance().recordError();
-            logger.error("this method should be worked on access database.");
-            flag = false;
-        }
-        return flag;
-    }
-
-    /**
      * create table by schemaFullName which defined tableName, and import data which in csvPath to table.
      *
      * @param tableName       table name in access database

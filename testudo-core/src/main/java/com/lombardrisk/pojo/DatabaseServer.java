@@ -5,7 +5,7 @@ import com.lombardrisk.status.BuildStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class DatabaseServer {
+public final class DatabaseServer {
 
     private static final Logger logger = LoggerFactory.getLogger(DatabaseServer.class);
     private int id;
@@ -136,7 +136,7 @@ public class DatabaseServer {
             return new GsonBuilder().setPrettyPrinting().create().toJson(this);
         } catch (Exception e) {
             BuildStatus.getInstance().recordError();
-            logger.error(e.getMessage());
+            logger.error("Unable to display Database Server", e);
             return "";
         }
     }

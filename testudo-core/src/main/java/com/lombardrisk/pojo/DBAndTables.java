@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 public class DBAndTables {
 
     private static final Logger logger = LoggerFactory.getLogger(DBAndTables.class);
+    @SuppressWarnings("squid:S00116")
     private String ID;
     private DatabaseServer databaseServer;
     private RequiredTables requiredTables;
@@ -51,7 +52,7 @@ public class DBAndTables {
             return new GsonBuilder().setPrettyPrinting().create().toJson(this);
         } catch (Exception e) {
             BuildStatus.getInstance().recordError();
-            logger.error(e.getMessage());
+            logger.error("Unable to display details of DBAndTables", e);
             return "";
         }
     }

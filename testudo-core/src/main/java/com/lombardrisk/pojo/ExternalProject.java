@@ -21,7 +21,7 @@ public class ExternalProject {
             return new GsonBuilder().setPrettyPrinting().create().toJson(this);
         } catch (Exception e) {
             BuildStatus.getInstance().recordError();
-            logger.error(e.getMessage());
+            logger.error("Unable to display details of ExternalProject", e);
             return "";
         }
     }

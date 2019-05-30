@@ -57,7 +57,6 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder 
 
             metadataPath = targetSrcPath + META_PATH; //current product(prefix)'s target metadata path
             arCIConfg.setMetadataPath(metadataPath);
-            arCIConfg.setSrcPath(sourcePath);
             arCIConfg.setTargetSrcPath(targetSrcPath);
             FileUtil.createDirectories(arCIConfg.getMetadataPath());
 
