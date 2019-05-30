@@ -316,27 +316,25 @@ public final class FileUtil {
         return fileNames;
     }
 
-    private static List<String> unCompress(String compressFile, String destDir) throws IOException {
+    private static void unCompress(String compressFile, String destDir) throws IOException {
         String upperName = compressFile.toUpperCase();
-        List<String> ret = null;
         if (upperName.endsWith(".ZIP")) {
-            ret = unZip(compressFile, destDir);
+            unZip(compressFile, destDir);
         } else if (upperName.endsWith(".TAR")) {
-            ret = unTar(compressFile, destDir);
+            unTar(compressFile, destDir);
         } else if (upperName.endsWith(".TAR.BZ2")) {
-            ret = unTarBZip2(compressFile, destDir);
+            unTarBZip2(compressFile, destDir);
         } else if (upperName.endsWith(".BZ2")) {
-            ret = unBZip2(compressFile, destDir);
+            unBZip2(compressFile, destDir);
         } else if (upperName.endsWith(".TAR.GZ")) {
-            ret = unTarGZ(compressFile, destDir);
+            unTarGZ(compressFile, destDir);
         } else if (upperName.endsWith(".GZ")) {
-            ret = unGZ(compressFile, destDir);
+            unGZ(compressFile, destDir);
         } else if (upperName.endsWith(".WAR")) {
-            ret = unWar(compressFile, destDir);
+            unWar(compressFile, destDir);
         } else if (upperName.endsWith(".7Z")) {
-            ret = un7z(compressFile, destDir);
+            un7z(compressFile, destDir);
         }
-        return ret;
     }
 
     public static void renameTo(String fileFullName, String destFullName) {
@@ -427,15 +425,14 @@ public final class FileUtil {
      * @param filePath maybe contains "*"
      */
     public static List<String> getFilesByFilter(String filePath, String excludeFilters) {
-        List<String> filePaths = null;
         if (StringUtils.isNotBlank(filePath)) {
-            filePaths = new ArrayList<>();
-            listFilesByFilter(filePath, null, excludeFilters, filePaths);
+            return listFilesByFilter(filePath, null, excludeFilters);
         }
-        return filePaths;
+        return new ArrayList<>();
     }
 
-    private static void listFilesByFilter(String filePath, String filterStr, String exfilterStr, List<String> filePaths) {
+    private static List<String> listFilesByFilter(String filePath, String filterStr, String exfilterStr) {
+        List<String> filePaths = new ArrayList<>();
         File fileFullPath = new File(filePath);
         if (StringUtils.isBlank(filterStr)) {
             filterStr = "";
@@ -447,7 +444,7 @@ public final class FileUtil {
             if (fileFullPath.isDirectory()) {
                 File[] files = filterFilesAndSubFolders(fileFullPath, filterStr, exfilterStr);
                 for (File file : files) {
-                    listFilesByFilter(file.getAbsolutePath(), filterStr, exfilterStr, filePaths);
+                    filePaths.addAll(listFilesByFilter(file.getAbsolutePath(), filterStr, exfilterStr));
                 }
             }
             if (fileFullPath.isFile()) {
@@ -464,13 +461,14 @@ public final class FileUtil {
             if (parentPath.isDirectory()) {
                 File[] files = filterFilesAndSubFolders(parentPath, fileName, exfilterStr);
                 for (File file : files) {
-                    listFilesByFilter(file.getAbsolutePath(), fileName, exfilterStr, filePaths);
+                    filePaths.addAll(listFilesByFilter(file.getAbsolutePath(), fileName, exfilterStr));
                 }
             } else {
                 BuildStatus.getInstance().recordError();
                 logger.error("error: invalid path[" + filePath + "]");
             }
         }
+        return filePaths;
     }
 
     private static File[] filterFilesAndSubFolders(File parentPath, String filterStr, String excludeFileStr) {
