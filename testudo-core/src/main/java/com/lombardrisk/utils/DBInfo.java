@@ -20,9 +20,9 @@ public final class DBInfo implements IComFolder {
     private DBHelper dbHelper;
     private DBDriverType dbDriverFlag;
 
-    private final String fileSeparator=System.getProperty("file.separator"); //fixed sonar
-    private final String selectSQL="select * from "; //fixed sonar
-    private final String warnTable="warn: table[";
+    private static final String ACTUAL_FILE_SEPERATOR =System.getProperty("file.separator"); //fixed sonar
+    private static final String SELECT_SQL ="select * from "; //fixed sonar
+    private static final String WARN_TABLE ="warn: table[";
 
     public enum DBDriverType {
         ORACLE,
@@ -131,20 +131,20 @@ public final class DBInfo implements IComFolder {
                 logger.info("----------- " + tableName + " ----------- ");
                 tab = tab.replace(sharpFlag, emptyStr);
                 metadataName= tab + idOfDBAndTable + csvSuffix;
-                exportFullPath = exportPath + fileSeparator + metadataName;
+                exportFullPath = exportPath + ACTUAL_FILE_SEPERATOR + metadataName;
                 if (new File(exportFullPath).exists()) {
                     logger.warn("warn: duplicated [" + tab + idOfDBAndTable + "] in metadata, overwriting existed one.");
                 }
 
                 sQL=getSQLForExportToSingle(tableName,dividedTableField,excludeReturnIds);
                 logger.info("export metadata struct to " + iNIName);
-                dbHelper.exportToINI(tab + idOfDBAndTable, sQL, new File(exportPath).getPath() + fileSeparator + iNIName);
+                dbHelper.exportToINI(tab + idOfDBAndTable, sQL, new File(exportPath).getPath() + ACTUAL_FILE_SEPERATOR + iNIName);
 
                 logger.info("metadata exports to:" + metadataName);
                 dbHelper.exportToCsv(sQL, exportFullPath);
 
             } else {
-                logger.warn(warnTable + tabName + "] doesn't exist.");
+                logger.warn(WARN_TABLE + tabName + "] doesn't exist.");
             }
         }
         dbHelper.close();
@@ -159,9 +159,9 @@ public final class DBInfo implements IComFolder {
 
         String quoteFlag="\"";
         if (getDbDriverFlag() == DBDriverType.SQLSERVER || getDbDriverFlag() == DBDriverType.ACCESSDB) {
-            sqlBuilder=new StringBuilder(selectSQL + tableName);
+            sqlBuilder=new StringBuilder(SELECT_SQL + tableName);
         } else {
-            sqlBuilder=new StringBuilder(selectSQL + quoteFlag + tableName + quoteFlag);
+            sqlBuilder=new StringBuilder(SELECT_SQL + quoteFlag + tableName + quoteFlag);
         }
         sqlBuilder.append(judgeReturnIdExist(tableName, dividedTableField, sqlCondition));
         return sqlBuilder.toString();
@@ -182,7 +182,7 @@ public final class DBInfo implements IComFolder {
                     + "' and b.name='"+dividedField+"'";
             exist = queryRecord(sQL);
         } else if (getDbDriverFlag() == DBDriverType.ACCESSDB) {
-            sQL = selectSQL + tableName + " where false";
+            sQL = SELECT_SQL + tableName + " where false";
             if (StringUtils.isNotBlank(getDbHelper().getColumnType(sQL, dividedField))) {
                 exist = dividedField;
             }
@@ -195,18 +195,19 @@ public final class DBInfo implements IComFolder {
     }
 
     public String combineSqlCondition(String dividedField,List<String> excludeReturnIds) {
-        String sqlCondition = "";
+
         if (excludeReturnIds != null && excludeReturnIds.size() > 0) {
-            sqlCondition = " where \""+dividedField+"\" not in (";
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append(" where \""+dividedField+"\" not in (");
             if (getDbDriverFlag() == DBDriverType.ACCESSDB) {
-                sqlCondition = " where CStr("+dividedField+") not in (";
+                stringBuilder = new StringBuilder(" where CStr("+dividedField+") not in (");
             }
             for (String excludeReturnId : excludeReturnIds) {
-                sqlCondition = sqlCondition + "'" + excludeReturnId + "',";
+                stringBuilder.append("'").append(excludeReturnId).append("',");
             }
-            sqlCondition = sqlCondition.replaceAll(",$", ")");
+            return stringBuilder.toString().replaceAll(",$", ")");
         }
-        return sqlCondition;
+        return "";
     }
 
     /***
@@ -253,7 +254,7 @@ public final class DBInfo implements IComFolder {
                         idOfDBAndTable);
 
             } else {
-                logger.warn(warnTable + tabName + "] doesn't exist.");
+                logger.warn(WARN_TABLE + tabName + "] doesn't exist.");
             }
         }
         dbHelper.close();
@@ -294,13 +295,13 @@ public final class DBInfo implements IComFolder {
         String csvSuffix=".csv";
         String underlineFlag="_";
         String dividedTableField=DivideTableFieldList.getDividedField(tableName);
-        String subPath = exportPath + fileSeparator + tab;
+        String subPath = exportPath + ACTUAL_FILE_SEPERATOR + tab;
         logger.info("export metadata struct to " + iNIName);
-        sQL = selectSQL + quoteFlag + tableName + quoteFlag+" where rownum=1";//
+        sQL = SELECT_SQL + quoteFlag + tableName + quoteFlag+" where rownum=1";//
         if (getDbDriverFlag() == DBDriverType.SQLSERVER || getDbDriverFlag() == DBDriverType.ACCESSDB) {
             sQL = top1SQL + tableName;
         }
-        dbHelper.exportToINI(tab + idOfDBAndTable, sQL, exportPath + fileSeparator + iNIName);
+        dbHelper.exportToINI(tab + idOfDBAndTable, sQL, exportPath + ACTUAL_FILE_SEPERATOR + iNIName);
         String typeReturnId = dbHelper.getColumnType(sQL, dividedTableField);
         List<String> returnIds = getReturnIds(tableName, dividedTableField, excludeReturnIds);
         if (returnIds != null) {
@@ -309,10 +310,10 @@ public final class DBInfo implements IComFolder {
                 if (StringUtils.isNotBlank(returnId) && !returnId.equalsIgnoreCase("null")) {
                     metadataName= tab + idOfDBAndTable + underlineFlag + returnId + csvSuffix;
                     logger.info("metadata exports to:" + metadataName);
-                    sQL = selectSQL + quoteFlag  + tableName + quoteFlag + whereSQL + quoteFlag + dividedTableField + quoteFlag +
+                    sQL = SELECT_SQL + quoteFlag  + tableName + quoteFlag + whereSQL + quoteFlag + dividedTableField + quoteFlag +
                             equalFlag+quoteSingleFlag + returnId + quoteSingleFlag;
                     if(getDbDriverFlag() == DBDriverType.ACCESSDB){
-                        sqlBuilder=new StringBuilder(selectSQL + tableName + whereSQL + dividedTableField + equalFlag);
+                        sqlBuilder=new StringBuilder(SELECT_SQL + tableName + whereSQL + dividedTableField + equalFlag);
                         if(typeReturnId.contains("VARCHAR")){
                             sqlBuilder.append(quoteSingleFlag + returnId + quoteSingleFlag);
                         }else{
@@ -321,11 +322,11 @@ public final class DBInfo implements IComFolder {
                         sQL=sqlBuilder.toString();
                     }
 
-                    dbHelper.exportToCsv(sQL,subPath + fileSeparator + metadataName);
+                    dbHelper.exportToCsv(sQL,subPath + ACTUAL_FILE_SEPERATOR + metadataName);
                 }
             }
         } else {
-            logger.warn(warnTable + tableName + "] doesn't contains any ReturnId.");
+            logger.warn(WARN_TABLE + tableName + "] doesn't contains any ReturnId.");
         }
     }
 
