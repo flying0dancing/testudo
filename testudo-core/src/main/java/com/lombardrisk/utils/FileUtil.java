@@ -41,7 +41,7 @@ import java.util.List;
 
 public final class FileUtil {
 
-    private FileUtil(){
+    private FileUtil() {
     }
 
     private static final Logger logger = LoggerFactory.getLogger(FileUtil.class);
@@ -61,6 +61,7 @@ public final class FileUtil {
      * @param toZipFileFullPaths many files's getAbsolutePath with name.
      * @param zipFullName zip full path with name
      */
+    @SuppressWarnings("squid:S109")
     public static boolean zipFilesAndFolders(String sourcePath, List<String> toZipFileFullPaths, String zipFullName) {
         boolean flag = true;
         byte[] buf = new byte[1024];
@@ -139,6 +140,7 @@ public final class FileUtil {
         return fileNames;
     }
 
+    @SuppressWarnings("squid:S109")
     private static List<String> unTar(InputStream inputStream, String destDir) throws IOException {
         List<String> fileNames = new ArrayList<>();
 
@@ -270,7 +272,7 @@ public final class FileUtil {
         destDir = destDir.endsWith(File.separator) ? destDir : destDir + File.separator;
         List<String> fileNames = new ArrayList<>();
 
-        try (ZipArchiveInputStream is = new ZipArchiveInputStream(new BufferedInputStream(new FileInputStream(zipfilePath), BUFFER_SIZE))){
+        try (ZipArchiveInputStream is = new ZipArchiveInputStream(new BufferedInputStream(new FileInputStream(zipfilePath), BUFFER_SIZE))) {
             ZipArchiveEntry entry;
             while ((entry = is.getNextZipEntry()) != null) {
                 fileNames.add(entry.getName());
@@ -278,7 +280,7 @@ public final class FileUtil {
                     File directory = new File(destDir, entry.getName());
                     directory.mkdirs();
                 } else {
-                    try (OutputStream os= new BufferedOutputStream(new FileOutputStream(new File(destDir, entry.getName())), BUFFER_SIZE)){
+                    try (OutputStream os = new BufferedOutputStream(new FileOutputStream(new File(destDir, entry.getName())), BUFFER_SIZE)) {
                         IOUtils.copy(is, os);
                     }
                 }
@@ -432,7 +434,7 @@ public final class FileUtil {
         return new ArrayList<>();
     }
 
-    private static Pair<File,String> splitFilePathIntoParentFileAndFileName(String filePathParam){
+    private static Pair<File, String> splitFilePathIntoParentFileAndFileName(String filePathParam) {
         String filePath = filePathParam.replace("\"", "");
         if (filePath.endsWith("/") || filePath.endsWith("\\")) {
             filePath = filePath.substring(0, filePath.length() - 1);
@@ -441,7 +443,7 @@ public final class FileUtil {
         int lastSlash = filePath.lastIndexOf("\\") == -1 ? filePath.lastIndexOf("/") : filePath.lastIndexOf("\\");
         File parentPath = new File(filePath.substring(0, lastSlash));
         String fileName = filePath.substring(lastSlash + 1);
-        return Pair.of(parentPath,fileName);
+        return Pair.of(parentPath, fileName);
     }
 
     private static List<String> listFilesByFilter(String filePath, String filterStr, String exfilterStr) {
@@ -464,7 +466,7 @@ public final class FileUtil {
                 filePaths.add(fileFullPath.getAbsolutePath());
             }
         } else {
-            Pair<File,String> pathParts = splitFilePathIntoParentFileAndFileName(filePath);
+            Pair<File, String> pathParts = splitFilePathIntoParentFileAndFileName(filePath);
             String fileName = pathParts.getRight();
             File parentPath = pathParts.getLeft();
 
@@ -482,44 +484,10 @@ public final class FileUtil {
     }
 
     private static File[] filterFilesAndSubFolders(File parentPath, String filterStr, String excludeFileStr) {
-        final String[] fileters = filterStr.toLowerCase().split("\\*");
-        final String[] exfileters = excludeFileStr.toLowerCase().replaceAll("^\\*(.*)", "$1").split(";");
-        return parentPath.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                if (new File(dir, name).isDirectory() && !name.startsWith(".")) {
-                    return true;
-                }
+        final String[] filters = filterStr.toLowerCase().split("\\*");
+        final String[] exfilters = excludeFileStr.toLowerCase().replaceAll("^\\*(.*)", "$1").split(";");
 
-                boolean flag = true;
-                for (String filter : fileters) {
-                    if (StringUtils.isNotBlank(filter) && !name.toLowerCase().contains(filter)) {
-                        flag = false;
-                        break;
-                    }
-                }
-                if (flag) {
-                    boolean exflag = false;
-                    for (String exfilter : exfileters) {
-                        if (StringUtils.isNotBlank(exfilter)) {
-                            exflag = true;
-                            String[] subfilters = exfilter.split("\\*");
-                            for (String subexfilter : subfilters) {
-                                if (StringUtils.isNotBlank(subexfilter) && !name.toLowerCase().contains(subexfilter)) {
-                                    exflag = false;
-                                    break;
-                                }
-                            }
-                        }
-                        if (exflag) {
-                            flag = false;
-                            break;
-                        }
-                    }
-                }
-                return flag;
-            }
-        });
+        return parentPath.listFiles(new CustomFileNameFilter(filters, exfilters));
     }
 
     /***
@@ -549,7 +517,7 @@ public final class FileUtil {
         return fileFullName.substring(lastSlash + 1);
     }
 
-    @SuppressWarnings("DM_DEFAULT_ENCODING")
+    @SuppressWarnings("findbugs:DM_DEFAULT_ENCODING")
     public static boolean search(String fileFullName, String searchStr) {
         logger.info("search " + searchStr + " in " + fileFullName);
         File filehd = new File(fileFullName);
@@ -578,7 +546,7 @@ public final class FileUtil {
     /**
      * return table's definition in a INI file
      */
-    @SuppressWarnings("squid:S109,findbugs:DM_DEFAULT_ENCODING")
+    @SuppressWarnings({"squid:S109","findbugs:DM_DEFAULT_ENCODING"})
     public static List<List<TableProps>> searchTablesDefinition(String fileFullName, String tableName) {
         List<List<TableProps>> tablesDefinition = null;
         List<TableProps> tableColumns;
@@ -707,6 +675,7 @@ public final class FileUtil {
      * @param newFilePath can be null, get fileFullName's parent path
      * @return new file full path with name
      */
+    @SuppressWarnings("findbugs:DM_DEFAULT_ENCODING")
     public static String createNewFileWithSuffix(String fileFullName, String suffix, String newFilePath) {
         String newFileFullName = null;
         File file = new File(fileFullName);
@@ -826,5 +795,50 @@ public final class FileUtil {
             names.append("(GridKey|GridRef|List|Ref|Sums|Vals|XVals|RefReturns)(_.*)");
         }
         return names.toString();
+    }
+
+    private static class CustomFileNameFilter implements FilenameFilter {
+
+        private final String[] filters;
+        private final String[] exFilters;
+
+        public CustomFileNameFilter(String[] filters, String[] exFilters){
+
+            this.filters = filters;
+            this.exFilters = exFilters;
+        }
+
+        @Override
+        public boolean accept(File dir, String name) {
+            if (new File(dir, name).isDirectory() && !name.startsWith(".")) {
+                return true;
+            }
+            for (String filter : filters) {
+                if (StringUtils.isNotBlank(filter) && !name.toLowerCase().contains(filter)) {
+                    return false;
+                }
+            }
+            return runExcludeFilters(name);
+        }
+
+        private boolean runExcludeFilters(final String name) {
+            for (String exfilter : exFilters) {
+                boolean exflag = false;
+                if (StringUtils.isNotBlank(exfilter)) {
+                    exflag = true;
+                    String[] subfilters = exfilter.split("\\*");
+                    for (String subexfilter : subfilters) {
+                        if (StringUtils.isNotBlank(subexfilter) && !name.toLowerCase().contains(subexfilter)) {
+                            exflag = false;
+                            break;
+                        }
+                    }
+                }
+                if (exflag) {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 }
