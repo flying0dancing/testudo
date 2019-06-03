@@ -18,6 +18,7 @@ import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -431,6 +432,18 @@ public final class FileUtil {
         return new ArrayList<>();
     }
 
+    private static Pair<File,String> splitFilePathIntoParentFileAndFileName(String filePathParam){
+        String filePath = filePathParam.replace("\"", "");
+        if (filePath.endsWith("/") || filePath.endsWith("\\")) {
+            filePath = filePath.substring(0, filePath.length() - 1);
+        }
+
+        int lastSlash = filePath.lastIndexOf("\\") == -1 ? filePath.lastIndexOf("/") : filePath.lastIndexOf("\\");
+        File parentPath = new File(filePath.substring(0, lastSlash));
+        String fileName = filePath.substring(lastSlash + 1);
+        return Pair.of(parentPath,fileName);
+    }
+
     private static List<String> listFilesByFilter(String filePath, String filterStr, String exfilterStr) {
         List<String> filePaths = new ArrayList<>();
         File fileFullPath = new File(filePath);
@@ -451,13 +464,10 @@ public final class FileUtil {
                 filePaths.add(fileFullPath.getAbsolutePath());
             }
         } else {
-            filePath = filePath.replace("\"", "");
-            if (filePath.endsWith("/") || filePath.endsWith("\\")) {
-                filePath = filePath.substring(0, filePath.length() - 1);
-            }
-            int lastSlash = filePath.lastIndexOf("\\") == -1 ? filePath.lastIndexOf("/") : filePath.lastIndexOf("\\");
-            String fileName = filePath.substring(lastSlash + 1);
-            File parentPath = new File(filePath.substring(0, lastSlash));//TODO maybe contains risk, for example see Helper.getParentPath
+            Pair<File,String> pathParts = splitFilePathIntoParentFileAndFileName(filePath);
+            String fileName = pathParts.getRight();
+            File parentPath = pathParts.getLeft();
+
             if (parentPath.isDirectory()) {
                 File[] files = filterFilesAndSubFolders(parentPath, fileName, exfilterStr);
                 for (File file : files) {
@@ -539,6 +549,7 @@ public final class FileUtil {
         return fileFullName.substring(lastSlash + 1);
     }
 
+    @SuppressWarnings("DM_DEFAULT_ENCODING")
     public static boolean search(String fileFullName, String searchStr) {
         logger.info("search " + searchStr + " in " + fileFullName);
         File filehd = new File(fileFullName);
@@ -567,7 +578,7 @@ public final class FileUtil {
     /**
      * return table's definition in a INI file
      */
-    @SuppressWarnings("squid:S109")
+    @SuppressWarnings("squid:S109,findbugs:DM_DEFAULT_ENCODING")
     public static List<List<TableProps>> searchTablesDefinition(String fileFullName, String tableName) {
         List<List<TableProps>> tablesDefinition = null;
         List<TableProps> tableColumns;
@@ -635,6 +646,7 @@ public final class FileUtil {
     /**
      * if a file contains tableName, case insensitive, it will rewrite this table's definition at the end.
      */
+    @SuppressWarnings("findbugs:DM_DEFAULT_ENCODING")
     public static void updateContent(String fileFullName, String tableName, String addedContent) {
         logger.info("update file: " + fileFullName);
         StringBuilder strBuffer = new StringBuilder();
@@ -671,6 +683,7 @@ public final class FileUtil {
     /**
      * get content of fileFullName, return String
      */
+    @SuppressWarnings("findbugs:DM_DEFAULT_ENCODING")
     public static String getFileContent1(String fileFullName) {
         StringBuilder contents = new StringBuilder();
         if (StringUtils.isNotBlank(fileFullName)) {
