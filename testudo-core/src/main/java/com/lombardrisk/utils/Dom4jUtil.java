@@ -24,32 +24,25 @@ public class Dom4jUtil {
 
     /**
      * get attribute path's value from manifest.xml
-     *
-     * @param xmlFileStr
-     * @param localPath
-     * @return
      */
     public static List<String> getPathFromElement(String xmlFileStr, String localPath) {
-        Document doc = null;
-        List<String> paths = new ArrayList<String>();
+        List<String> paths = new ArrayList<>();
         try {
             SAXReader reader = new SAXReader();
             File xmlFile = new File(xmlFileStr);
-            Element root = null;
             if (!xmlFile.exists()) {
                 BuildStatus.getInstance().recordError();
                 logger.error("error: invalid xml file[" + xmlFileStr + "]");
                 return paths;
-            } else {
-                doc = reader.read(xmlFile);
-                root = doc.getRootElement();//list
             }
-            String op = System.getProperty("file.separator");
+            Document doc = reader.read(xmlFile);
+            Element root = doc.getRootElement();
+
             @SuppressWarnings("unchecked")
             List<Element> eltList = root.elements();
             for (Element element : eltList) {
                 if (element.getName().equalsIgnoreCase("assets")) {
-                    List<String> manifestpaths = new ArrayList<String>();
+                    List<String> manifestpaths = new ArrayList<>();
                     getPathsFromElement(element, "path", "", manifestpaths);
                     for (String path : manifestpaths) {
                         paths.add(Helper.reviseFilePath(localPath + path));
@@ -57,25 +50,6 @@ public class Dom4jUtil {
                     break;
                 }
             }
-	    	
-	    	/*
-	    	String formConfig=Helper.reviseFilePath(localPath+getPathFromElement(root, "formConfig","path"));//1 level
-	    	if(StringUtils.isNotBlank(formConfig)){
-	    		paths.add(formConfig);
-	    		
-	    		String arbitraryExcelExport=formConfig+op+getPathFromElement(root, "arbitraryExcelExport","path");//1-2 level
-		    	List<String> tmppaths=Helper.getRelativePaths(formConfig+op,getPathFromElement(root, "presentationTemplate","path"));
-		    	if(tmppaths!=null && tmppaths.size()>0){
-		    		paths.addAll(tmppaths);
-		    	}
-		    	paths.addAll(Helper.getRelativePaths(formConfig+op,getPathFromElement(root, "excelExportTemplate","path")));
-		    	paths.addAll(Helper.getRelativePaths(formConfig+op,getPathFromElement(root, "arbitraryExcelExport","path")));
-		    	paths.addAll(Helper.getRelativePaths(arbitraryExcelExport+op,getPathFromElement(root, "arbitraryExcelExportTemplate","path")));
-		    	paths.addAll(Helper.getRelativePaths(arbitraryExcelExport+op,getPathFromElement(root, "arbitraryExcelExportDescriptor","path")));
-		    	paths.add(Helper.reviseFilePath(localPath+op+getPathFromElement(root, "transforms","path")));
-		    	paths.add(Helper.reviseFilePath(localPath+op+getPathFromElement(root, "dpmConfig","path")));
-	    	}*/
-
         } catch (Exception e) {
             BuildStatus.getInstance().recordError();
             logger.error(e.getMessage(), e);
@@ -86,7 +60,7 @@ public class Dom4jUtil {
     /**
      * this is for get all attribute path's values of manifest.xml's assets element, stored in pathList
      *
-     * @param parentElt
+     * @param parentElt  The parent element
      * @param atrr       the attribute name
      * @param appendPath set it as "" if parentElt doesn't contains the attr, set it as attr's value if parentElt contains the attr
      * @param pathList   defined it before using this method
@@ -125,79 +99,31 @@ public class Dom4jUtil {
         }
     }
 
-    /**
-     * 1. get attr's value from which element(elementOrAttribute); 2. get first matched elementOrAttribute's text if attr is blank
-     * for example, getPathFromElement(root, "excelExportTemplate","path")
-     *
-     * @param parentEle
-     * @param elementOrAttribute
-     * @param atrr
-     * @return
-     */
-    @Deprecated
-    private static String getPathFromElement(Element parentEle, String elementOrAttribute, String atrr) {
-        boolean foundflag = false;
-        String returnValue = null;
-        if (elementOrAttribute.equalsIgnoreCase(parentEle.getName())) {
-            foundflag = true;
-            if (StringUtils.isBlank(atrr)) {
-                returnValue = parentEle.getTextTrim();
-            } else {
-                returnValue = parentEle.attributeValue(atrr);
-            }
-            return returnValue;
-        }
-        if (!foundflag && StringUtils.isBlank(atrr)) {
-            @SuppressWarnings("unchecked")
-            Iterator<Attribute> attr = parentEle.attributeIterator();
-            while (attr.hasNext()) {
-                Attribute attrNext = (Attribute) attr.next();
-                if (elementOrAttribute.equalsIgnoreCase(attrNext.getName())) {
-                    foundflag = true;
-                    returnValue = attrNext.getValue();
-                    break;
-                }
-            }
-        }
-        if (!foundflag) {
-            @SuppressWarnings("unchecked")
-            Iterator<Element> it = parentEle.elementIterator();
-            while (it.hasNext()) {
-                Element elementNext = (Element) it.next();
-                returnValue = getPathFromElement(elementNext, elementOrAttribute, atrr);
-                if (returnValue != null) return returnValue;
-            }
-        }
-        return returnValue;
-    }
+
 
     public static String updateElement(String xmlFileStr, String elementOrAttribute, String newValue) {
-        Document doc = null;
-        String value = "";
         try {
             SAXReader reader = new SAXReader();
             File xmlFile = new File(xmlFileStr);
-            Element root = null;
             if (!xmlFile.exists()) {
                 BuildStatus.getInstance().recordError();
                 logger.error("error: invalid xml file[" + xmlFileStr + "]");
-                return value;
-            } else {
-                doc = reader.read(xmlFile);
-                root = doc.getRootElement();//list
+                return "";
             }
-            value = readSubElementAndUpdate(root, elementOrAttribute, newValue);//not tested
+            Document doc = reader.read(xmlFile);
+            Element root = doc.getRootElement();//list
+
+            String value = readSubElementAndUpdate(root, elementOrAttribute, newValue);//not tested
             writeDocumentToXml(doc, xmlFileStr);
+            return value;
         } catch (Exception e) {
             BuildStatus.getInstance().recordError();
             logger.error(e.getMessage(), e);
+            return "";
         }
-        return value;
     }
 
     private static String readSubElementAndUpdate(Element parentEle, String elementOrAttribute, String newValue) {
-        boolean foundflag = false;
-        String returnValue = null;
         if (elementOrAttribute.equalsIgnoreCase(parentEle.getName())) {
             if (elementOrAttribute.equalsIgnoreCase("implementationVersion")) {
                 String value = parentEle.getTextTrim();
@@ -215,33 +141,29 @@ public class Dom4jUtil {
                     parentEle.setText(newValue);
                 }
             }
-            foundflag = true;
-            returnValue = parentEle.getTextTrim();
-            return returnValue;
+            return parentEle.getTextTrim();
         }
-        if (!foundflag) {
-            @SuppressWarnings("unchecked")
-            Iterator<Attribute> attr = parentEle.attributeIterator();
-            while (attr.hasNext()) {
-                Attribute attrNext = (Attribute) attr.next();
-                if (elementOrAttribute.equalsIgnoreCase(attrNext.getName())) {
-                    attrNext.setValue(newValue);
-                    foundflag = true;
-                    returnValue = attrNext.getValue();
-                    break;
-                }
+
+        @SuppressWarnings("unchecked")
+        Iterator<Attribute> attr = parentEle.attributeIterator();
+        while (attr.hasNext()) {
+            Attribute attrNext = attr.next();
+            if (elementOrAttribute.equalsIgnoreCase(attrNext.getName())) {
+                attrNext.setValue(newValue);
+                return attrNext.getValue();
             }
         }
-        if (!foundflag) {
+
             @SuppressWarnings("unchecked")
-            Iterator<Element> it = parentEle.elementIterator();
-            while (it.hasNext()) {
-                Element elementNext = (Element) it.next();
-                returnValue = readSubElementAndUpdate(elementNext, elementOrAttribute, newValue);
-                if (returnValue != null) return returnValue;
+        Iterator<Element> it = parentEle.elementIterator();
+        while (it.hasNext()) {
+            Element elementNext = it.next();
+            String returnValue = readSubElementAndUpdate(elementNext, elementOrAttribute, newValue);
+            if (returnValue != null) {
+                return returnValue;
             }
         }
-        return returnValue;
+        return null;
     }
 
     public static void writeDocumentToXml(Document doc, String xmlFileStr) {
