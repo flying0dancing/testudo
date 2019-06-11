@@ -459,12 +459,12 @@ public final class DBInfo implements IComFolder {
     }
 
     public String getTableNameFromDB(String tab){
-        String sQL = "select unique t.table_name from user_tab_cols t where lower(t.table_name)='" + tab + "'";
+        String sQL = "select unique t.table_name from user_tab_cols t where lower(t.table_name)='" + tab.toLowerCase() + "'";
 
         if (getDbDriverFlag() == DBDriverType.SQLSERVER) {
             sQL = "select name from sysobjects where xtype='u' and lower(name)=lower('" + tab + "')";
         } else if (getDbDriverFlag() == DBDriverType.ACCESSDB) {
-            sQL = "SELECT Name FROM sys.MSysObjects WHERE LCase(Name)='" + tab + "'";
+            sQL = "SELECT Name FROM sys.MSysObjects WHERE LCase(Name)='" + tab.toLowerCase() + "'";
         }
         return queryRecord(sQL);
     }
