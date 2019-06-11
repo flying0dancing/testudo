@@ -214,5 +214,7 @@ maven solution
             identify buildnumber
         * confParam 
             identify json file name, default value is testudo.json
+        * procParam
+            identify proc, provided <procParam>all<proParam> can do UAT.
     * goal databaseExport, this can extract data to metadata folder.
     
