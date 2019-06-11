@@ -33,6 +33,10 @@ public class CreatePackageMojo extends TestudoMojo {
     @Parameter(property = "createPackage.conf")
     private String confParam;
 
+    @Parameter(property = "createPackage.proc", defaultValue="2")
+    private String procParam;
+
+
     @Override
     public void execute() throws MojoFailureException {
         super.execute();
@@ -71,6 +75,9 @@ public class CreatePackageMojo extends TestudoMojo {
         properties.setProperty("release", releaseParam);
         if (StringUtils.isNotBlank(confParam)) {
             properties.setProperty("conf", getProject().getBasedir() + getFileSeperator() + confParam);
+        }
+        if(StringUtils.isNotBlank(procParam)){
+            properties.setProperty("proc", procParam);
         }
     }
 }
