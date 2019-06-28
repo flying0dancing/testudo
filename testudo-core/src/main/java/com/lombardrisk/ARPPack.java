@@ -73,9 +73,10 @@ public class ARPPack implements IComFolder {
         schemaFullName=Helper.reviseFilePath(schemaFullName);
         DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
         //dbInfo.createAccessTables(schemaFullName);
-        dbInfo.importCsvToAccess("Ref", null,null, schemaFullName);
-        dbInfo.importCsvToAccess("GridRef", null,null, schemaFullName);
-        dbInfo.importCsvToAccess("Rets", null,null, schemaFullName);
+        List<String> subFolderNames=FileUtil.getSubFolderNames(csvParentPath);
+        for(String name:subFolderNames){
+            dbInfo.importCsvToAccess(name, null,null, schemaFullName);
+        }
         if (csvPaths == null || csvPaths.size() <= 0) {
             return null;
         }

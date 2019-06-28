@@ -768,7 +768,7 @@ public final class FileUtil {
         }
     }
 
-    private static List<String> getSubFolderNames(String path) {
+    public static List<String> getSubFolderNames(String path) {
         List<String> filenames = new ArrayList<>();
         if (StringUtils.isNotBlank(path)) {
             File parentPath = new File(path);
