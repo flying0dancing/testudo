@@ -417,7 +417,9 @@ public final class DBInfo implements IComFolder {
 
                 flag = accdb.createAccessDBTab(tableName, columns);
                 if (flag) {
-                    flag = accdb.importCsvToAccessDB(tableName, columns, csvPath);
+                    if(StringUtils.isNotBlank(csvPath)){
+                        flag = accdb.importCsvToAccessDB(tableName, columns, csvPath);
+                    }
                 } else {
                     BuildStatus.getInstance().recordError();
                     logger.error("error: fail to create table [" + tableName + "]");
@@ -434,6 +436,7 @@ public final class DBInfo implements IComFolder {
         }
         return flag;
     }
+
 
     public DBDriverType getDbDriverFlag() {
         return dbDriverFlag;

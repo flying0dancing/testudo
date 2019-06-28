@@ -652,13 +652,24 @@ public final class FileUtil {
      * get content of fileFullName, return String
      */
     @SuppressWarnings("findbugs:DM_DEFAULT_ENCODING")
-    public static String getFileContent1(String fileFullName) {
+    public static String getSQLContent(String fileFullName) {
         StringBuilder contents = new StringBuilder();
         if (StringUtils.isNotBlank(fileFullName)) {
             try (BufferedReader bufReader = new BufferedReader(new FileReader(fileFullName))) {
                 String line;
                 while ((line = bufReader.readLine()) != null) {
-                    contents.append(line);
+                    line=line.trim();
+                    if(line.startsWith("#") || line.startsWith("--")){
+                        continue;
+                    }else if(line.startsWith("/*")){
+                        while ((line = bufReader.readLine()) != null){
+                            if(line.trim().endsWith("*/")){
+                                break;
+                            }
+                        }
+                    }else{
+                        contents.append(line);
+                    }
                 }
             } catch (Exception e) {
                 BuildStatus.getInstance().recordError();

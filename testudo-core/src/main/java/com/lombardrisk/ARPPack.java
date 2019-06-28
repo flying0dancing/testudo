@@ -70,15 +70,19 @@ public class ARPPack implements IComFolder {
         if (StringUtils.isBlank(csvParentPath)) {
             return null;
         }
+        schemaFullName=Helper.reviseFilePath(schemaFullName);
         DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
         //dbInfo.createAccessTables(schemaFullName);
+        dbInfo.importCsvToAccess("Ref", null,null, schemaFullName);
+        dbInfo.importCsvToAccess("GridRef", null,null, schemaFullName);
+        dbInfo.importCsvToAccess("Rets", null,null, schemaFullName);
         if (csvPaths == null || csvPaths.size() <= 0) {
             return null;
         }
         List<String> realCsvFullPaths = new ArrayList<>();
         String name_returnId;
         String folderregex = FileUtil.getFolderRegex(csvParentPath);
-
+        long begin, end;
         logger.info("================= import metadata into DPM =================");
         for (String pathTmp : csvPaths) {
             List<String> realCsvFullPathsTmp =
@@ -116,13 +120,15 @@ public class ARPPack implements IComFolder {
                         logger.debug("4 table name {}", tableName);
                     }
                     logger.debug("X table name {}", tableName);
+                    begin=System.currentTimeMillis();
                     Boolean flag = dbInfo.importCsvToAccess(tableName, tableNameWithDB,
                             Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(schemaFullName));
+                    end=System.currentTimeMillis();
                     if (!flag) {
                         BuildStatus.getInstance().recordError();
                         logger.error("import metadata[" + pathTmp2 + "] to " + tableName + " fail.");
                     } else {
-                        logger.info("import metadata[" + pathTmp2 + "] to " + tableName + " successfully.");
+                        logger.info("import metadata[" + pathTmp2 + "] to " + tableName + " successfully."+(end - begin) /1000.00F);
                     }
                 }
             }
@@ -171,7 +177,7 @@ public class ARPPack implements IComFolder {
         DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
         for (String fileFullPath : realFullPaths) {
             logger.info("sql statements in file: " + fileFullPath);
-            String fileContent = FileUtil.getFileContent1(fileFullPath);
+            String fileContent = FileUtil.getSQLContent(fileFullPath);
             if (fileContent.contains(";")) {
                 String[] sqlStatements = fileContent.split(";");
                 for (String sql : sqlStatements) {

@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -47,10 +48,13 @@ import java.util.regex.Pattern;
 public class DBHelper {
 
     private static final Logger logger = LoggerFactory.getLogger(DBHelper.class);
-    public static final int BATCH_SIZE = 50;
+    public static final int BATCH_SIZE = 1000; //num of inserted records
     private String dbmsDriver;
     private Connection conn = null;
     private DatabaseServer databaseServer;
+    private static final List<String> types = new ArrayList<String>(Arrays.asList("MEMO", "LONGTEXT", "VARCHAR"));
+    private static final String dateRegex =
+            "((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?(?:\\.\\d+)?)";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
 
     public DBHelper(DatabaseServer databaseServer) {
         this.databaseServer = databaseServer;
@@ -531,7 +535,6 @@ public class DBHelper {
     }
 
     public class AccessdbHelper {
-
         /***
          * existence of access table
          * @param tableName
@@ -600,101 +603,81 @@ public class DBHelper {
         public Boolean importCsvToAccessDB(String tableName, List<TableProps> columns, String importCsvFullName) {
             Boolean flag = false;
             try {
-                String dbFullName = getDatabaseServer().getSchema();
-                Database db = DatabaseBuilder.open(new File(dbFullName));
-                Builder builder = new ImportUtil.Builder(db, tableName);
-                if (db.getTable(tableName) != null) {
-					/*List<ColumnImpl> dbTableColumns=(List<ColumnImpl>) db.getTable(tableName).getColumns();
-					for(int i=0;i<dbTableColumns.size();i++){
-						
-					}*/
-                    db.close();
-                    logger.debug("accessdb table[" + tableName + "] already exists.");
+                flag=importCsvToAccessDBDirect(tableName,importCsvFullName);
+                if (!flag) {
                     List<String> dbTableColumns = new ArrayList<String>();
                     Map<String, String> columnsDefs = new HashMap<String, String>(); // key: columns's name, value: column's type
-                    String type;
-                    for (int j = 0; j < columns.size(); j++) {
-                        dbTableColumns.add(columns.get(j).getName());
-                        type = columns.get(j).getTypeSize();
-                        if (type.contains("(")) {
-                            type = type.substring(0, type.indexOf("("));
-                        }
-                        columnsDefs.put(columns.get(j).getName(), type);
-                    }
+                    setColumnsMap(columns, dbTableColumns, columnsDefs);
                     if (StringUtils.isNoneBlank(importCsvFullName, tableName)) {
                         //
                         Reader in = new FileReader(importCsvFullName);
                         CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().parse(in);
                         List<String> finalHeaders = getIntersectNames(dbTableColumns, new ArrayList<String>(parser.getHeaderMap().keySet()));
                         if (finalHeaders == null || finalHeaders.size() == 0) {
+                            parser.close();
                             return flag;
                         }
-                        int lineno = 1;
-                        String header = "";
-                        String line = null;
-                        String value = null;
-                        String sql;
-                        StringBuffer lineBuffer = new StringBuffer();
-                        String regex =
-                                "((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?(?:\\.\\d+)?)";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
-                        header = "insert into [" + tableName + "] (";
-                        for (int i = 0; i < finalHeaders.size(); i++) {
-                            header = header + " [" + finalHeaders.get(i) + "],";
-                        }
-                        header = header.replaceAll(",$", " ) values "); // like insert into [InstanceSets] ([InstSetId],[InstSetName] ) values
-                        List<String> strTypes = new ArrayList<String>(Arrays.asList("MEMO", "LONGTEXT", "VARCHAR"));
+                        String header=setInsertSQL(tableName,finalHeaders);// like insert into [InstanceSets] ([InstSetId],[InstSetName] ) values
+                        StringBuffer sqlBuffer = new StringBuffer();
+
+                        getConn().setAutoCommit(false);
+                        Statement statement = getConn().createStatement();
+
                         List<CSVRecord> records = parser.getRecords();
-                        for (CSVRecord record : records) {
-                            line = "(";
-                            for (int i = 0; i < finalHeaders.size(); i++) {
-                                value = record.get(finalHeaders.get(i));
-                                type = columnsDefs.get(finalHeaders.get(i)).toUpperCase();
-                                if (StringUtils.isBlank(value)) {
-                                    value = "null";
-                                } else if (strTypes.contains(type)) {
-                                    value = value.replaceAll("(\")", "\"$1");// some values are contains ", changed to ""
-                                    value = "\"" + value + "\"";//adding "
-                                    //value="\"\""+value+"\"\"";
-                                } else if (type.startsWith("DATE")) {
-                                    value = value.replaceAll(regex, "#$2#");
-                                }
-                                line = line + value + ",";
-                            }
-                            line = line.replaceAll(",$", ")");
-                            lineBuffer.append(line + ",");
-                            if (lineno % BATCH_SIZE == 0) {
-                                sql = header + lineBuffer.substring(0, lineBuffer.length() - 1);
-                                lineBuffer.setLength(0);//clear
-                                logger.debug(sql);
-                                flag = addBatch(sql);
-                                if (!flag) {
-                                    BuildStatus.getInstance().recordError();
-                                    logger.error("fail to import data into:" + tableName + " ( " + (lineno - BATCH_SIZE) + "-" + lineno + " )");
-                                    break;
-                                }
-                            }
-                            lineno++;
-                        }
-                        parser.close();
-                        if (lineBuffer.length() > 0) {
-                            sql = header + lineBuffer.substring(0, lineBuffer.length() - 1);
-                            logger.debug(sql);
-                            flag = addBatch(sql);
-                            if (!flag) {
-                                BuildStatus.getInstance().recordError();
-                                if (lineno >= BATCH_SIZE) {
-                                    logger.error("fail to import data into:" + tableName + " ( " + (lineno - BATCH_SIZE) + "-" + lineno + " )");
-                                } else {
-                                    logger.error("fail to import data into:" + tableName + " ( 0-" + lineno + " )");
-                                }
-                            }
-                        }
-                        if (lineno == 1) {
+                        int recordsize=records.size();
+
+                        int numTrans=recordsize/BATCH_SIZE+1;    //commit times
+                        if(recordsize==0){
+                            numTrans=0;
                             flag = true;
+                        }else if(recordsize%BATCH_SIZE==0){
+                            numTrans=recordsize/BATCH_SIZE;
                         }
+                        int numData=0;
+                        int numMax;
+                        for(int j=1;j<=numTrans;j++){
+                            numMax=numData+BATCH_SIZE;
+                            if(numMax>recordsize){
+                                numMax=recordsize;
+                            }
+                            for(int i=numData;i<numMax;i++){
+                                setInsertLine(records.get(i), finalHeaders, columnsDefs, sqlBuffer, header);
+                                statement.addBatch(sqlBuffer.toString());
+                                sqlBuffer.setLength(0);//clear
+                            }
+                            statement.executeBatch();
+                            getConn().commit();
+                            statement.clearBatch();
+                            numData += BATCH_SIZE;
+                        }
+                        statement.close();
+                        parser.close();
+                        flag=true;
                     }
-                } else {
+                }
+            } catch (IOException e) {
+                BuildStatus.getInstance().recordError();
+                logger.error(e.getMessage(), e);
+            } catch (SQLException e) {
+                BuildStatus.getInstance().recordError();
+                logger.error(e.getMessage(), e);
+            }
+            return flag;
+        }
+
+        public Boolean importCsvToAccessDBDirect(String tableName,String importCsvFullName){
+            Boolean flag = false;
+            String dbFullName = getDatabaseServer().getSchema();
+            Database db;
+            Builder builder;
+            try {
+                db = DatabaseBuilder.open(new File(dbFullName));
+                if (db.getTable(tableName) != null) {
+                    db.close();
+                    logger.debug("accessdb table[" + tableName + "] already exists.");
+                }else{
                     logger.warn("accessdb table[" + tableName + "] doesn't exist, import csv directly.");
+                    builder = new ImportUtil.Builder(db, tableName);
                     builder.setUseExistingTable(false);
                     builder.setDelimiter(",").setHeader(true).importReader(new BufferedReader(new FileReader(new File(importCsvFullName))));
                     flag = true;
@@ -705,6 +688,80 @@ public class DBHelper {
                 logger.error(e.getMessage(), e);
             }
             return flag;
+        }
+
+
+        public void setColumnsMap(List<TableProps> columns, List<String> dbTableColumns, Map<String, String> columnsDefs){
+            String type;
+            for (int j = 0; j < columns.size(); j++) {
+                dbTableColumns.add(columns.get(j).getName());
+                type = columns.get(j).getTypeSize();
+                if (type.contains("(")) {
+                    type = type.substring(0, type.indexOf("("));
+                }
+                columnsDefs.put(columns.get(j).getName(), type);
+            }
+        }
+        public String setInsertSQL(String tableName,List<String> finalHeaders){
+            String insertSQL = "insert into [" + tableName + "] (";
+            //String quotesSQL="(";
+            for (int i = 0; i < finalHeaders.size(); i++) {
+                insertSQL = insertSQL + " [" + finalHeaders.get(i) + "],";
+                //quotesSQL=quotesSQL+"?,";
+            }
+            insertSQL = insertSQL.replaceAll(",$", " ) values ");
+            //quotesSQL=quotesSQL.replaceAll(",$",")");
+            return insertSQL;
+        }
+        public String setInsertSQLWithAsk(String tableName,List<String> finalHeaders){
+            String insertSQL = "insert into [" + tableName + "] (";
+            String quotesSQL="(";
+            for (int i = 0; i < finalHeaders.size(); i++) {
+                insertSQL = insertSQL + " [" + finalHeaders.get(i) + "],";
+                quotesSQL=quotesSQL+"?,";
+            }
+            insertSQL = insertSQL.replaceAll(",$", " ) values ");
+            quotesSQL=quotesSQL.replaceAll(",$",")");
+            return insertSQL+quotesSQL;
+        }
+        public void setInsertLine(CSVRecord record, List<String> finalHeaders, Map<String, String> columnsDefs,StringBuffer line){
+            String value;
+            String type;
+            for (int i = 0; i < finalHeaders.size(); i++)
+            {
+                value = record.get(finalHeaders.get(i));
+                type = columnsDefs.get(finalHeaders.get(i)).toUpperCase();
+                if (StringUtils.isBlank(value)) {
+                    value = "null";
+                } else if (types.contains(type)) {
+                    value = value.replaceAll("(\")", "\"$1");// some values are contains ", changed to ""
+                    value = "\"" + value + "\"";//adding "
+                } else if (type.startsWith("DATE")) {
+                    value = value.replaceAll(dateRegex, "#$2#");
+                }
+                line.append(value+",");
+            }
+        }
+        public void setInsertLine(CSVRecord record, List<String> finalHeaders, Map<String, String> columnsDefs,StringBuffer line, String header) {
+            String value;
+            String type;
+            line.append(header+"(");
+            for (int i = 0; i < finalHeaders.size(); i++)
+            {
+                value = record.get(finalHeaders.get(i));
+                type = columnsDefs.get(finalHeaders.get(i)).toUpperCase();
+                if (StringUtils.isBlank(value)) {
+                    value = "null";
+                } else if (types.contains(type)) {
+                    value = value.replaceAll("(\")", "\"$1");// some values are contains ", changed to ""
+                    value = "\"" + value + "\"";//adding "
+                } else if (type.startsWith("DATE")) {
+                    value = value.replaceAll(dateRegex, "#$2#");
+                }
+                line.append(value+",");
+            }
+            line.deleteCharAt(line.length()-1);
+            line.append( ")");
         }
 
         /**
