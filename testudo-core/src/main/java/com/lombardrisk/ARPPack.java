@@ -14,14 +14,20 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ARPPack implements IComFolder {
 
     private final static Logger logger = LoggerFactory.getLogger(ARPPack.class);
-
+    private String dbFullName;
     public enum DBInfoSingle {
         INSTANCE;
         private DBInfo dbInfo;
@@ -42,6 +48,7 @@ public class ARPPack implements IComFolder {
      */
     public Boolean createNewDpm(String dbFullName) {
         Boolean flag = false;
+        this.dbFullName=dbFullName;
         DBInfoSingle.INSTANCE.setDbInfo(dbFullName);
         flag = DBInfoSingle.INSTANCE.getDbInfo().createAccessDB();
         return flag;
@@ -70,19 +77,27 @@ public class ARPPack implements IComFolder {
         if (StringUtils.isBlank(csvParentPath)) {
             return null;
         }
-        schemaFullName=Helper.reviseFilePath(schemaFullName);
-        DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
-        //dbInfo.createAccessTables(schemaFullName);
-        List<String> subFolderNames=FileUtil.getSubFolderNames(csvParentPath);
-        for(String name:subFolderNames){
-            dbInfo.importCsvToAccess(name, null,null, schemaFullName);
-        }
         if (csvPaths == null || csvPaths.size() <= 0) {
             return null;
         }
+        schemaFullName=Helper.reviseFilePath(schemaFullName);
+        DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
+        dbInfo.getDbHelper().connect();
+        //dbInfo.createAccessTables(schemaFullName);
+        List<String> subFolderNames=FileUtil.getSubFolderNames(csvParentPath);
+        String folderRegex = FileUtil.getFolderRegex(csvParentPath,subFolderNames);
+        /*subFolderNames.addAll(FileUtil.getSingleMetadataNames(csvParentPath));
+        for(String namRe:subFolderNames){
+            dbInfo.CreateAccessDBTable(name,schemaFullName);
+        }*/
+        dbInfo.CreateAccessDBTable("Ref",schemaFullName);
+        dbInfo.CreateAccessDBTable("GridRef",schemaFullName);
+        dbInfo.CreateAccessDBTable("Rets",schemaFullName);
         List<String> realCsvFullPaths = new ArrayList<>();
+        List<String> realNames=new ArrayList<>();
+        Map<String,String> realCsvPathTableMap=new HashMap<String,String>();
         String name_returnId;
-        String folderregex = FileUtil.getFolderRegex(csvParentPath);
+
         long begin, end;
         logger.info("================= import metadata into DPM =================");
         for (String pathTmp : csvPaths) {
@@ -95,10 +110,9 @@ public class ARPPack implements IComFolder {
                 continue;
             }
             for (String pathTmp2 : realCsvFullPathsTmp) {
-                if (!realCsvFullPaths.contains(pathTmp2)) {
+                if (!realCsvPathTableMap.containsKey(pathTmp2)) {
                     name_returnId = "";
-                    realCsvFullPaths.add(pathTmp2);
-                    logger.info("import metadata file:" + pathTmp2);
+                    //logger.info("metadata file:" + pathTmp2);
                     String tableNameWithDB = FileUtil.getFileNameWithoutSuffix(pathTmp2);
                     logger.debug("1 table name with DB {}", tableNameWithDB);
                     String tableName = tableNameWithDB.replaceAll("#.*?_", "_");
@@ -108,7 +122,7 @@ public class ARPPack implements IComFolder {
                         tableName = tableNameWithDB.replaceAll("#.*", "");
                         logger.debug("2 table name {}", tableName);
                     }
-                    Pattern p = Pattern.compile(folderregex, Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+                    Pattern p = Pattern.compile(folderRegex, Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
                     Matcher m = p.matcher(tableName);
                     if (m.find()) {
                         tableName = m.group(1);
@@ -121,22 +135,29 @@ public class ARPPack implements IComFolder {
                         logger.debug("4 table name {}", tableName);
                     }
                     logger.debug("X table name {}", tableName);
+                    if(!realNames.contains(tableName)){
+                        dbInfo.CreateAccessDBTable(tableName,schemaFullName);
+                        realNames.add(tableName);
+                    }
+                    realCsvFullPaths.add(pathTmp2);
+                    realCsvPathTableMap.put(pathTmp2,tableName);
                     begin=System.currentTimeMillis();
-                    Boolean flag = dbInfo.importCsvToAccess(tableName, tableNameWithDB,
-                            Helper.reviseFilePath(pathTmp2), Helper.reviseFilePath(schemaFullName));
+                    Boolean flag = dbInfo.importCsvToAccess(tableName, Helper.reviseFilePath(pathTmp2));
                     end=System.currentTimeMillis();
                     if (!flag) {
                         BuildStatus.getInstance().recordError();
                         logger.error("import metadata[" + pathTmp2 + "] to " + tableName + " fail.");
                     } else {
-                        logger.info("import metadata[" + pathTmp2 + "] to " + tableName + " successfully."+(end - begin) /1000.00F);
+                        logger.info("import metadata[" + pathTmp2 + "] to " + tableName + " successfully.");
                     }
                 }
             }
         }
-        if (realCsvFullPaths.size() <= 0) {
+        dbInfo.getDbHelper().close();
+        if (realCsvPathTableMap.size() <= 0) {
             return null;
         }
+
         return realCsvFullPaths;
     }
 

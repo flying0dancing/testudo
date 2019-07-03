@@ -38,6 +38,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public final class FileUtil {
 
@@ -592,7 +593,9 @@ public final class FileUtil {
         if (tablesDefinition != null && tablesDefinition.size() > 0) {
             List<String> columnNames = new ArrayList<>();
             tableColumns = tablesDefinition.get(0);//get first table's columns
-
+            if(tablesDefinition.size()==1){
+                return tableColumns;
+            }
             TableProps tableProps;
             //get first table columns' name
             for (TableProps tableColumn : tableColumns) {
@@ -610,7 +613,37 @@ public final class FileUtil {
         }
         return tableColumns;
     }
+    public static Map<String, List<TableProps>> getAllTablesMixedDefinition(String fileFullName) {
+        Map<String, List<TableProps>> mixedAllTables=null;
+        List<String> tableNames=new ArrayList<>();
+        List<TableProps> tableColumns;
+        if (StringUtils.isNoneBlank(fileFullName)) {
+            try (BufferedReader bufReader = new BufferedReader(new FileReader(fileFullName))) {
 
+                String line;
+                while ((line = bufReader.readLine()) != null) {
+                    line=line.trim();
+                    if(line.startsWith("[") && line.endsWith("]")){
+                        String tableName=line.replaceAll("\\[|\\]", "");
+                        if(tableName.contains("#")){
+                            tableName=tableName.split("#")[0];
+                        }
+                        if(!tableNames.contains(tableName)){
+                            tableNames.add(tableName);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                BuildStatus.getInstance().recordError();
+                logger.error(e.getMessage(), e);
+            }
+            for(String tableName:tableNames){
+                tableColumns=getMixedTablesDefinition(searchTablesDefinition(fileFullName,tableName));
+                mixedAllTables.put(tableName, tableColumns);
+            }
+        }
+        return mixedAllTables;
+    }
     /**
      * if a file contains tableName, case insensitive, it will rewrite this table's definition at the end.
      */
@@ -659,14 +692,14 @@ public final class FileUtil {
                 String line;
                 while ((line = bufReader.readLine()) != null) {
                     line=line.trim();
-                    if(line.startsWith("#") || line.startsWith("--")){
+                    if(line.equals("") || line.startsWith("#") || line.startsWith("--")|| line.startsWith("//")){
                         continue;
                     }else if(line.startsWith("/*")){
-                        while ((line = bufReader.readLine()) != null){
+                        do{
                             if(line.trim().endsWith("*/")){
                                 break;
                             }
-                        }
+                        }while ((line = bufReader.readLine()) != null);
                     }else{
                         contents.append(line);
                     }
@@ -790,9 +823,37 @@ public final class FileUtil {
         }
         return filenames;
     }
+    public static List<String> getSingleMetadataNames(String path) {
+        List<String> filenames = new ArrayList<>();
+        if (StringUtils.isNotBlank(path)) {
+            File parentPath = new File(path);
+            if (parentPath.isDirectory()) {
+                File[] files = parentPath.listFiles((dir, name) -> {
+                    boolean flag = false;
+                    if (new File(dir, name).isFile() && name.toLowerCase().endsWith(".csv")) {
+                        flag = true;
+                    }
+                    return flag;
+                });
+                String name;
+                for (File file : files) {
+                    name=file.getName();
+                    name=name.substring(0,name.lastIndexOf("."));//may like Rets, Rets#AR
+                    name=name.split("#")[0];
+                    if(!filenames.contains(name)){
+                        filenames.add(name);
+                    }
 
-    public static String getFolderRegex(String path) {
-        List<String> filenames = getSubFolderNames(path);
+                }
+            } else {
+                BuildStatus.getInstance().recordError();
+                logger.error("File is not Directory: " + path);
+            }
+        }
+        return filenames;
+    }
+    public static String getFolderRegex(String path, List<String> filenames) {
+        //List<String> filenames = getSubFolderNames(path);
         StringBuilder names = new StringBuilder();
         if (filenames != null && filenames.size() > 0) {
             names.append("(");

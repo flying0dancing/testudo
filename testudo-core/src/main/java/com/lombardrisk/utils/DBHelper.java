@@ -573,25 +573,6 @@ public class DBHelper {
             return intersectNames;
         }
 
-        private List<String> getIntersectNames(Set<String> dbTabHeaders, Set<String> csvHeaders) {
-            List<String> intersectNames = null;
-            if (dbTabHeaders != null && dbTabHeaders.size() > 0 && csvHeaders != null && csvHeaders.size() > 0) {
-                intersectNames = new ArrayList<String>();
-                Set<String> largerOne = dbTabHeaders;
-                Set<String> smallOne = csvHeaders;
-                if (dbTabHeaders.size() < csvHeaders.size()) {
-                    largerOne = csvHeaders;
-                    smallOne = dbTabHeaders;
-                }
-                for (String small : smallOne) {
-                    if (largerOne.contains(small)) {
-                        intersectNames.add(small);
-                    }
-                }
-            }
-
-            return intersectNames;
-        }
 
         /**
          * import csv to access table
@@ -601,68 +582,73 @@ public class DBHelper {
          * @return
          */
         public Boolean importCsvToAccessDB(String tableName, List<TableProps> columns, String importCsvFullName) {
-            Boolean flag = false;
-            try {
-                flag=importCsvToAccessDBDirect(tableName,importCsvFullName);
-                if (!flag) {
-                    List<String> dbTableColumns = new ArrayList<String>();
-                    Map<String, String> columnsDefs = new HashMap<String, String>(); // key: columns's name, value: column's type
-                    setColumnsMap(columns, dbTableColumns, columnsDefs);
-                    if (StringUtils.isNoneBlank(importCsvFullName, tableName)) {
-                        //
-                        Reader in = new FileReader(importCsvFullName);
-                        CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().parse(in);
-                        List<String> finalHeaders = getIntersectNames(dbTableColumns, new ArrayList<String>(parser.getHeaderMap().keySet()));
-                        if (finalHeaders == null || finalHeaders.size() == 0) {
+            synchronized (this){
+                Boolean flag = false;
+                try {
+                    flag=importCsvToAccessDBDirect(tableName,importCsvFullName);
+                    if (!flag) {
+                        List<String> dbTableColumns = new ArrayList<String>();
+                        Map<String, String> columnsDefs = new HashMap<String, String>(); // key: columns's name, value: column's type
+                        setColumnsMap(columns, dbTableColumns, columnsDefs);
+                        if (StringUtils.isNoneBlank(importCsvFullName, tableName)) {
+                            //
+                            Reader in = new FileReader(importCsvFullName);
+                            CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().parse(in);
+                            List<String> finalHeaders = getIntersectNames(dbTableColumns, new ArrayList<String>(parser.getHeaderMap().keySet()));
+                            if (finalHeaders == null || finalHeaders.size() == 0) {
+                                parser.close();
+                                return flag;
+                            }
+                            String header=setInsertSQLHeader(tableName,finalHeaders);// like insert into [InstanceSets] ([InstSetId],[InstSetName] ) values
+                            StringBuffer sqlBuffer = new StringBuffer();
+
+                            getConn().setAutoCommit(false);
+                            Statement statement = getConn().createStatement();
+
+                            List<CSVRecord> records = parser.getRecords();
+                            int recordsize=records.size();
+
+                            int numTrans=recordsize/BATCH_SIZE+1;    //commit times
+                            if(recordsize==0){
+                                numTrans=0;
+                                flag = true;
+                            }else if(recordsize%BATCH_SIZE==0){
+                                numTrans=recordsize/BATCH_SIZE;
+                            }
+                            int numData=0;
+                            int numMax;
+                            for(int j=1;j<=numTrans;j++){
+                                numMax=numData+BATCH_SIZE;
+                                if(numMax>recordsize){
+                                    numMax=recordsize;
+                                }
+                                for(int i=numData;i<numMax;i++){
+                                    setInsertSQLLine(records.get(i), finalHeaders, columnsDefs, sqlBuffer, header);
+                                    statement.addBatch(sqlBuffer.toString());
+                                    //int rowAffectCount=statement.executeUpdate(sqlBuffer.toString());
+                                    //logger.debug(String.format("record %s affected count %s",i,rowAffectCount));
+                                    sqlBuffer.setLength(0);//clear
+                                }
+                                statement.executeBatch();
+                                getConn().commit();
+                                statement.clearBatch();
+                                numData += BATCH_SIZE;
+                            }
+                            statement.close();
                             parser.close();
-                            return flag;
+                            flag=true;
                         }
-                        String header=setInsertSQL(tableName,finalHeaders);// like insert into [InstanceSets] ([InstSetId],[InstSetName] ) values
-                        StringBuffer sqlBuffer = new StringBuffer();
-
-                        getConn().setAutoCommit(false);
-                        Statement statement = getConn().createStatement();
-
-                        List<CSVRecord> records = parser.getRecords();
-                        int recordsize=records.size();
-
-                        int numTrans=recordsize/BATCH_SIZE+1;    //commit times
-                        if(recordsize==0){
-                            numTrans=0;
-                            flag = true;
-                        }else if(recordsize%BATCH_SIZE==0){
-                            numTrans=recordsize/BATCH_SIZE;
-                        }
-                        int numData=0;
-                        int numMax;
-                        for(int j=1;j<=numTrans;j++){
-                            numMax=numData+BATCH_SIZE;
-                            if(numMax>recordsize){
-                                numMax=recordsize;
-                            }
-                            for(int i=numData;i<numMax;i++){
-                                setInsertLine(records.get(i), finalHeaders, columnsDefs, sqlBuffer, header);
-                                statement.addBatch(sqlBuffer.toString());
-                                sqlBuffer.setLength(0);//clear
-                            }
-                            statement.executeBatch();
-                            getConn().commit();
-                            statement.clearBatch();
-                            numData += BATCH_SIZE;
-                        }
-                        statement.close();
-                        parser.close();
-                        flag=true;
                     }
+                } catch (IOException e) {
+                    BuildStatus.getInstance().recordError();
+                    logger.error(e.getMessage(), e);
+                } catch (SQLException e) {
+                    BuildStatus.getInstance().recordError();
+                    logger.error(e.getMessage(), e);
                 }
-            } catch (IOException e) {
-                BuildStatus.getInstance().recordError();
-                logger.error(e.getMessage(), e);
-            } catch (SQLException e) {
-                BuildStatus.getInstance().recordError();
-                logger.error(e.getMessage(), e);
+                return flag;
             }
-            return flag;
+
         }
 
         public Boolean importCsvToAccessDBDirect(String tableName,String importCsvFullName){
@@ -702,7 +688,7 @@ public class DBHelper {
                 columnsDefs.put(columns.get(j).getName(), type);
             }
         }
-        public String setInsertSQL(String tableName,List<String> finalHeaders){
+        public String setInsertSQLHeader(String tableName,List<String> finalHeaders){
             String insertSQL = "insert into [" + tableName + "] (";
             //String quotesSQL="(";
             for (int i = 0; i < finalHeaders.size(); i++) {
@@ -713,36 +699,9 @@ public class DBHelper {
             //quotesSQL=quotesSQL.replaceAll(",$",")");
             return insertSQL;
         }
-        public String setInsertSQLWithAsk(String tableName,List<String> finalHeaders){
-            String insertSQL = "insert into [" + tableName + "] (";
-            String quotesSQL="(";
-            for (int i = 0; i < finalHeaders.size(); i++) {
-                insertSQL = insertSQL + " [" + finalHeaders.get(i) + "],";
-                quotesSQL=quotesSQL+"?,";
-            }
-            insertSQL = insertSQL.replaceAll(",$", " ) values ");
-            quotesSQL=quotesSQL.replaceAll(",$",")");
-            return insertSQL+quotesSQL;
-        }
-        public void setInsertLine(CSVRecord record, List<String> finalHeaders, Map<String, String> columnsDefs,StringBuffer line){
-            String value;
-            String type;
-            for (int i = 0; i < finalHeaders.size(); i++)
-            {
-                value = record.get(finalHeaders.get(i));
-                type = columnsDefs.get(finalHeaders.get(i)).toUpperCase();
-                if (StringUtils.isBlank(value)) {
-                    value = "null";
-                } else if (types.contains(type)) {
-                    value = value.replaceAll("(\")", "\"$1");// some values are contains ", changed to ""
-                    value = "\"" + value + "\"";//adding "
-                } else if (type.startsWith("DATE")) {
-                    value = value.replaceAll(dateRegex, "#$2#");
-                }
-                line.append(value+",");
-            }
-        }
-        public void setInsertLine(CSVRecord record, List<String> finalHeaders, Map<String, String> columnsDefs,StringBuffer line, String header) {
+
+
+        public void setInsertSQLLine(CSVRecord record, List<String> finalHeaders, Map<String, String> columnsDefs,StringBuffer line, String header) {
             String value;
             String type;
             line.append(header+"(");
@@ -996,7 +955,7 @@ public class DBHelper {
                     return flag;
                 }
                 //generate sql statement
-                StringBuilder sqlBuilder = new StringBuilder("CREATE TABLE [" + tableName + "] (");
+                StringBuffer sqlBuilder = new StringBuffer("CREATE TABLE [" + tableName + "] (");
                 for (TableProps props : tableDefinition) {
                     if (props.getTypeSize().equalsIgnoreCase("LONGTEXT")) {
                         props.setTypeSize("MEMO");
