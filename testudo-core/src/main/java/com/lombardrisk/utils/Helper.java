@@ -91,9 +91,9 @@ public class Helper {
                 path = path.replace("/", "\\");
                 path = path.replaceAll("\\\\+", "\\\\");
             }
-            if (path.contains(" ")) {
+            /*if (path.contains(" ")) {
                 path = "\"" + path + "\"";
-            }
+            }*/
         }
         return path;
     }
