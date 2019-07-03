@@ -14,7 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class DBInfo implements IComFolder {
+public class DBInfo implements IComFolder {
 
     private static final Logger logger = LoggerFactory.getLogger(DBInfo.class);
     private DBHelper dbHelper;
@@ -30,7 +30,7 @@ public final class DBInfo implements IComFolder {
         ACCESSDB
     }
 
-    private static final Map<String, List<TableProps>> dbTableColumns = new HashMap<>();
+    private Map<String, List<TableProps>> dbTableColumns= new HashMap<>();//be carefully, mvn package all products together using static will get wrong.
 
     public DBInfo(DatabaseServer databaseServer) {
         setDbHelper(databaseServer);
@@ -380,45 +380,72 @@ public final class DBInfo implements IComFolder {
      * create table by schemaFullName which defined tableName, and import data which in csvPath to table.
      *
      * @param tableName       table name in access database
-     * @param tableNameWithDB the value which defined in schemaFullName, which can equal to tableName, or tableName plus databaseServerAndTables's ID
+     //* @param tableNameWithDB the value which defined in schemaFullName, which can equal to tableName, or tableName plus databaseServerAndTables's ID
      * @param csvPath
-     * @param schemaFullName
+     //* @param schemaFullName
      * @return
      */
-    public Boolean importCsvToAccess(String tableName, String tableNameWithDB, String csvPath, String schemaFullName) {
+    public Boolean importCsvToAccess(String tableName, String csvPath) {
+        Boolean flag = false;
+        if (this.getDbHelper().getDatabaseServer().getDriver().startsWith("access")) {
+            //this.getDbHelper().connect();
+            /*String userSchemaFullName = schemaFullName.replace(
+                    FileUtil.getFileNameWithSuffix(schemaFullName),
+                    ACCESS_SCHEMA_INI);*/
+            List<TableProps> columns = findDbTableColumns(tableName);
+            if (columns != null && columns.size() > 0) {
+                DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
+                if(StringUtils.isNotBlank(csvPath)){
+                    flag = accdb.importCsvToAccessDB(tableName, columns, csvPath);
+                }
+
+            } else {
+                BuildStatus.getInstance().recordError();
+                logger.error("error: invalid table definition [" + tableName + "]");
+                flag = false;
+            }
+            //this.getDbHelper().close();
+        } else {
+            BuildStatus.getInstance().recordError();
+            logger.error("this method should be worked on access database.");
+        }
+        return flag;
+    }
+    public Boolean CreateAccessDBTable(String tableName, String schemaFullName) {
+
         Boolean flag = false;
         if (dbHelper.getDatabaseServer().getDriver().startsWith("access")) {
-            dbHelper.connect();
+            //dbHelper.connect();
             String userSchemaFullName = schemaFullName.replace(
                     FileUtil.getFileNameWithSuffix(schemaFullName),
                     ACCESS_SCHEMA_INI);
             List<TableProps> columns = findDbTableColumns(tableName);
-            logger.debug("initial columns {}", columns);
-            if (columns == null) {
-                if (FileUtil.search(userSchemaFullName, "[" + tableName + "]")) {
-                    logger.debug("using user schema: {}", userSchemaFullName);
-                    columns = FileUtil.getMixedTablesDefinition(FileUtil.searchTablesDefinition(
-                            userSchemaFullName,
-                            tableName));
-                    logger.debug("user schema columns {}", columns);
-                    setDbTableColumns(tableName, columns);
-                } else {
-                    logger.debug("using full schema: {}", schemaFullName);
-                    FileUtil.search(schemaFullName, "[" + tableNameWithDB + "]");
-                    columns = FileUtil.getMixedTablesDefinition(FileUtil.searchTablesDefinition(
-                            schemaFullName,
-                            tableName));
-                    logger.debug("full schema columns {}", columns);
-                    setDbTableColumns(tableName, columns);
-                }
+            if(columns!=null){
+                return true;
+            }
+            if (FileUtil.search(userSchemaFullName, "[" + tableName + "]")) {
+                logger.debug("using user schema: {}", userSchemaFullName);
+                columns = FileUtil.getMixedTablesDefinition(FileUtil.searchTablesDefinition(
+                        userSchemaFullName,
+                        tableName));
+                logger.debug("user schema columns {}", columns);
+                setDbTableColumns(tableName, columns);
+            } else {
+                logger.debug("using full schema: {}", schemaFullName);
+                //FileUtil.search(schemaFullName, "[" + tableNameWithDB + "]");
+                columns = FileUtil.getMixedTablesDefinition(FileUtil.searchTablesDefinition(
+                        schemaFullName,
+                        tableName));
+                logger.debug("full schema columns {}", columns);
+                setDbTableColumns(tableName, columns);
             }
             if (columns != null && columns.size() > 0) {
                 DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
 
                 flag = accdb.createAccessDBTab(tableName, columns);
-                if (flag) {
-                    flag = accdb.importCsvToAccessDB(tableName, columns, csvPath);
-                } else {
+                if(flag){
+                    logger.info("create table ["+tableName+"] successfully.");
+                }else{
                     BuildStatus.getInstance().recordError();
                     logger.error("error: fail to create table [" + tableName + "]");
                 }
@@ -427,12 +454,13 @@ public final class DBInfo implements IComFolder {
                 logger.error("error: invalid table definition [" + tableName + "]");
                 flag = false;
             }
-            dbHelper.close();
+            //dbHelper.close();
         } else {
             BuildStatus.getInstance().recordError();
             logger.error("this method should be worked on access database.");
         }
         return flag;
+
     }
 
     public DBDriverType getDbDriverFlag() {
@@ -443,15 +471,15 @@ public final class DBInfo implements IComFolder {
         this.dbDriverFlag = dbDriverFlag;
     }
 
-    public static void setDbTableColumns(String tableName, List<TableProps> columns) {
-        DBInfo.dbTableColumns.put(tableName, columns);
+    public void setDbTableColumns(String tableName, List<TableProps> columns) {
+        this.dbTableColumns.put(tableName, columns);
     }
 
-    public static List<TableProps> findDbTableColumns(String tableName) {
-        if (!DBInfo.dbTableColumns.isEmpty()) {
-            for (String key : DBInfo.dbTableColumns.keySet()) {
+    public List<TableProps> findDbTableColumns(String tableName) {
+        if (!dbTableColumns.isEmpty()) {
+            for (String key : dbTableColumns.keySet()) {
                 if (key.equals(tableName)) {
-                    return DBInfo.dbTableColumns.get(key);
+                    return dbTableColumns.get(key);
                 }
             }
         }
