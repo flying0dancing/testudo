@@ -429,7 +429,6 @@ public class DBInfo implements IComFolder {
                         userSchemaFullName,
                         tableName));
                 logger.debug("user schema columns {}", columns);
-                setDbTableColumns(tableName, columns);
             } else {
                 logger.debug("using full schema: {}", schemaFullName);
                 //FileUtil.search(schemaFullName, "[" + tableNameWithDB + "]");
@@ -437,9 +436,10 @@ public class DBInfo implements IComFolder {
                         schemaFullName,
                         tableName));
                 logger.debug("full schema columns {}", columns);
-                setDbTableColumns(tableName, columns);
+
             }
             if (columns != null && columns.size() > 0) {
+                setDbTableColumns(tableName, columns);
                 DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
 
                 flag = accdb.createAccessDBTab(tableName, columns);
@@ -447,11 +447,10 @@ public class DBInfo implements IComFolder {
                     logger.info("create table ["+tableName+"] successfully.");
                 }else{
                     BuildStatus.getInstance().recordError();
-                    logger.error("error: fail to create table [" + tableName + "]");
+                    logger.error("fail to create table [" + tableName + "]");
                 }
             } else {
-                BuildStatus.getInstance().recordError();
-                logger.error("error: invalid table definition [" + tableName + "]");
+                logger.warn("invalid table definition [" + tableName + "]");
                 flag = false;
             }
             //dbHelper.close();
