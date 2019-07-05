@@ -92,7 +92,6 @@ public class ARPPack implements IComFolder {
         }*/
         dbInfo.CreateAccessDBTable("Ref",schemaFullName);
         dbInfo.CreateAccessDBTable("GridRef",schemaFullName);
-        dbInfo.CreateAccessDBTable("Rets",schemaFullName);
         List<String> realCsvFullPaths = new ArrayList<>();
         List<String> realNames=new ArrayList<>();
         Map<String,String> realCsvPathTableMap=new HashMap<String,String>();
