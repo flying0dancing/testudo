@@ -15,6 +15,7 @@ import java.lang.reflect.Method;
 import java.sql.Blob;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class Helper {
@@ -212,4 +213,35 @@ public class Helper {
         }
         return flag;
     }
+
+
+    public static <T> void removeDuplicatedElements(List<T> list){
+        if(list!=null){
+            removeBlanks(list);
+            int size=list.size();
+            if(size>1){
+                for(int i=0;i<size-1;i++){
+                    for(int j=i+1;j<size;j++){
+                        if(list.get(i).equals(list.get(j))){
+                            list.remove(j);
+                            size--;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static <T> void removeBlanks(List<T> list){
+        if(list!=null) {
+            Iterator it=list.iterator();
+            while(it.hasNext()){
+                T obj=(T)it.next();
+                if(obj.equals("")){
+                    it.remove();
+                }
+            }
+        }
+    }
+
 }

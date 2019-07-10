@@ -52,10 +52,7 @@ public class DBInfo implements IComFolder {
     }
 
     public Boolean executeSQL(String sql) {
-        dbHelper.connect();
         Boolean flag = dbHelper.addBatch(sql);
-        dbHelper.close();
-
         return flag;
     }
 
@@ -354,7 +351,7 @@ public class DBInfo implements IComFolder {
         String returnAndVer = "";
         String tableName = "Rets";
         if (getDbDriverFlag() == DBDriverType.ACCESSDB) {
-            dbHelper.connect();
+            //dbHelper.connect();
             DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
             if (!accdb.accessTableExistence(tableName)) {
                 BuildStatus.getInstance().recordError();
@@ -364,7 +361,7 @@ public class DBInfo implements IComFolder {
                 returnAndVer = dbHelper.query(sQL);
             }
 
-            dbHelper.close();
+            //dbHelper.close();
         } else {
             BuildStatus.getInstance().recordError();
             logger.error("this function should be worked on access database.");
