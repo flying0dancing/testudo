@@ -129,6 +129,7 @@ public class ARPPack implements IComFolder {
         if(!flag){
             return null;
         }
+        Runtime.getRuntime().gc();
         return realCsvFullPaths;
     }
 
@@ -294,7 +295,7 @@ public class ARPPack implements IComFolder {
             BuildStatus.getInstance().recordError();
             logger.error("error: package with failures.");
         }
-
+        Runtime.getRuntime().gc();
         return flag;
     }
 

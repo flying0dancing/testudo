@@ -99,6 +99,17 @@
       <artifactId>jtds</artifactId>
       <version>1.3.1</version>
     </dependency>
+    <!--for 7zip-java binding-->
+    <dependency>
+      <groupId>net.sf.sevenzipjbinding</groupId>
+      <artifactId>sevenzipjbinding</artifactId>
+      <version>9.20-2.00beta</version>
+    </dependency>
+    <dependency>
+      <groupId>net.sf.sevenzipjbinding</groupId>
+      <artifactId>sevenzipjbinding-all-platforms</artifactId>
+      <version>9.20-2.00beta</version>
+    </dependency>
   </dependencies>
 
   <build>

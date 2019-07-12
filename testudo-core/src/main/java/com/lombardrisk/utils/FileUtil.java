@@ -116,20 +116,30 @@ public final class FileUtil {
 
     private static List<String> un7z1(File file, String destDir) throws IOException {
         List<String> fileNames = new ArrayList<>();
-
+        File tmpFile;
+        FileOutputStream out;
+        byte[] content;
         try (SevenZFile sevenZFile = new SevenZFile(file)) {
             SevenZArchiveEntry entry;
             while ((entry = sevenZFile.getNextEntry()) != null) {
                 fileNames.add(entry.getName());
+                logger.info(entry.getName());
                 if (entry.isDirectory()) {
                     createDirectory(destDir, entry.getName());
                 } else {
-                    File tmpFile = new File(destDir + File.separator + entry.getName());
+                    tmpFile = new File(destDir + File.separator + entry.getName());
+
                     createDirectory(tmpFile.getParent() + File.separator, null);
-                    try (FileOutputStream out = new FileOutputStream(tmpFile)) {
-                        byte[] content = new byte[(int) entry.getSize()];
+                    try{
+                        out = new FileOutputStream(tmpFile);
+                        content = new byte[(int) entry.getSize()];
                         sevenZFile.read(content, 0, content.length);
                         out.write(content);
+                        out.flush();
+                        out.close();
+                    }catch (Exception e){
+                        BuildStatus.getInstance().recordError();
+                        logger.error(e.getMessage(), e);
                     }
                 }
             }
@@ -138,6 +148,7 @@ public final class FileUtil {
             logger.error(e.getMessage(), e);
             throw e;
         }
+        Runtime.getRuntime().gc();
         return fileNames;
     }
 
@@ -171,7 +182,7 @@ public final class FileUtil {
         return fileNames;
     }
 
-    private static List<String> un7z(String tarFile, String destDir) throws IOException {
+    public static List<String> un7z(String tarFile, String destDir) throws IOException {
         File file = new File(tarFile);
         return un7z(file, destDir);
     }
@@ -337,7 +348,9 @@ public final class FileUtil {
         } else if (upperName.endsWith(".WAR")) {
             unWar(compressFile, destDir);
         } else if (upperName.endsWith(".7Z")) {
-            un7z(compressFile, destDir);
+            //un7z(compressFile, destDir);
+            SevenZipServer server = new SevenZipServer();
+            server.extractZIP7Paral(compressFile,destDir);
         }
     }
 
@@ -774,7 +787,6 @@ public final class FileUtil {
     }
 
     public static void copyExternalProject(String srcFile, String destDir, String uncompress) {
-
         File srcFileHd = new File(srcFile);
         if (srcFileHd.exists()) {
             createDirectories(destDir);
