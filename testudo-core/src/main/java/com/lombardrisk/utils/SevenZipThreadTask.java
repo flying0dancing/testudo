@@ -18,14 +18,12 @@ public class SevenZipThreadTask implements Callable<Boolean> {
     String zipFile;
     String packageName;
     String unpackPath;
-    int totalUnpackSize;
 
-    public SevenZipThreadTask(int[] in, String zipFile, String packageName, String unpackPath,int totalUnpackSize){
+    public SevenZipThreadTask(int[] in, String zipFile, String packageName, String unpackPath){
         this.in=in;
         this.zipFile=zipFile;
         this.packageName=packageName;
         this.unpackPath=unpackPath;
-        this.totalUnpackSize=totalUnpackSize;
     }
 
     @Override
@@ -38,7 +36,7 @@ public class SevenZipThreadTask implements Callable<Boolean> {
             archive = SevenZip.openInArchive(null,
                     new RandomAccessFileInStream(
                             randomAccessFile));
-            archive.extract(in, false, new SevenZipExtractCallback(archive, packageName, unpackPath,totalUnpackSize));
+            archive.extract(in, false, new SevenZipExtractCallback(archive, packageName, unpackPath));
             flag=true;
         }catch (FileNotFoundException e){
             logger.error(zipFile+"-FileNotFoundException occurs.");

@@ -8,24 +8,26 @@ import net.sf.sevenzipjbinding.ISequentialOutStream;
 import net.sf.sevenzipjbinding.PropID;
 import net.sf.sevenzipjbinding.SevenZipException;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 
 public class SevenZipExtractCallback implements IArchiveExtractCallback {
-    private int index;
+    private String path;
     private String packageName;
     private String unzipPath;
     private IInArchive inArchive;
-    //private static int printIndex=0;
-    private int totalUnpackSize;
+    private OutputStream outputStream;
+    private String fullItemName;
+    private File fullItemFile;
 
-    public SevenZipExtractCallback(IInArchive inArchive, String packageName, String unzipPath, int totalUnpackSize) {
+    public SevenZipExtractCallback(IInArchive inArchive, String packageName, String unzipPath) {
         this.inArchive = inArchive;
         this.packageName=packageName;
         this.unzipPath = unzipPath;
-        this.totalUnpackSize=totalUnpackSize;
     }
 
     public ISequentialOutStream getStream(int index, ExtractAskMode extractAskMode) throws SevenZipException {
@@ -36,17 +38,15 @@ public class SevenZipExtractCallback implements IArchiveExtractCallback {
         if(index%1000==0){
             System.out.print(".");
         }
-        this.index = index;
-        String path = (String) inArchive.getProperty(index, PropID.PATH);
+
+        this.path = inArchive.getStringProperty(index, PropID.PATH);
         Boolean isFolder=(Boolean) inArchive.getProperty(index,PropID.IS_FOLDER);
         Long size=(Long)inArchive.getProperty(index,PropID.SIZE);
-        String fullItemName = unzipPath+path;
+
+        this.fullItemName = unzipPath+path;
+        this.fullItemFile=new File(fullItemName);
         if(isFolder){
-            File fullItemFile=new File(fullItemName);
-            if(!fullItemFile.exists()){
-                fullItemFile.mkdirs();
-                //System.out.println(fullItemName);
-            }
+            createDirectory(fullItemFile);
             return null;
         }
         if(size==0){
@@ -54,22 +54,22 @@ public class SevenZipExtractCallback implements IArchiveExtractCallback {
             return null;
         }
 
+        createDirectory(fullItemFile.getParentFile());
+
+        try{
+            outputStream=new FileOutputStream(fullItemFile);
+        } catch (FileNotFoundException e) {
+            throw new SevenZipException("Error opening file: "
+                    + fullItemName);
+        }
         return new ISequentialOutStream() {
-            public int write(byte[] data) throws SevenZipException {
+
+            public int write(final byte[] data) throws SevenZipException {
                 try {
-                    File fullItemFile=new File(fullItemName);
-                    File parent=fullItemFile.getParentFile();
-                    if(!parent.exists()){
-                        parent.mkdirs();
-                    }
-                    BufferedOutputStream fileOutputStream;
-                    fileOutputStream= new BufferedOutputStream(new FileOutputStream(fullItemFile));
-                    fileOutputStream.write(data);
-                    fileOutputStream.flush();
-                    fileOutputStream.close();
-                    //System.out.println(fullItemName);
+                    outputStream.write(data);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    throw new SevenZipException("Error writing to file: "
+                            + fullItemName);
                 }
                 return data.length;
             }
@@ -80,20 +80,11 @@ public class SevenZipExtractCallback implements IArchiveExtractCallback {
     }
 
     public void setOperationResult(ExtractOperationResult extractOperationResult) throws SevenZipException {
-        /*String path = (String) inArchive.getProperty(index, PropID.PATH);
-        boolean isFolder = (Boolean) inArchive.getProperty(index, PropID.IS_FOLDER);
-        if (!isFolder) {
-            if (extractOperationResult != ExtractOperationResult.OK) {
-                StringBuilder sb = new StringBuilder();
-                sb.append("decompress file ").append(path).append("fail!");
-            }
-        }*/
-        String path = (String) inArchive.getProperty(index, PropID.PATH);
+        closeOutputStream();
         if (extractOperationResult != ExtractOperationResult.OK) {
             StringBuilder sb = new StringBuilder();
             sb.append("decompress ").append(packageName).append(" file ").append(path).append("fail!");
         }
-
     }
 
     public void setTotal(long l) throws SevenZipException {
@@ -103,5 +94,26 @@ public class SevenZipExtractCallback implements IArchiveExtractCallback {
     public void setCompleted(long l) throws SevenZipException {
 
     }
+
+    private void createDirectory(File file) throws SevenZipException {
+        if(!file.exists()){
+            if(!file.mkdirs()){
+                throw new SevenZipException("Error creating directory: "
+                        + file.getAbsolutePath());
+            }
+        }
+    }
+
+    private void closeOutputStream() throws SevenZipException {
+        if(outputStream!=null){
+            try{
+                outputStream.close();
+            } catch (IOException e) {
+                throw new SevenZipException("Error closing file: "
+                        + fullItemName);
+            }
+        }
+    }
+
 
 }

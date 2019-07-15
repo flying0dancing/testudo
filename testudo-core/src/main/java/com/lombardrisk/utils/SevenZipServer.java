@@ -43,7 +43,7 @@ public class SevenZipServer {
                 in[i] = i;
             }
 
-            archive.extract(in, false, new SevenZipExtractCallback(archive, packageName, unpackPath, in.length));
+            archive.extract(in, false, new SevenZipExtractCallback(archive, packageName, unpackPath));
             success = true;
         }catch (FileNotFoundException e){
             logger.error(zipFile+"-FileNotFoundException occurs: ");
@@ -62,7 +62,7 @@ public class SevenZipServer {
         return success;
     }
 
-    public boolean extractZIP7Paral(String zipFile,String unpackPath ){
+    public boolean extractZIP7Parallel(String zipFile, String unpackPath ){
         long begin=System.currentTimeMillis();
         IInArchive archive = null;
         RandomAccessFile randomAccessFile = null;
@@ -75,6 +75,7 @@ public class SevenZipServer {
                     new RandomAccessFileInStream(
                             randomAccessFile));
             int size=archive.getNumberOfItems();
+
             List<Integer> itemsToExtract = new ArrayList<Integer>();
             Boolean isFolder=false;
             String path;
@@ -91,33 +92,44 @@ public class SevenZipServer {
                     itemsToExtract.add(Integer.valueOf(i));
                 }
             }
-            archive.close();
-            randomAccessFile.close();
             int sizeRe=itemsToExtract.size();
-            int size1=sizeRe/2;
-            int size2=sizeRe-size1;
-            int[] in1 = new int[size1];
-            int[] in2=new int[size2];
+            if(sizeRe>1){
+                archive.close();
+                randomAccessFile.close();
+                int size1=sizeRe/2;
+                int size2=sizeRe-size1;
+                int[] in1 = new int[size1];
+                int[] in2=new int[size2];
 
-            for(int i=0;i<size1;i++){
-                in1[i] = itemsToExtract.get(i);
-            }
-            for(int i=0;i<size2;i++){
-                in2[i]=itemsToExtract.get(size1+i);
-            }
-            success = true;
-            List<Future<Boolean>> futures=new ArrayList<>();
-            ExecutorService threadPool= Executors.newFixedThreadPool(2);
-            futures.add(threadPool.submit(new SevenZipThreadTask(in1,zipFile,packageName,unpackPath,size)));
-            futures.add(threadPool.submit(new SevenZipThreadTask(in2,zipFile,packageName,unpackPath,size)));
-            for(int i=0;i<futures.size();i++){
-                if(!futures.get(i).get()){
-                    success =false;
-                    break;
+                for(int i=0;i<size1;i++){
+                    in1[i] = itemsToExtract.get(i);
                 }
+                for(int i=0;i<size2;i++){
+                    in2[i]=itemsToExtract.get(size1+i);
+                }
+                success = true;
+                List<Future<Boolean>> futures=new ArrayList<>();
+                ExecutorService threadPool= Executors.newFixedThreadPool(2);
+                futures.add(threadPool.submit(new SevenZipThreadTask(in1,zipFile,packageName,unpackPath)));
+                futures.add(threadPool.submit(new SevenZipThreadTask(in2,zipFile,packageName,unpackPath)));
+                for(int i=0;i<futures.size();i++){
+                    if(!futures.get(i).get()){
+                        success =false;
+                        break;
+                    }
+                }
+                threadPool.shutdown();
+            }else{
+                int[] in=new int[sizeRe];
+                for(int i=0;i<sizeRe;i++){
+                    in[i]=itemsToExtract.get(i);
+                }
+                archive.extract(in, false, new SevenZipExtractCallback(archive, packageName, unpackPath));
+                archive.close();
+                randomAccessFile.close();
             }
-            threadPool.shutdown();
-            //System.out.print("\b\b\b\b");
+
+
             System.out.println("100%");
         }catch (FileNotFoundException e){
             logger.error(zipFile+"-FileNotFoundException occurs: ");

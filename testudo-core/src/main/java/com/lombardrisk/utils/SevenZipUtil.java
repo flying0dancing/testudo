@@ -179,7 +179,7 @@ public final class SevenZipUtil {
     }
     public static void main(String[] args){
         long begin=System.currentTimeMillis();
-        String sourceZipFile ="E:\\ComplianceProduct\\ECR_CI\\ecrxbrl\\ci-script.7z";
+        String sourceZipFile ="E:\\ComplianceProduct\\ECR_CI\\ecrxbrl\\ECR_FORM_META.7z";
         /*String destDir = "E:\\ComplianceProduct\\ECR_CI\\xbrl11";
         String password = "";
         unzipDirWithPasswordOld(sourceZipFile, destDir, password);
@@ -196,10 +196,11 @@ public final class SevenZipUtil {
         */
 
         //解压文件
-        String unzipPath = "E:\\ComplianceProduct\\ECR_CI\\engli\\"; //解压目录
+        String unzipPath = "E:\\ComplianceProduct\\ECR_CI\\engllli\\"; //解压目录
         SevenZipServer server = new SevenZipServer();
         System.out.println("---------------开始解压---------------------");
-        server.extractZIP7Paral(sourceZipFile,unzipPath);
+        server.extractZIP7Parallel(sourceZipFile,unzipPath);
+        //unzipDirWithPasswordOld(sourceZipFile,unzipPath,"");
         System.out.println("---------------解压完成---------------------");
         logger.info("total time(sec):" + (System.currentTimeMillis() - begin) / 1000.00F);
     }

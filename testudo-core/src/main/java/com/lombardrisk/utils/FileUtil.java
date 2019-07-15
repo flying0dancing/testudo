@@ -350,7 +350,7 @@ public final class FileUtil {
         } else if (upperName.endsWith(".7Z")) {
             //un7z(compressFile, destDir);
             SevenZipServer server = new SevenZipServer();
-            server.extractZIP7Paral(compressFile,destDir);
+            server.extractZIP7Parallel(compressFile,destDir);
         }
     }
 
