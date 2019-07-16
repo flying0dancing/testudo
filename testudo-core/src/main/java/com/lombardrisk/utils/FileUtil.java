@@ -348,9 +348,7 @@ public final class FileUtil {
         } else if (upperName.endsWith(".WAR")) {
             unWar(compressFile, destDir);
         } else if (upperName.endsWith(".7Z")) {
-            //un7z(compressFile, destDir);
-            SevenZipServer server = new SevenZipServer();
-            server.extractZIP7Parallel(compressFile,destDir);
+            un7z(compressFile, destDir);
         }
     }
 
@@ -787,6 +785,7 @@ public final class FileUtil {
     }
 
     public static void copyExternalProject(String srcFile, String destDir, String uncompress) {
+        long begin=System.currentTimeMillis();
         File srcFileHd = new File(srcFile);
         if (srcFileHd.exists()) {
             createDirectories(destDir);
@@ -795,14 +794,22 @@ public final class FileUtil {
             }
             if (srcFileHd.isFile()) {
                 String srcFileSuffix = srcFile.substring(srcFile.lastIndexOf(".") + 1).toUpperCase();
-                List<String> compressTypes = new ArrayList<>(Arrays.asList("ZIP", "7Z", "GZ", "TAR", "BZ2", "WAR"));
-                if (compressTypes.contains(srcFileSuffix) && StringUtils.containsIgnoreCase("yes", uncompress)) {
-                    try {
-                        unCompress(srcFile, destDir);
-                    } catch (Exception e) {
+                List<String> compressTypes = Arrays.asList("ZIP", "7Z", "GZ", "TAR", "BZ2", "WAR");
+                if (StringUtils.containsIgnoreCase("yes", uncompress)) {
+                    if(compressTypes.contains(srcFileSuffix)){
+                        try {
+                            //unCompress(srcFile, destDir);
+                            SevenZipServer server = new SevenZipServer();
+                            server.extractZIP7Parallel(srcFile,destDir+File.separator);
+                        } catch (Exception e) {
+                            BuildStatus.getInstance().recordError();
+                            logger.error(e.getMessage(), e);
+                        }
+                    }else {
                         BuildStatus.getInstance().recordError();
-                        logger.error(e.getMessage(), e);
+                        logger.error("Error compress type, testudo can extract *.zip, *.7z, *.gz, *.tar, *.bz2, *.war");
                     }
+                    Runtime.getRuntime().gc();
                 } else {
                     copyFileToDirectory(srcFile, destDir);
                 }
@@ -811,6 +818,7 @@ public final class FileUtil {
             BuildStatus.getInstance().recordError();
             logger.error("File Not Found: " + srcFile);
         }
+        logger.info("total time(sec):" + (System.currentTimeMillis() - begin) / 1000.00F);
     }
 
     public static List<String> getSubFolderNames(String path) {

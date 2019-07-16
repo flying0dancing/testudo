@@ -8,7 +8,6 @@ import net.sf.sevenzipjbinding.ISequentialOutStream;
 import net.sf.sevenzipjbinding.PropID;
 import net.sf.sevenzipjbinding.SevenZipException;
 
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -41,7 +40,6 @@ public class SevenZipExtractCallback implements IArchiveExtractCallback {
 
         this.path = inArchive.getStringProperty(index, PropID.PATH);
         Boolean isFolder=(Boolean) inArchive.getProperty(index,PropID.IS_FOLDER);
-        Long size=(Long)inArchive.getProperty(index,PropID.SIZE);
 
         this.fullItemName = unzipPath+path;
         this.fullItemFile=new File(fullItemName);
@@ -49,6 +47,8 @@ public class SevenZipExtractCallback implements IArchiveExtractCallback {
             createDirectory(fullItemFile);
             return null;
         }
+
+        Long size=(Long)inArchive.getProperty(index,PropID.SIZE);
         if(size==0){
             FileUtil.createNew(fullItemName);
             return null;
@@ -64,7 +64,7 @@ public class SevenZipExtractCallback implements IArchiveExtractCallback {
         }
         return new ISequentialOutStream() {
 
-            public int write(final byte[] data) throws SevenZipException {
+            public int write(byte[] data) throws SevenZipException {
                 try {
                     outputStream.write(data);
                 } catch (Exception e) {
@@ -84,6 +84,7 @@ public class SevenZipExtractCallback implements IArchiveExtractCallback {
         if (extractOperationResult != ExtractOperationResult.OK) {
             StringBuilder sb = new StringBuilder();
             sb.append("decompress ").append(packageName).append(" file ").append(path).append("fail!");
+            throw new SevenZipException("Error "+sb.toString());
         }
     }
 
@@ -95,6 +96,19 @@ public class SevenZipExtractCallback implements IArchiveExtractCallback {
 
     }
 
+    private  void createNewFile(File file) throws SevenZipException{
+        if(!file.exists()){
+            try {
+                if(!file.createNewFile()){
+                    throw new SevenZipException("Error creating new file: "
+                            + file.getAbsolutePath());
+                }
+            } catch (IOException e) {
+                throw new SevenZipException("Error creating new file: "
+                        + file.getAbsolutePath());
+            }
+        }
+    }
     private void createDirectory(File file) throws SevenZipException {
         if(!file.exists()){
             if(!file.mkdirs()){
@@ -108,6 +122,7 @@ public class SevenZipExtractCallback implements IArchiveExtractCallback {
         if(outputStream!=null){
             try{
                 outputStream.close();
+                outputStream=null;
             } catch (IOException e) {
                 throw new SevenZipException("Error closing file: "
                         + fullItemName);

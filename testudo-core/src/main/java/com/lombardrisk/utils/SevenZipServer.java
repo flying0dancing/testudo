@@ -1,5 +1,6 @@
 package com.lombardrisk.utils;
 
+import com.lombardrisk.status.BuildStatus;
 import net.sf.sevenzipjbinding.IInArchive;
 import net.sf.sevenzipjbinding.PropID;
 import net.sf.sevenzipjbinding.SevenZip;
@@ -129,20 +130,24 @@ public class SevenZipServer {
                 randomAccessFile.close();
             }
 
-
             System.out.println("100%");
         }catch (FileNotFoundException e){
+            BuildStatus.getInstance().recordError();
             logger.error(zipFile+"-FileNotFoundException occurs: ");
-            e.printStackTrace();
+            logger.error(e.getMessage());
         }catch (SevenZipException e){
+            BuildStatus.getInstance().recordError();
             logger.error("SevenZipException occurs: ");
-            e.printStackTrace();
+            logger.error(e.getMessage());
         }catch (IOException e){
-            e.printStackTrace();
+            BuildStatus.getInstance().recordError();
+            logger.error(e.getMessage());
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            BuildStatus.getInstance().recordError();
+            logger.error(e.getMessage());
         } catch (ExecutionException e) {
-            e.printStackTrace();
+            BuildStatus.getInstance().recordError();
+            logger.error(e.getMessage());
         }finally {
             Runtime.getRuntime().gc();
             System.out.println("used time(sec):" + (System.currentTimeMillis() - begin) / 1000.00F);
