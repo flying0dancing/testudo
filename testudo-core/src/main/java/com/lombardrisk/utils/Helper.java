@@ -241,6 +241,7 @@ public class Helper {
                     it.remove();
                 }
             }
+            it=null;
         }
     }
 

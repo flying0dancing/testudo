@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.io.Reader;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -39,9 +38,9 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -55,7 +54,7 @@ public class DBHelper {
     private static final List<String> types = new ArrayList<String>(Arrays.asList("MEMO", "LONGTEXT", "VARCHAR"));
     private static final String dateRegex =
             "((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?(?:\\.\\d+)?)";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
-
+    private DBHelper.AccessdbHelper accdb;
     public DBHelper(DatabaseServer databaseServer) {
         this.databaseServer = databaseServer;
 
@@ -109,7 +108,7 @@ public class DBHelper {
             dbmsDriver = "net.ucanaccess.jdbc.UcanaccessDriver";
             if (StringUtils.isBlank(this.databaseServer.getUrl())) {
                 this.databaseServer.setUrl(String.format(
-                        "jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY",
+                        "jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY;lobScale=32",
                         this.databaseServer.getSchema()));
             }
         }
@@ -164,10 +163,9 @@ public class DBHelper {
             return null;
         logger.debug("Sql Statement: [" + sql + "]");
         String value = null;
-        try {
-            ResultSet rs = null;
-            Statement stmt = getConn().createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);//
-            rs = stmt.executeQuery(sql);
+        try (Statement stmt = getConn().createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+             ResultSet rs = stmt.executeQuery(sql);){
+
             if (rs.getRow() >= 0) {
                 ResultSetMetaData rsmd = rs.getMetaData();
                 while (rs.next()) {
@@ -456,7 +454,7 @@ public class DBHelper {
             logger.error("Error setting autocommit false", e);
             return false;
         }
-        try (Statement statement = getConn().createStatement();) {
+        try (Statement statement = getConn().createStatement();){
             String sqlLow = sql.trim().toLowerCase().replaceAll("(\\s)+", "$1");
             if (sqlLow.startsWith("update") || (sqlLow.contains("create") && sqlLow.contains("select") && sqlLow.contains("with"))) {
                 statement.executeUpdate(sql);
@@ -471,8 +469,8 @@ public class DBHelper {
                     tableName = match.group(1);
                     newTableName = match.group(2);
                 }
-                DBHelper.AccessdbHelper accessDBH = this.new AccessdbHelper();
-                flag = accessDBH.renameAccessDBTable(tableName, newTableName);
+                //DBHelper.AccessdbHelper accessDBH = this.new AccessdbHelper();
+                flag = getAccdb().renameAccessDBTable(tableName, newTableName);
             } else if (sqlLow.startsWith("drop")) {
                 String tableName = "";
                 String regexDROP = "DROP\\s+TABLE\\s+\\[?(\\w+)\\]?";
@@ -481,8 +479,8 @@ public class DBHelper {
                 if (match.find()) {
                     tableName = match.group(1);
                 }
-                DBHelper.AccessdbHelper accessDBH = this.new AccessdbHelper();
-                flag = accessDBH.deleteAccessDBTable(tableName);
+                //DBHelper.AccessdbHelper accessDBH = this.new AccessdbHelper();
+                flag = getAccdb().deleteAccessDBTable(tableName);
             } else {
                 statement.execute(sql);//result false is not quite sure
                 flag = true;
@@ -533,8 +531,22 @@ public class DBHelper {
         close();
         super.finalize();
     }
+    public void setAccdb(DBHelper.AccessdbHelper accdb){this.accdb=accdb;}
+    public DBHelper.AccessdbHelper getAccdb(){return accdb;}
+
 
     public class AccessdbHelper {
+
+        private final static String CREATE_STR="CREATE TABLE [";
+        private final static String CREATE_STR2="] (";
+        private final static String LONGTXT_STR="LONGTEXT";
+        private final static String MEMO_STR="MEMO";
+        private final static String BOOLEAN_STR="BOOLEAN";
+        private final static String YESNO_STR="YESNO";
+        private final static String DATE_STR="DATE";
+        private final static String DATETIME_STR="DATETIME";
+        private final static String NUMERIC_STR="NUMERIC";
+        private final static String DECIMAL_STR="DECIMAL";
         /***
          * existence of access table
          * @param tableName
@@ -582,80 +594,107 @@ public class DBHelper {
          * @return
          */
         public Boolean importCsvToAccessDB(String tableName, List<TableProps> columns, String importCsvFullName) {
-            synchronized (this){
-                Boolean flag = false;
-                try {
-                    flag=importCsvToAccessDBDirect(tableName,importCsvFullName);
-                    if (!flag) {
-                        List<String> dbTableColumns = new ArrayList<String>();
-                        Map<String, String> columnsDefs = new HashMap<String, String>(); // key: columns's name, value: column's type
-                        setColumnsMap(columns, dbTableColumns, columnsDefs);
-                        if (StringUtils.isNoneBlank(importCsvFullName, tableName)) {
-                            //
-                            Reader in = new FileReader(importCsvFullName);
-                            CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().parse(in);
-                            List<String> finalHeaders = getIntersectNames(dbTableColumns, new ArrayList<String>(parser.getHeaderMap().keySet()));
-                            if (finalHeaders == null || finalHeaders.size() == 0) {
-                                parser.close();
-                                return flag;
-                            }
-                            String header=setInsertSQLHeader(tableName,finalHeaders);// like insert into [InstanceSets] ([InstSetId],[InstSetName] ) values
-                            StringBuffer sqlBuffer = new StringBuffer();
-
-                            getConn().setAutoCommit(false);
-                            Statement statement = getConn().createStatement();
-
-                            List<CSVRecord> records = parser.getRecords();
-                            int recordsize=records.size();
-
-                            int numTrans=recordsize/BATCH_SIZE+1;    //commit times
-                            if(recordsize==0){
-                                numTrans=0;
-                                flag = true;
-                            }else if(recordsize%BATCH_SIZE==0){
-                                numTrans=recordsize/BATCH_SIZE;
-                            }
-                            int numData=0;
-                            int numMax;
-                            for(int j=1;j<=numTrans;j++){
-                                numMax=numData+BATCH_SIZE;
-                                if(numMax>recordsize){
-                                    numMax=recordsize;
-                                }
-                                for(int i=numData;i<numMax;i++){
-                                    setInsertSQLLine(records.get(i), finalHeaders, columnsDefs, sqlBuffer, header);
-                                    statement.addBatch(sqlBuffer.toString());
-                                    //int rowAffectCount=statement.executeUpdate(sqlBuffer.toString());
-                                    //logger.debug(String.format("record %s affected count %s",i,rowAffectCount));
-                                    sqlBuffer.setLength(0);//clear
-                                }
-                                statement.executeBatch();
-                                getConn().commit();
-                                statement.clearBatch();
-                                numData += BATCH_SIZE;
-                            }
-                            statement.close();
+            Boolean flag = false;
+            try (Reader in = new FileReader(importCsvFullName);
+                 CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().parse(in);
+                 Statement statement = getConn().createStatement()){
+                flag=importCsvToAccessDBDirect(tableName,importCsvFullName);
+                if (!flag) {
+                    List<String> dbTableColumns = new ArrayList<String>();
+                    Map<String, String> columnsDefs = new HashMap<String, String>(); // key: columns's name, value: column's type
+                    setColumnsMap(columns, dbTableColumns, columnsDefs);
+                    if (StringUtils.isNoneBlank(importCsvFullName, tableName)) {
+                        //
+                        //Reader in = new FileReader(importCsvFullName);
+                        //CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().parse(in);
+                        List<String> finalHeaders = getIntersectNames(dbTableColumns, new ArrayList<String>(parser.getHeaderMap().keySet()));
+                        if (finalHeaders == null || finalHeaders.size() == 0) {
                             parser.close();
-                            flag=true;
+                            return flag;
                         }
-                    }
-                } catch (IOException e) {
-                    BuildStatus.getInstance().recordError();
-                    logger.error(e.getMessage(), e);
-                } catch (SQLException e) {
-                    BuildStatus.getInstance().recordError();
-                    logger.error(e.getMessage(), e);
-                }
-                return flag;
-            }
+                        String header=setInsertSQLHeader(tableName,finalHeaders);// like insert into [InstanceSets] ([InstSetId],[InstSetName] ) values
+                        StringBuffer sqlBuffer = new StringBuffer();
 
+                        getConn().setAutoCommit(false);
+                        //Statement statement = getConn().createStatement();
+                        long recordsize=parser.getRecordNumber();
+                        /*List<CSVRecord> records = parser.getRecords();
+
+
+                        long numTrans=recordsize/BATCH_SIZE+1;    //commit times
+                        if(recordsize==0){
+                            numTrans=0;
+                            flag = true;
+                        }else if(recordsize%BATCH_SIZE==0){
+                            numTrans=recordsize/BATCH_SIZE;
+                        }
+                        int numData=0;
+                        long numMax;
+
+                        for(int j=1;j<=numTrans;j++){
+                            numMax=numData+BATCH_SIZE;
+                            if(numMax>recordsize){
+                                numMax=recordsize;
+                            }
+                            for(int i=numData;i<numMax;i++){
+                                setInsertSQLLine(records.get(i), finalHeaders, columnsDefs, sqlBuffer, header);
+                                statement.addBatch(sqlBuffer.toString());
+                                sqlBuffer.setLength(0);//clear
+                            }
+                            statement.executeBatch();
+                            getConn().commit();
+                            statement.clearBatch();
+                            numData += BATCH_SIZE;
+                        }*/
+                        int count=0;
+                        int trans=0;
+                        Iterator<CSVRecord> csvRecords=parser.iterator();
+                        if(recordsize<=BATCH_SIZE){
+                            while(csvRecords.hasNext()){
+                                setInsertSQLLine(csvRecords.next(), finalHeaders, columnsDefs, sqlBuffer, header);
+                                statement.addBatch(sqlBuffer.toString());
+                                sqlBuffer.setLength(0);//clear
+                                count++;
+                            }
+                        }else{
+                            while(csvRecords.hasNext()){
+                                setInsertSQLLine(csvRecords.next(), finalHeaders, columnsDefs, sqlBuffer, header);
+                                statement.addBatch(sqlBuffer.toString());
+                                sqlBuffer.setLength(0);//clear
+                                count++;
+                                if(count%BATCH_SIZE==0){
+                                    statement.executeBatch();
+                                    getConn().commit();
+                                    statement.clearBatch();
+                                    trans++;
+                                }
+                            }
+                        }
+                        if(count>0){
+                            statement.executeBatch();
+                            getConn().commit();
+                            statement.clearBatch();
+                        }
+                        if(trans>10){
+                            Runtime.getRuntime().gc();
+                        }
+                        flag=true;
+                    }
+                }
+            } catch (IOException e) {
+                BuildStatus.getInstance().recordError();
+                logger.error(e.getMessage(), e);
+            } catch (SQLException e) {
+                BuildStatus.getInstance().recordError();
+                logger.error(e.getMessage(), e);
+            }
+            return flag;
         }
 
         public Boolean importCsvToAccessDBDirect(String tableName,String importCsvFullName){
             Boolean flag = false;
             String dbFullName = getDatabaseServer().getSchema();
             Database db;
-            Builder builder;
             try {
                 db = DatabaseBuilder.open(new File(dbFullName));
                 if (db.getTable(tableName) != null) {
@@ -663,7 +702,7 @@ public class DBHelper {
                     logger.debug("accessdb table[" + tableName + "] already exists.");
                 }else{
                     logger.warn("accessdb table[" + tableName + "] doesn't exist, import csv directly.");
-                    builder = new ImportUtil.Builder(db, tableName);
+                    Builder builder = new ImportUtil.Builder(db, tableName);
                     builder.setUseExistingTable(false);
                     builder.setDelimiter(",").setHeader(true).importReader(new BufferedReader(new FileReader(new File(importCsvFullName))));
                     flag = true;
@@ -701,7 +740,7 @@ public class DBHelper {
         }
 
 
-        public void setInsertSQLLine(CSVRecord record, List<String> finalHeaders, Map<String, String> columnsDefs,StringBuffer line, String header) {
+        public void setInsertSQLLine(CSVRecord record, List<String> finalHeaders, Map<String, String> columnsDefs,StringBuffer line,String header) {
             String value;
             String type;
             line.append(header+"(");
@@ -910,18 +949,18 @@ public class DBHelper {
                     return flag;
                 }
                 //generate sql statement
-                StringBuilder sqlBuilder = new StringBuilder("CREATE TABLE [" + tableName + "] (");
+                StringBuilder sqlBuilder = new StringBuilder(CREATE_STR + tableName + CREATE_STR2);
                 for (String str : tableDefinition) {
                     String[] strArr = str.split("\\=| ");
 
-                    if (strArr[2].equalsIgnoreCase("LONGTEXT")) {
-                        strArr[2] = "MEMO";
-                    } else if (strArr[2].equalsIgnoreCase("BOOLEAN")) {
-                        strArr[2] = "YESNO";//Optional
-                    } else if (strArr[2].equalsIgnoreCase("DATE")) {
-                        strArr[2] = "DATETIME";//Optional
-                    } else if (strArr[2].equalsIgnoreCase("DECIMAL")) {
-                        strArr[2] = "NUMERIC";//Optional
+                    if (strArr[2].equalsIgnoreCase(LONGTXT_STR)) {
+                        strArr[2] = MEMO_STR;
+                    } else if (strArr[2].equalsIgnoreCase(BOOLEAN_STR)) {
+                        strArr[2] = YESNO_STR;//Optional
+                    } else if (strArr[2].equalsIgnoreCase(DATE_STR)) {
+                        strArr[2] = DATETIME_STR;//Optional
+                    } else if (strArr[2].equalsIgnoreCase(DECIMAL_STR)) {
+                        strArr[2] = NUMERIC_STR;//Optional
                     }
                     if (strArr.length == 3) {
                         sqlBuilder.append("[" + strArr[1] + "] " + strArr[2] + " NOT NULL,");
@@ -940,6 +979,7 @@ public class DBHelper {
             return flag;
         }
 
+
         /**
          * create access table
          *
@@ -955,16 +995,16 @@ public class DBHelper {
                     return flag;
                 }
                 //generate sql statement
-                StringBuffer sqlBuilder = new StringBuffer("CREATE TABLE [" + tableName + "] (");
+                StringBuffer sqlBuilder = new StringBuffer(CREATE_STR + tableName + CREATE_STR2);
                 for (TableProps props : tableDefinition) {
-                    if (props.getTypeSize().equalsIgnoreCase("LONGTEXT")) {
-                        props.setTypeSize("MEMO");
-                    } else if (props.getTypeSize().equalsIgnoreCase("BOOLEAN")) {
-                        props.setTypeSize("YESNO");//Optional
-                    } else if (props.getTypeSize().equalsIgnoreCase("DATE")) {
-                        props.setTypeSize("DATETIME");
-                    } else if (props.getTypeSize().equalsIgnoreCase("DECIMAL")) {
-                        props.setTypeSize("NUMERIC");
+                    if (props.getTypeSize().equalsIgnoreCase(LONGTXT_STR)) {
+                        props.setTypeSize(MEMO_STR);
+                    } else if (props.getTypeSize().equalsIgnoreCase(BOOLEAN_STR)) {
+                        props.setTypeSize(YESNO_STR);//Optional
+                    } else if (props.getTypeSize().equalsIgnoreCase(DATE_STR)) {
+                        props.setTypeSize(DATETIME_STR);
+                    } else if (props.getTypeSize().equalsIgnoreCase(DECIMAL_STR)) {
+                        props.setTypeSize(NUMERIC_STR);
                     }
                     sqlBuilder.append("[" + props.getName() + "] " + props.getTypeSize() + props.getNullable() + ",");
                 }
@@ -983,7 +1023,7 @@ public class DBHelper {
                 logger.info("table name is blank, please check sql syntax.");
                 return flag;
             }
-            try {
+            try{
                 String dbFullName = getDatabaseServer().getSchema();
                 Database db = DatabaseBuilder.open(new File(dbFullName));
                 Table sysTable = db.getSystemTable("MSysObjects");
@@ -1040,10 +1080,10 @@ public class DBHelper {
                 if (type.startsWith("VARCHAR")) {
                     return Types.NVARCHAR;
                 }
-                if (type.equalsIgnoreCase("LONGTEXT")) {
+                if (type.equalsIgnoreCase(LONGTXT_STR)) {
                     return Types.NCLOB;
                 }
-                if (type.equalsIgnoreCase("DATE")) {
+                if (type.equalsIgnoreCase(DATE_STR)) {
                     return Types.DATE;
                 }
                 if (type.equalsIgnoreCase("LONG")) {
@@ -1058,10 +1098,10 @@ public class DBHelper {
                 if (type.equalsIgnoreCase("DOUBLE")) {
                     return Types.DOUBLE;
                 }
-                if (type.equalsIgnoreCase("DECIMAL")) {
+                if (type.equalsIgnoreCase(DECIMAL_STR)) {
                     return Types.DECIMAL;
                 }
-                if (type.equalsIgnoreCase("BOOLEAN")) {
+                if (type.equalsIgnoreCase(BOOLEAN_STR)) {
                     return Types.BOOLEAN;
                 }
             }

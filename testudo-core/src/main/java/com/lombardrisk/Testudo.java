@@ -18,7 +18,7 @@ import java.util.List;
 public class Testudo implements IComFolder {
 
     private static final Logger logger = LoggerFactory.getLogger(Testudo.class);
-    private static final float MILLISECONDS_PER_SECOND = 1000.00F;
+    private static final float MILLISECONDS_PER_SECOND = 60*1000.00F;
 
     public static void main(String[] args) {
         long begin = System.currentTimeMillis();
@@ -59,7 +59,8 @@ public class Testudo implements IComFolder {
             logger.error(e.getMessage(), e);
         }
         long end = System.currentTimeMillis();
-        logger.info("total time(sec):" + (end - begin) / MILLISECONDS_PER_SECOND);
+        logger.info("total time(min):" + (end - begin) / MILLISECONDS_PER_SECOND);
+        Runtime.getRuntime().gc();
     }
 
     private static void convertArgumentsToSystemProperties(final String[] args) {

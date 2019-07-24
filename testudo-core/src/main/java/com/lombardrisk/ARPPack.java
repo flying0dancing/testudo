@@ -21,6 +21,12 @@ import java.util.regex.Pattern;
 public class ARPPack implements IComFolder {
 
     private final static Logger logger = LoggerFactory.getLogger(ARPPack.class);
+    private final static String REGEX_1="#.*?_";
+    private final static String UNDERLINE_1 ="_";
+    private final static String REGEX_2="#.*";
+    private final static String SHARP_1="#";
+    private final static String BLANK="";
+
     public enum DBInfoSingle {
         INSTANCE;
         private DBInfo dbInfo;
@@ -76,7 +82,6 @@ public class ARPPack implements IComFolder {
         schemaFullName=Helper.reviseFilePath(schemaFullName);
         DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
         dbInfo.getDbHelper().connect();
-
         List<String> subFolderNames=FileUtil.getSubFolderNames(csvParentPath);
         String folderRegex = FileUtil.getFolderRegex(csvParentPath,subFolderNames);
 
@@ -88,7 +93,7 @@ public class ARPPack implements IComFolder {
         List<String> realCsvFullPathsTmp;
         String tableName;
         Boolean flag=true;
-        //long begin, end;
+        long begin, end;
         logger.info("================= import metadata into DPM =================");
         for (String pathTmp : csvPaths) {
             realCsvFullPathsTmp =
@@ -96,36 +101,38 @@ public class ARPPack implements IComFolder {
                             ".separator") + pathTmp), null);
             if (realCsvFullPathsTmp.size() <= 0) {
                 logger.error("error: invalid path [" + csvParentPath + System.getProperty("file.separator") + pathTmp + "]");
-                continue;
             }else{
-                realCsvFullPaths.addAll(realCsvFullPathsTmp);
+                //realCsvFullPaths.addAll(realCsvFullPathsTmp);
+                for(String pathTmp2:realCsvFullPathsTmp){
+                    if(realCsvFullPaths.contains(pathTmp2)){
+                        continue;
+                    }
+                    realCsvFullPaths.add(pathTmp2);
+                    tableName=getTableFromMetaName(pathTmp2,folderRegex);
+
+                    if(!realNames.contains(tableName)){
+                        dbInfo.CreateAccessDBTable(tableName,schemaFullName);
+                        realNames.add(tableName);
+                    }
+                    begin=System.currentTimeMillis();
+                    flag = dbInfo.importCsvToAccess(tableName, Helper.reviseFilePath(pathTmp2));
+                    end=System.currentTimeMillis();
+                    if (!flag) {
+                        BuildStatus.getInstance().recordError();
+                        logger.error("import [" + pathTmp2 + "] to " + tableName + " fail.");
+                        break;
+                    } else {
+                        logger.info("import [" + pathTmp2 + "] to " + tableName + " successfully."+(end-begin)/1000.00F);
+                    }
+                }
             }
         }
 
+        dbInfo.getDbHelper().close();
+        dbInfo=null;
         if (realCsvFullPaths.size() <= 0) {
             return null;
-        }else{
-            for(String pathTmp2 :realCsvFullPaths){
-                //logger.info("metadata file:" + pathTmp2);
-                tableName=getTableFromMetaName(pathTmp2,folderRegex);
-
-                if(!realNames.contains(tableName)){
-                    dbInfo.CreateAccessDBTable(tableName,schemaFullName);
-                    realNames.add(tableName);
-                }
-                //begin=System.currentTimeMillis();
-                flag = dbInfo.importCsvToAccess(tableName, Helper.reviseFilePath(pathTmp2));
-                //end=System.currentTimeMillis();
-                if (!flag) {
-                    BuildStatus.getInstance().recordError();
-                    logger.error("import [" + pathTmp2 + "] to " + tableName + " fail.");
-                    break;
-                } else {
-                    logger.info("import [" + pathTmp2 + "] to " + tableName + " successfully.");
-                }
-            }
         }
-        dbInfo.getDbHelper().close();
         if(!flag){
             return null;
         }
@@ -146,16 +153,17 @@ public class ARPPack implements IComFolder {
         dbInfo.getDbHelper().connect();
         for (String csvPath : csvFullPaths) {
             String csvName = FileUtil.getFileNameWithoutSuffix(csvPath);
-            if (!csvName.contains("_")) continue;
-            String[] nameParts = csvName.split("_");
+            if (!csvName.contains(UNDERLINE_1)) continue;
+            String[] nameParts = csvName.split(UNDERLINE_1);
             if (!nameParts[1].matches("\\d+")) continue;
             String returnId = nameParts[1];
             String returnNameVer = dbInfo.getReturnAndVersion(returnId);
-            if (!returnNameVer.equals("") && !nameAndVers.contains(returnNameVer)) {
+            if (!returnNameVer.equals(BLANK) && !nameAndVers.contains(returnNameVer)) {
                 nameAndVers.add(returnNameVer);
             }
         }
         dbInfo.getDbHelper().close();
+        dbInfo=null;
         if (nameAndVers.size() <= 0) return null;
         return nameAndVers;
     }
@@ -205,6 +213,7 @@ public class ARPPack implements IComFolder {
             }
         }
         dbInfo.getDbHelper().close();
+        dbInfo=null;
         return flag;
     }
 
@@ -226,7 +235,7 @@ public class ARPPack implements IComFolder {
         String productPrefix = Dom4jUtil.updateElement(sourcePath + MANIFEST_FILE, PREFIX, null);
         if (StringUtils.isBlank(productPrefix)) {
             productPrefix = FileUtil.getFileNameWithSuffix(Helper.getParentPath(sourcePath))
-                    .toUpperCase().replaceAll("\\(\\d+\\)", "");
+                    .toUpperCase().replaceAll("\\(\\d+\\)", BLANK);
         }
         Boolean flag = true;
         List<String> packFileNames = zipSet.getZipFiles();
@@ -263,9 +272,9 @@ public class ARPPack implements IComFolder {
 
         //zipped and lrm product
         String packageNamePrefix = PropHelper.getProperty(PACKAGE_NAME_PREFIX);
-        packageNamePrefix = StringUtils.isBlank(packageNamePrefix) ? productPrefix + "_" : packageNamePrefix + productPrefix + "_";
+        packageNamePrefix = StringUtils.isBlank(packageNamePrefix) ? productPrefix + UNDERLINE_1 : packageNamePrefix + productPrefix + UNDERLINE_1;
         String packageNameSuffix = null;//PropHelper.getProperty(AR_INSTALLER_VERSION);
-        packageNameSuffix = StringUtils.isBlank(packageNameSuffix) ? "" : "_for_AR_v" + packageNameSuffix;
+        packageNameSuffix = StringUtils.isBlank(packageNameSuffix) ? BLANK : "_for_AR_v" + packageNameSuffix;
         String zipFileNameWithoutSuffix = packageNamePrefix + "v" + packageVersion + packageNameSuffix;
         String zipFullPathWithoutSuffix = Helper.reviseFilePath(zipPath + "/" + zipFileNameWithoutSuffix);
 
@@ -350,15 +359,14 @@ public class ARPPack implements IComFolder {
             if (realFullPathsTmp.size() <= 0) {
                 //BuildStatus.getInstance().recordError(); //solve ARPA-72
                 logger.warn("error: cannot search [" + filter + "] under path [" + sourcePath + "]");
-                continue;
+
             }else{
-                realFilePaths.addAll(realFullPathsTmp);
-            }
-            /*for (String pathTmp : realFullPathsTmp) {
-                if (!realFilePaths.contains(pathTmp)) {
-                    realFilePaths.add(pathTmp);
+                for (String pathTmp : realFullPathsTmp) {
+                    if (!realFilePaths.contains(pathTmp)) {
+                        realFilePaths.add(pathTmp);
+                    }
                 }
-            }*/
+            }
         }
         if (realFilePaths.size() <= 0) return null;
         return realFilePaths;
@@ -368,11 +376,11 @@ public class ARPPack implements IComFolder {
         String name_returnId="";
         String tableNameWithDB = FileUtil.getFileNameWithoutSuffix(pathTmp2);
         logger.debug("1 table name with DB {}", tableNameWithDB);
-        String tableName = tableNameWithDB.replaceAll("#.*?_", "_");
+        String tableName = tableNameWithDB.replaceAll(REGEX_1, UNDERLINE_1);
         logger.debug("1 table name {}", tableName);
 
         if (!tableName.contains("_")) {
-            tableName = tableNameWithDB.replaceAll("#.*", "");
+            tableName = tableNameWithDB.replaceAll(REGEX_2, BLANK);
             logger.debug("2 table name {}", tableName);
         }
         Pattern p = Pattern.compile(folderRegex, Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
@@ -382,9 +390,9 @@ public class ARPPack implements IComFolder {
             logger.debug("3 table name {}", tableName);
             name_returnId = m.group(2);
         }
-        tableNameWithDB = tableNameWithDB.replace(name_returnId, "");
-        if (name_returnId.equals("") && tableNameWithDB.contains("_")) {
-            tableName = tableNameWithDB.split("#")[0];
+        tableNameWithDB = tableNameWithDB.replace(name_returnId, BLANK);
+        if (name_returnId.equals(BLANK) && tableNameWithDB.contains(UNDERLINE_1)) {
+            tableName = tableNameWithDB.split(SHARP_1)[0];
             logger.debug("4 table name {}", tableName);
         }
         logger.debug("X table name {}", tableName);

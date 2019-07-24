@@ -49,7 +49,9 @@ public class DBInfo implements IComFolder {
 
     private void setDbHelper(DatabaseServer databaseServer) {
         this.dbHelper = new DBHelper(databaseServer);
+        this.dbHelper.setAccdb(this.dbHelper.new AccessdbHelper());
     }
+
 
     public Boolean executeSQL(String sql) {
         Boolean flag = dbHelper.addBatch(sql);
@@ -192,7 +194,6 @@ public class DBInfo implements IComFolder {
     }
 
     public String combineSqlCondition(String dividedField,List<String> excludeReturnIds) {
-
         if (excludeReturnIds != null && excludeReturnIds.size() > 0) {
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append(" where \""+dividedField+"\" not in (");
@@ -229,10 +230,8 @@ public class DBInfo implements IComFolder {
             return;
         }
         String emptyStr="";
-
         prefix=StringUtils.isBlank(prefix)?emptyStr:prefix;
         idOfDBAndTable=StringUtils.isBlank(idOfDBAndTable)?emptyStr:idOfDBAndTable;
-
         String sharpFlag="#";
         String tabName;
         String tableName;
@@ -242,14 +241,11 @@ public class DBInfo implements IComFolder {
             tabName=tab.replace(sharpFlag, prefix);
             tableName = getTableNameFromDB(tabName);
             if (StringUtils.isNotBlank(tableName)) {
-
                 logger.info("----------- " + tableName + " ----------- ");
                 tab = tab.replace(sharpFlag, emptyStr);
-
                 exportDividedMetadata(new File(exportPath).getPath(), tab,tableName,iNIName,
                         excludeReturnIds,
                         idOfDBAndTable);
-
             } else {
                 logger.warn(WARN_TABLE + tabName + "] doesn't exist.");
             }
@@ -335,8 +331,7 @@ public class DBInfo implements IComFolder {
     public boolean createAccessDB() {
         String dbFullName = dbHelper.getDatabaseServer().getSchema();
         if (!new File(dbFullName).exists()) {
-            DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
-            return accdb.createAccessDB(dbHelper.getDatabaseServer().getSchema());
+            return this.dbHelper.getAccdb().createAccessDB(dbHelper.getDatabaseServer().getSchema());
         }
         return true;
     }
@@ -351,17 +346,13 @@ public class DBInfo implements IComFolder {
         String returnAndVer = "";
         String tableName = "Rets";
         if (getDbDriverFlag() == DBDriverType.ACCESSDB) {
-            //dbHelper.connect();
-            DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
-            if (!accdb.accessTableExistence(tableName)) {
+            if (!this.dbHelper.getAccdb().accessTableExistence(tableName)) {
                 BuildStatus.getInstance().recordError();
                 logger.error("cannot found " + tableName);
             } else {
                 String sQL = "SELECT Return & \"_v\" & Version AS Expr1 from [" + tableName + "] WHERE ReturnId=" + returnId;
                 returnAndVer = dbHelper.query(sQL);
             }
-
-            //dbHelper.close();
         } else {
             BuildStatus.getInstance().recordError();
             logger.error("this function should be worked on access database.");
@@ -369,7 +360,6 @@ public class DBInfo implements IComFolder {
         if (returnAndVer == null) {
             returnAndVer = "";
         }
-
         return returnAndVer;
     }
 
@@ -385,23 +375,16 @@ public class DBInfo implements IComFolder {
     public Boolean importCsvToAccess(String tableName, String csvPath) {
         Boolean flag = false;
         if (this.getDbHelper().getDatabaseServer().getDriver().startsWith("access")) {
-            //this.getDbHelper().connect();
-            /*String userSchemaFullName = schemaFullName.replace(
-                    FileUtil.getFileNameWithSuffix(schemaFullName),
-                    ACCESS_SCHEMA_INI);*/
             List<TableProps> columns = findDbTableColumns(tableName);
             if (columns != null && columns.size() > 0) {
-                DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
                 if(StringUtils.isNotBlank(csvPath)){
-                    flag = accdb.importCsvToAccessDB(tableName, columns, csvPath);
+                    flag = this.dbHelper.getAccdb().importCsvToAccessDB(tableName, columns, csvPath);
                 }
-
             } else {
                 BuildStatus.getInstance().recordError();
                 logger.error("error: invalid table definition [" + tableName + "]");
                 flag = false;
             }
-            //this.getDbHelper().close();
         } else {
             BuildStatus.getInstance().recordError();
             logger.error("this method should be worked on access database.");
@@ -409,10 +392,8 @@ public class DBInfo implements IComFolder {
         return flag;
     }
     public Boolean CreateAccessDBTable(String tableName, String schemaFullName) {
-
         Boolean flag = false;
         if (dbHelper.getDatabaseServer().getDriver().startsWith("access")) {
-            //dbHelper.connect();
             String userSchemaFullName = schemaFullName.replace(
                     FileUtil.getFileNameWithSuffix(schemaFullName),
                     ACCESS_SCHEMA_INI);
@@ -433,13 +414,11 @@ public class DBInfo implements IComFolder {
                         schemaFullName,
                         tableName));
                 logger.debug("full schema columns {}", columns);
-
             }
             if (columns != null && columns.size() > 0) {
                 setDbTableColumns(tableName, columns);
-                DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
 
-                flag = accdb.createAccessDBTab(tableName, columns);
+                flag = this.dbHelper.getAccdb().createAccessDBTab(tableName, columns);
                 if(flag){
                     logger.info("create table ["+tableName+"] successfully.");
                 }else{
@@ -450,13 +429,11 @@ public class DBInfo implements IComFolder {
                 logger.warn("invalid table definition [" + tableName + "]");
                 flag = false;
             }
-            //dbHelper.close();
         } else {
             BuildStatus.getInstance().recordError();
             logger.error("this method should be worked on access database.");
         }
         return flag;
-
     }
 
     public DBDriverType getDbDriverFlag() {

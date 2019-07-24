@@ -36,7 +36,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -116,30 +115,24 @@ public final class FileUtil {
 
     private static List<String> un7z1(File file, String destDir) throws IOException {
         List<String> fileNames = new ArrayList<>();
-        File tmpFile;
-        FileOutputStream out;
-        byte[] content;
+
         try (SevenZFile sevenZFile = new SevenZFile(file)) {
             SevenZArchiveEntry entry;
             while ((entry = sevenZFile.getNextEntry()) != null) {
                 fileNames.add(entry.getName());
-                logger.info(entry.getName());
                 if (entry.isDirectory()) {
                     createDirectory(destDir, entry.getName());
                 } else {
-                    tmpFile = new File(destDir + File.separator + entry.getName());
-
+                    File tmpFile = new File(destDir + File.separator + entry.getName());
                     createDirectory(tmpFile.getParent() + File.separator, null);
-                    try{
-                        out = new FileOutputStream(tmpFile);
-                        content = new byte[(int) entry.getSize()];
+                    try (FileOutputStream out = new FileOutputStream(tmpFile)) {
+                        byte[] content = new byte[(int) entry.getSize()];
                         sevenZFile.read(content, 0, content.length);
                         out.write(content);
-                        out.flush();
-                        out.close();
                     }catch (Exception e){
                         BuildStatus.getInstance().recordError();
                         logger.error(e.getMessage(), e);
+                        throw e;
                     }
                 }
             }
@@ -182,7 +175,7 @@ public final class FileUtil {
         return fileNames;
     }
 
-    public static List<String> un7z(String tarFile, String destDir) throws IOException {
+    private static List<String> un7z(String tarFile, String destDir) throws IOException {
         File file = new File(tarFile);
         return un7z(file, destDir);
     }
@@ -773,10 +766,12 @@ public final class FileUtil {
     public static void copyDirectory(String sourcePath, String destPath) {
         try {
             if (sourcePath != null && destPath != null) {
+                long begin=System.currentTimeMillis();
                 File sourceFile = new File(sourcePath);
                 File destFile = new File(destPath);
                 createDirectories(destPath);
                 FileUtils.copyDirectory(sourceFile, destFile);
+                System.out.println("copy folder time(sec):"+(System.currentTimeMillis()-begin)/1000.00F);
             }
         } catch (Exception e) {
             BuildStatus.getInstance().recordError();
@@ -785,7 +780,6 @@ public final class FileUtil {
     }
 
     public static void copyExternalProject(String srcFile, String destDir, String uncompress) {
-        long begin=System.currentTimeMillis();
         File srcFileHd = new File(srcFile);
         if (srcFileHd.exists()) {
             createDirectories(destDir);
@@ -793,21 +787,13 @@ public final class FileUtil {
                 copyDirectory(srcFile, destDir);
             }
             if (srcFileHd.isFile()) {
-                String srcFileSuffix = srcFile.substring(srcFile.lastIndexOf(".") + 1).toUpperCase();
-                List<String> compressTypes = Arrays.asList("ZIP", "7Z", "GZ", "TAR", "BZ2", "WAR");
                 if (StringUtils.containsIgnoreCase("yes", uncompress)) {
-                    if(compressTypes.contains(srcFileSuffix)){
-                        try {
-                            //unCompress(srcFile, destDir);
-                            SevenZipServer server = new SevenZipServer();
-                            server.extractZIP7Parallel(srcFile,destDir+File.separator);
-                        } catch (Exception e) {
-                            BuildStatus.getInstance().recordError();
-                            logger.error(e.getMessage(), e);
-                        }
-                    }else {
+                    try {
+                        SevenZipServer.extractZIP7Parallel(srcFile,destDir+File.separator);
+                    } catch (Exception e) {
                         BuildStatus.getInstance().recordError();
-                        logger.error("Error compress type, testudo can extract *.zip, *.7z, *.gz, *.tar, *.bz2, *.war");
+                        logger.error(e.getMessage(), e);
+                        throw e;
                     }
                     Runtime.getRuntime().gc();
                 } else {
@@ -818,7 +804,6 @@ public final class FileUtil {
             BuildStatus.getInstance().recordError();
             logger.error("File Not Found: " + srcFile);
         }
-        logger.info("total time(sec):" + (System.currentTimeMillis() - begin) / 1000.00F);
     }
 
     public static List<String> getSubFolderNames(String path) {

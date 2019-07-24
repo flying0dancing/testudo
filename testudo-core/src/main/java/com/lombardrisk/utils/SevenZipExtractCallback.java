@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 public class SevenZipExtractCallback implements IArchiveExtractCallback {
+    private final static int PRINT_SIZE=1000;
     private String path;
     private String packageName;
     private String unzipPath;
@@ -34,7 +35,7 @@ public class SevenZipExtractCallback implements IArchiveExtractCallback {
             return null;
         }
         //progress display
-        if(index%1000==0){
+        if(index%PRINT_SIZE==0){
             System.out.print(".");
         }
 

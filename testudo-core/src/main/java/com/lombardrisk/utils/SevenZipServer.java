@@ -29,7 +29,7 @@ public class SevenZipServer {
      * @param zipFile
      * @param unpackPath
      */
-    public boolean extractZIP7(String zipFile,String unpackPath ){
+    public static boolean extractZIP7(String zipFile,String unpackPath ){
         IInArchive archive = null;
         RandomAccessFile randomAccessFile = null;
         boolean success = false;
@@ -63,14 +63,14 @@ public class SevenZipServer {
         return success;
     }
 
-    public boolean extractZIP7Parallel(String zipFile, String unpackPath ){
+    public static boolean extractZIP7Parallel(String zipFile, String unpackPath ){
         long begin=System.currentTimeMillis();
         IInArchive archive = null;
         RandomAccessFile randomAccessFile = null;
         boolean success = false;
         try {
             String packageName=FileUtil.getFileNameWithSuffix(zipFile);
-            System.out.print(packageName+"\textracting:");
+            System.out.print(packageName+"\textracting");
             randomAccessFile = new RandomAccessFile(zipFile, "r");
             archive = SevenZip.openInArchive(null,
                     new RandomAccessFileInStream(
@@ -81,7 +81,8 @@ public class SevenZipServer {
             Boolean isFolder=false;
             String path;
             File fullItemFile;
-            for (int i = 0; i < size; i++) {
+            int i;
+            for (i = 0; i < size; i++) {
                 isFolder=(Boolean)archive.getProperty(i, PropID.IS_FOLDER);
                 if (isFolder) {
                     path = (String) archive.getProperty(i, PropID.PATH);
@@ -102,10 +103,10 @@ public class SevenZipServer {
                 int[] in1 = new int[size1];
                 int[] in2=new int[size2];
 
-                for(int i=0;i<size1;i++){
+                for(i=0;i<size1;i++){
                     in1[i] = itemsToExtract.get(i);
                 }
-                for(int i=0;i<size2;i++){
+                for(i=0;i<size2;i++){
                     in2[i]=itemsToExtract.get(size1+i);
                 }
                 success = true;
@@ -113,7 +114,7 @@ public class SevenZipServer {
                 ExecutorService threadPool= Executors.newFixedThreadPool(2);
                 futures.add(threadPool.submit(new SevenZipThreadTask(in1,zipFile,packageName,unpackPath)));
                 futures.add(threadPool.submit(new SevenZipThreadTask(in2,zipFile,packageName,unpackPath)));
-                for(int i=0;i<futures.size();i++){
+                for(i=0;i<futures.size();i++){
                     if(!futures.get(i).get()){
                         success =false;
                         break;
@@ -122,14 +123,13 @@ public class SevenZipServer {
                 threadPool.shutdown();
             }else{
                 int[] in=new int[sizeRe];
-                for(int i=0;i<sizeRe;i++){
+                for(i=0;i<sizeRe;i++){
                     in[i]=itemsToExtract.get(i);
                 }
                 archive.extract(in, false, new SevenZipExtractCallback(archive, packageName, unpackPath));
                 archive.close();
                 randomAccessFile.close();
             }
-
             System.out.println("100%");
         }catch (FileNotFoundException e){
             BuildStatus.getInstance().recordError();
@@ -150,7 +150,7 @@ public class SevenZipServer {
             logger.error(e.getMessage());
         }finally {
             Runtime.getRuntime().gc();
-            System.out.println("used time(sec):" + (System.currentTimeMillis() - begin) / 1000.00F);
+            System.out.println("extraction time(sec):" + (System.currentTimeMillis() - begin) / 1000.00F);
         }
         return success;
     }
