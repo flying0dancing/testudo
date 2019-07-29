@@ -30,17 +30,18 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 public final class FileUtil {
-
+    private static final String CharacterSet="UTF-8";
     private FileUtil() {
     }
 
@@ -85,7 +86,7 @@ public final class FileUtil {
             sourcePath = sourcePathHd.getAbsolutePath();
             try (OutputStream os = new BufferedOutputStream(new FileOutputStream(zipFullName));
                  ZipArchiveOutputStream zipOut = new ZipArchiveOutputStream(os)) {
-                zipOut.setEncoding("UTF-8");
+                zipOut.setEncoding(CharacterSet);
                 for (String fileFullPath : toZipFileFullPaths) {
                     File fileHd = new File(fileFullPath);
                     String toZipPath = fileFullPath.substring(sourcePath.length() + 1);
@@ -118,6 +119,8 @@ public final class FileUtil {
 
         try (SevenZFile sevenZFile = new SevenZFile(file)) {
             SevenZArchiveEntry entry;
+            int i=1;
+            long begin=System.currentTimeMillis();
             while ((entry = sevenZFile.getNextEntry()) != null) {
                 fileNames.add(entry.getName());
                 if (entry.isDirectory()) {
@@ -135,7 +138,12 @@ public final class FileUtil {
                         throw e;
                     }
                 }
+                if(i%BUFFER_SIZE==0){
+                    System.out.print(".");
+                }
+                i++;
             }
+            System.out.println("100% extraction time(sec):" + (System.currentTimeMillis() - begin) / 1000.00F);
         } catch (IOException e) {
             BuildStatus.getInstance().recordError();
             logger.error(e.getMessage(), e);
@@ -651,11 +659,10 @@ public final class FileUtil {
     /**
      * if a file contains tableName, case insensitive, it will rewrite this table's definition at the end.
      */
-    @SuppressWarnings("findbugs:DM_DEFAULT_ENCODING")
     public static void updateContent(String fileFullName, String tableName, String addedContent) {
         logger.info("update file: " + fileFullName);
-        StringBuilder strBuffer = new StringBuilder();
-        try (BufferedReader bufReader = new BufferedReader(new FileReader(fileFullName))) {
+        StringBuffer strBuffer = new StringBuffer();
+        try (BufferedReader bufReader = new BufferedReader(new InputStreamReader(new FileInputStream(fileFullName),CharacterSet))) {
             String line;
             while ((line = bufReader.readLine()) != null) {    //delete searched string and its sub fields
                 if (line.toLowerCase().contains(tableName.toLowerCase())) {
@@ -672,7 +679,7 @@ public final class FileUtil {
             }
             bufReader.close();
 
-            try (BufferedWriter bufWriter = new BufferedWriter(new FileWriter(fileFullName))) {
+            try (BufferedWriter bufWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileFullName),CharacterSet))) {
 
                 bufWriter.append(strBuffer);
                 bufWriter.flush();
@@ -688,11 +695,10 @@ public final class FileUtil {
     /**
      * get content of fileFullName, return String
      */
-    @SuppressWarnings("findbugs:DM_DEFAULT_ENCODING")
     public static String getSQLContent(String fileFullName) {
         StringBuilder contents = new StringBuilder();
         if (StringUtils.isNotBlank(fileFullName)) {
-            try (BufferedReader bufReader = new BufferedReader(new FileReader(fileFullName))) {
+            try (BufferedReader bufReader = new BufferedReader(new InputStreamReader(new FileInputStream(fileFullName),CharacterSet))) {
                 String line;
                 while ((line = bufReader.readLine()) != null) {
                     line=line.trim();
@@ -789,11 +795,11 @@ public final class FileUtil {
             if (srcFileHd.isFile()) {
                 if (StringUtils.containsIgnoreCase("yes", uncompress)) {
                     try {
-                        SevenZipServer.extractZIP7Parallel(srcFile,destDir+File.separator);
+                        //SevenZipServer.extractZIP7Parallel(srcFile,destDir+File.separator);
+                        unCompress(srcFile, destDir);
                     } catch (Exception e) {
                         BuildStatus.getInstance().recordError();
                         logger.error(e.getMessage(), e);
-                        throw e;
                     }
                     Runtime.getRuntime().gc();
                 } else {

@@ -24,9 +24,10 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -55,6 +56,7 @@ public class DBHelper {
     private static final String dateRegex =
             "((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?(?:\\.\\d+)?)";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
     private DBHelper.AccessdbHelper accdb;
+    private static final String CharacterSet="UTF-8";
     public DBHelper(DatabaseServer databaseServer) {
         this.databaseServer = databaseServer;
 
@@ -108,8 +110,19 @@ public class DBHelper {
             dbmsDriver = "net.ucanaccess.jdbc.UcanaccessDriver";
             if (StringUtils.isBlank(this.databaseServer.getUrl())) {
                 this.databaseServer.setUrl(String.format(
-                        "jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY;lobScale=32",
+                        "jdbc:ucanaccess://%s;memory=false;sysSchema=TRUE;columnOrder=DISPLAY;mirrorFolder=java.io.tmpdir;",
                         this.databaseServer.getSchema()));
+                /*String dbSchema=this.databaseServer.getSchema();
+                File dbSchemaHD=new File(dbSchema);
+                if(dbSchemaHD.exists()){
+                    long dbSchemaSize=dbSchemaHD.length();
+                    if(dbSchemaSize>104857600){//100MB
+                        this.databaseServer.setUrl(String.format(
+                                "jdbc:ucanaccess://%s;memory=false;sysSchema=TRUE;columnOrder=DISPLAY;mirrorFolder=java.io.tmpdir",//jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY
+                                this.databaseServer.getSchema()));
+                    }
+                }*/
+
             }
         }
     }
@@ -366,15 +379,16 @@ public class DBHelper {
         if (getConn() == null) {
             connect();
         }
-        FileWriter csvName = null;
-        BufferedWriter bufOutFile = null;
+        //FileWriter csvName = null;
+        //BufferedWriter bufOutFile = null;
         try (Statement state = getConn().createStatement();
-             ResultSet rest = state.executeQuery(sql);) {
+             ResultSet rest = state.executeQuery(sql);
+             BufferedWriter bufOutFile = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileFullName),CharacterSet))) {
 
             ResultSetMetaData rsmd = rest.getMetaData();
 
-            csvName = new FileWriter(fileFullName);
-            bufOutFile = new BufferedWriter(csvName);
+            //csvName = new FileWriter(fileFullName);
+            //bufOutFile = new BufferedWriter(csvName);
             logger.debug("start \"export to csv\"");
             StringBuffer strBuf = new StringBuffer();
             //csv header
@@ -432,14 +446,14 @@ public class DBHelper {
             logger.error(e.getMessage(), e);
         } finally {
             close();
-            try {
+            /*try {
                 bufOutFile.close();
                 csvName.close();
             } catch (IOException e) {
                 BuildStatus.getInstance().recordError();
                 logger.error("error: fail to closing file handlers.");
                 logger.error(e.getMessage(), e);
-            }
+            }*/
         }
     }
 

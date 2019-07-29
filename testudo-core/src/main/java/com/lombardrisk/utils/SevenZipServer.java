@@ -5,6 +5,7 @@ import net.sf.sevenzipjbinding.IInArchive;
 import net.sf.sevenzipjbinding.PropID;
 import net.sf.sevenzipjbinding.SevenZip;
 import net.sf.sevenzipjbinding.SevenZipException;
+import net.sf.sevenzipjbinding.SevenZipNativeInitializationException;
 import net.sf.sevenzipjbinding.impl.RandomAccessFileInStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,7 +64,7 @@ public class SevenZipServer {
         return success;
     }
 
-    public static boolean extractZIP7Parallel(String zipFile, String unpackPath ){
+    public static boolean extractZIP7Parallel(String zipFile, String unpackPath ) {
         long begin=System.currentTimeMillis();
         IInArchive archive = null;
         RandomAccessFile randomAccessFile = null;
@@ -71,6 +72,12 @@ public class SevenZipServer {
         try {
             String packageName=FileUtil.getFileNameWithSuffix(zipFile);
             System.out.print(packageName+"\textracting");
+            System.out.println(SevenZip.getUsedPlatform());
+            List<String> oslist=SevenZip.getPlatformList();
+
+            System.out.println(System.getProperty("os.arch"));
+            System.out.println(System.getProperty("os.name"));
+            SevenZip.initSevenZipFromPlatformJAR();
             randomAccessFile = new RandomAccessFile(zipFile, "r");
             archive = SevenZip.openInArchive(null,
                     new RandomAccessFileInStream(
@@ -148,7 +155,10 @@ public class SevenZipServer {
         } catch (ExecutionException e) {
             BuildStatus.getInstance().recordError();
             logger.error(e.getMessage());
-        }finally {
+        } catch (SevenZipNativeInitializationException e) {
+            BuildStatus.getInstance().recordError();
+            logger.error(e.getMessage());
+        } finally {
             Runtime.getRuntime().gc();
             System.out.println("extraction time(sec):" + (System.currentTimeMillis() - begin) / 1000.00F);
         }
