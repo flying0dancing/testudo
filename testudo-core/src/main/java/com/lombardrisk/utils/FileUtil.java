@@ -118,6 +118,7 @@ public final class FileUtil {
         List<String> fileNames = new ArrayList<>();
 
         try (SevenZFile sevenZFile = new SevenZFile(file)) {
+            System.out.print(file.getName()+"\textracting");
             SevenZArchiveEntry entry;
             int i=1;
             long begin=System.currentTimeMillis();
@@ -795,8 +796,12 @@ public final class FileUtil {
             if (srcFileHd.isFile()) {
                 if (StringUtils.containsIgnoreCase("yes", uncompress)) {
                     try {
-                        //SevenZipServer.extractZIP7Parallel(srcFile,destDir+File.separator);
-                        unCompress(srcFile, destDir);
+                        String var2 = System.getProperty("os.name").split(" ")[0];
+                        if(var2.equalsIgnoreCase("windows")){
+                            SevenZipServer.extractZIP7Parallel(srcFile,destDir+File.separator);
+                        }else {
+                            unCompress(srcFile, destDir);
+                        }
                     } catch (Exception e) {
                         BuildStatus.getInstance().recordError();
                         logger.error(e.getMessage(), e);

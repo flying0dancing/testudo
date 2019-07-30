@@ -72,12 +72,7 @@ public class SevenZipServer {
         try {
             String packageName=FileUtil.getFileNameWithSuffix(zipFile);
             System.out.print(packageName+"\textracting");
-            System.out.println(SevenZip.getUsedPlatform());
-            List<String> oslist=SevenZip.getPlatformList();
-
-            System.out.println(System.getProperty("os.arch"));
-            System.out.println(System.getProperty("os.name"));
-            SevenZip.initSevenZipFromPlatformJAR();
+            //SevenZip.initSevenZipFromPlatformJAR();
             randomAccessFile = new RandomAccessFile(zipFile, "r");
             archive = SevenZip.openInArchive(null,
                     new RandomAccessFileInStream(
@@ -153,9 +148,6 @@ public class SevenZipServer {
             BuildStatus.getInstance().recordError();
             logger.error(e.getMessage());
         } catch (ExecutionException e) {
-            BuildStatus.getInstance().recordError();
-            logger.error(e.getMessage());
-        } catch (SevenZipNativeInitializationException e) {
             BuildStatus.getInstance().recordError();
             logger.error(e.getMessage());
         } finally {

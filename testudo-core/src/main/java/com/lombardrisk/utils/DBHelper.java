@@ -110,22 +110,21 @@ public class DBHelper {
             dbmsDriver = "net.ucanaccess.jdbc.UcanaccessDriver";
             if (StringUtils.isBlank(this.databaseServer.getUrl())) {
                 this.databaseServer.setUrl(String.format(
-                        "jdbc:ucanaccess://%s;memory=false;sysSchema=TRUE;columnOrder=DISPLAY;mirrorFolder=java.io.tmpdir;",
+                        "jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY;",
                         this.databaseServer.getSchema()));
-                /*String dbSchema=this.databaseServer.getSchema();
+                String dbSchema=this.databaseServer.getSchema();
                 File dbSchemaHD=new File(dbSchema);
                 if(dbSchemaHD.exists()){
                     long dbSchemaSize=dbSchemaHD.length();
                     if(dbSchemaSize>104857600){//100MB
                         this.databaseServer.setUrl(String.format(
-                                "jdbc:ucanaccess://%s;memory=false;sysSchema=TRUE;columnOrder=DISPLAY;mirrorFolder=java.io.tmpdir",//jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY
+                                "jdbc:ucanaccess://%s;memory=false;sysSchema=TRUE;columnOrder=DISPLAY;mirrorFolder=java.io.tmpdir;",//jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY
                                 this.databaseServer.getSchema()));
                     }
-                }*/
-
+                }
             }
         }
-    }
+     }
 
     public DatabaseServer getDatabaseServer() {
         return databaseServer;

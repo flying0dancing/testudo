@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 public class SevenZipExtractCallback implements IArchiveExtractCallback {
-    private final static int PRINT_SIZE=1000;
+    private final static int PRINT_SIZE=2048;
     private String path;
     private String packageName;
     private String unzipPath;
