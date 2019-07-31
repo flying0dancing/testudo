@@ -31,7 +31,8 @@ public class DBInfo implements IComFolder {
     }
 
     private Map<String, List<TableProps>> dbTableColumns= new HashMap<>();//be carefully, mvn package all products together using static will get wrong.
-
+    private String defaultSchemaFullName;
+    private Boolean defaultSchemaExist;
     public DBInfo(DatabaseServer databaseServer) {
         setDbHelper(databaseServer);
         if (dbHelper.getDatabaseServer().getDriver().startsWith("ora")) {
@@ -394,14 +395,12 @@ public class DBInfo implements IComFolder {
     public Boolean CreateAccessDBTable(String tableName, String schemaFullName) {
         Boolean flag = false;
         if (dbHelper.getDatabaseServer().getDriver().startsWith("access")) {
-            String userSchemaFullName = schemaFullName.replace(
-                    FileUtil.getFileNameWithSuffix(schemaFullName),
-                    ACCESS_SCHEMA_INI);
+            String userSchemaFullName = getDefaultSchemaFullName();
             List<TableProps> columns = findDbTableColumns(tableName);
             if(columns!=null){
                 return true;
             }
-            if (FileUtil.search(userSchemaFullName, "[" + tableName + "]")) {
+            if (getDefaultSchemaExist() && FileUtil.search(userSchemaFullName, "[" + tableName + "]")) {
                 logger.debug("using user schema: {}", userSchemaFullName);
                 columns = FileUtil.getMixedTablesDefinition(FileUtil.searchTablesDefinition(
                         userSchemaFullName,
@@ -469,4 +468,23 @@ public class DBInfo implements IComFolder {
         }
         return queryRecord(sQL);
     }
+
+
+    public String getDefaultSchemaFullName() {
+        return defaultSchemaFullName;
+    }
+
+    public void setDefaultSchemaFullName(final String defaultSchemaFullName) {
+        this.defaultSchemaFullName = defaultSchemaFullName;
+    }
+
+
+    public Boolean getDefaultSchemaExist() {
+        return defaultSchemaExist;
+    }
+
+    public void setDefaultSchemaExist(final String defaultSchemaFullName) {
+        this.defaultSchemaExist = FileUtil.exists(defaultSchemaFullName);
+    }
+
 }

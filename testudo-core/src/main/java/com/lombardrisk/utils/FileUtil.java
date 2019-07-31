@@ -531,41 +531,39 @@ public final class FileUtil {
         return fileFullName.substring(lastSlash + 1);
     }
 
-    @SuppressWarnings("findbugs:DM_DEFAULT_ENCODING")
+
     public static boolean search(String fileFullName, String searchStr) {
-        logger.info("search " + searchStr + " in " + fileFullName);
-        File filehd = new File(fileFullName);
-        if (!filehd.exists() || !filehd.isFile()) {
+        boolean flag = false;
+        if (new File(fileFullName).isFile()) {
+            logger.info("search " + searchStr + " in " + fileFullName);
+            try (BufferedReader bufReader = new BufferedReader(new InputStreamReader(new FileInputStream(fileFullName),CharacterSet))) {
+                String line;
+                while ((line = bufReader.readLine()) != null) {
+                    if (line.equalsIgnoreCase(searchStr)) {
+                        flag = true;
+                        logger.info("found " + searchStr + " in " + fileFullName);
+                        break;
+                    }
+                }
+            } catch (IOException e) {
+                BuildStatus.getInstance().recordError();
+                logger.error(e.getMessage(), e);
+            }
+        }else{
             logger.warn("File Not Found: " + fileFullName);
-            return false;
         }
 
-        boolean flag = false;
-        try (BufferedReader bufReader = new BufferedReader(new FileReader(fileFullName))) {
-            String line;
-            while ((line = bufReader.readLine()) != null) {
-                if (line.equalsIgnoreCase(searchStr)) {
-                    flag = true;
-                    logger.info("found " + searchStr + " in " + fileFullName);
-                    break;
-                }
-            }
-        } catch (IOException e) {
-            BuildStatus.getInstance().recordError();
-            logger.error(e.getMessage(), e);
-        }
         return flag;
     }
 
     /**
      * return table's definition in a INI file
      */
-    @SuppressWarnings({"squid:S109","findbugs:DM_DEFAULT_ENCODING"})
     public static List<List<TableProps>> searchTablesDefinition(String fileFullName, String tableName) {
         List<List<TableProps>> tablesDefinition = null;
         List<TableProps> tableColumns;
         if (StringUtils.isNoneBlank(fileFullName, tableName)) {
-            try (BufferedReader bufReader = new BufferedReader(new FileReader(fileFullName))) {
+            try (BufferedReader bufReader = new BufferedReader(new InputStreamReader(new FileInputStream(fileFullName),CharacterSet))) {
                 tablesDefinition = new ArrayList<>();
                 String line;
                 while ((line = bufReader.readLine()) != null) {
@@ -626,6 +624,7 @@ public final class FileUtil {
         }
         return tableColumns;
     }
+
     public static Map<String, List<TableProps>> getAllTablesMixedDefinition(String fileFullName) {
         Map<String, List<TableProps>> mixedAllTables=null;
         List<String> tableNames=new ArrayList<>();

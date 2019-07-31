@@ -170,7 +170,7 @@ public class Testudo implements IComFolder {
             }
         }else{
             BuildStatus.getInstance().recordError();
-            logger.error("error: not found any requiredMetadata.");
+            logger.error("error: not found any requiredMetadata or import failures.");
         }
 
     }

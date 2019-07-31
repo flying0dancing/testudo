@@ -84,7 +84,11 @@ public class ARPPack implements IComFolder {
         dbInfo.getDbHelper().connect();
         List<String> subFolderNames=FileUtil.getSubFolderNames(csvParentPath);
         String folderRegex = FileUtil.getFolderRegex(csvParentPath,subFolderNames);
-
+        String userSchemaFullName=schemaFullName.replace(
+                FileUtil.getFileNameWithSuffix(schemaFullName),
+                ACCESS_SCHEMA_INI);
+        dbInfo.setDefaultSchemaFullName(userSchemaFullName);
+        dbInfo.setDefaultSchemaExist(userSchemaFullName);
         dbInfo.CreateAccessDBTable("Ref",schemaFullName);
         dbInfo.CreateAccessDBTable("GridRef",schemaFullName);
 
@@ -117,23 +121,24 @@ public class ARPPack implements IComFolder {
                     begin=System.currentTimeMillis();
                     flag = dbInfo.importCsvToAccess(tableName, Helper.reviseFilePath(pathTmp2));
                     end=System.currentTimeMillis();
-                    if (!flag) {
+                    if (flag) {
+                        logger.info("import [" + pathTmp2 + "] to " + tableName + " successfully."+(end-begin)/1000.00F);
+                    } else {
                         BuildStatus.getInstance().recordError();
                         logger.error("import [" + pathTmp2 + "] to " + tableName + " fail.");
                         break;
-                    } else {
-                        logger.info("import [" + pathTmp2 + "] to " + tableName + " successfully."+(end-begin)/1000.00F);
                     }
+                }
+                if(!flag){
+                    realCsvFullPaths=null;
+                    break;
                 }
             }
         }
 
         dbInfo.getDbHelper().close();
         dbInfo=null;
-        if (realCsvFullPaths.size() <= 0) {
-            return null;
-        }
-        if(!flag){
+        if (realCsvFullPaths==null || realCsvFullPaths.size() <= 0) {
             return null;
         }
         Runtime.getRuntime().gc();
