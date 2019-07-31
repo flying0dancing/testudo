@@ -118,11 +118,11 @@ public class ARPPack implements IComFolder {
                         dbInfo.CreateAccessDBTable(tableName,schemaFullName);
                         realNames.add(tableName);
                     }
-                    begin=System.currentTimeMillis();
+                    //begin=System.currentTimeMillis();
                     flag = dbInfo.importCsvToAccess(tableName, Helper.reviseFilePath(pathTmp2));
-                    end=System.currentTimeMillis();
+                    //end=System.currentTimeMillis();
                     if (flag) {
-                        logger.info("import [" + pathTmp2 + "] to " + tableName + " successfully."+(end-begin)/1000.00F);
+                        logger.info("import [" + pathTmp2 + "] to " + tableName + " successfully.");
                     } else {
                         BuildStatus.getInstance().recordError();
                         logger.error("import [" + pathTmp2 + "] to " + tableName + " fail.");
