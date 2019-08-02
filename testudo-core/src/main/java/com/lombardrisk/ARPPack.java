@@ -156,16 +156,22 @@ public class ARPPack implements IComFolder {
 
         DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
         dbInfo.getDbHelper().connect();
-        for (String csvPath : csvFullPaths) {
-            String csvName = FileUtil.getFileNameWithoutSuffix(csvPath);
-            if (!csvName.contains(UNDERLINE_1)) continue;
-            String[] nameParts = csvName.split(UNDERLINE_1);
-            if (!nameParts[1].matches("\\d+")) continue;
-            String returnId = nameParts[1];
-            String returnNameVer = dbInfo.getReturnAndVersion(returnId);
-            if (!returnNameVer.equals(BLANK) && !nameAndVers.contains(returnNameVer)) {
-                nameAndVers.add(returnNameVer);
+        Boolean flag=dbInfo.getDbHelper().getAccdb().accessTableExistence("Rets");
+        if(flag){
+            for (String csvPath : csvFullPaths) {
+                String csvName = FileUtil.getFileNameWithoutSuffix(csvPath);
+                if (!csvName.contains(UNDERLINE_1)) continue;
+                String[] nameParts = csvName.split(UNDERLINE_1);
+                if (!nameParts[1].matches("\\d+")) continue;
+                String returnId = nameParts[1];
+                String returnNameVer = dbInfo.getReturnAndVersion(returnId);
+                if (!returnNameVer.equals(BLANK) && !nameAndVers.contains(returnNameVer)) {
+                    nameAndVers.add(returnNameVer);
+                }
             }
+        }else{
+            BuildStatus.getInstance().recordError();
+            logger.error("cannot found Rets");
         }
         dbInfo.getDbHelper().close();
         dbInfo=null;

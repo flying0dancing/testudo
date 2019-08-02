@@ -347,13 +347,8 @@ public class DBInfo implements IComFolder {
         String returnAndVer = "";
         String tableName = "Rets";
         if (getDbDriverFlag() == DBDriverType.ACCESSDB) {
-            if (!this.dbHelper.getAccdb().accessTableExistence(tableName)) {
-                BuildStatus.getInstance().recordError();
-                logger.error("cannot found " + tableName);
-            } else {
-                String sQL = "SELECT Return & \"_v\" & Version AS Expr1 from [" + tableName + "] WHERE ReturnId=" + returnId;
-                returnAndVer = dbHelper.query(sQL);
-            }
+            String sQL = "SELECT Return & \"_v\" & Version AS Expr1 from [" + tableName + "] WHERE ReturnId=" + returnId;
+            returnAndVer = dbHelper.query(sQL);
         } else {
             BuildStatus.getInstance().recordError();
             logger.error("this function should be worked on access database.");
