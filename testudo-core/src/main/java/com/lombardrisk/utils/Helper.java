@@ -173,7 +173,7 @@ public class Helper {
      * @param commons
      * @return
      */
-    public static Boolean runCmdCommand(String[] commons) {
+    public static Boolean runCmdCommand(final String[] commons) {
         Boolean flag = true;
         logger.info(String.join(" ", commons));
         try {
@@ -215,7 +215,7 @@ public class Helper {
     }
 
 
-    public static <T> void removeDuplicatedElements(List<T> list){
+    public static <T> void removeDuplicatedElements(final List<T> list){
         if(list!=null){
             removeBlanks(list);
             int size=list.size();
@@ -232,7 +232,7 @@ public class Helper {
         }
     }
 
-    public static <T> void removeBlanks(List<T> list){
+    public static <T> void removeBlanks(final List<T> list){
         if(list!=null) {
             Iterator it=list.iterator();
             while(it.hasNext()){
@@ -245,7 +245,7 @@ public class Helper {
         }
     }
 
-    public static <T> Boolean isEmptyList(List<T> list){
+    public static <T> Boolean isEmptyList(final List<T> list){
         if(list!=null){
             if(list.size()>0){
                 return false;

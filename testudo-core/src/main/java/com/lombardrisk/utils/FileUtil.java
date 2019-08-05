@@ -48,7 +48,7 @@ public final class FileUtil {
     private static final Logger logger = LoggerFactory.getLogger(FileUtil.class);
     private static final int BUFFER_SIZE = 2048;
 
-    public static boolean exists(String fileFullName) {
+    public static boolean exists(final String fileFullName) {
         if (StringUtils.isNotBlank(fileFullName)) {
             File file = new File(fileFullName);
             return file.exists();
@@ -63,7 +63,7 @@ public final class FileUtil {
      * @param zipFullName zip full path with name
      */
     @SuppressWarnings("squid:S109")
-    public static boolean zipFilesAndFolders(String sourcePath, List<String> toZipFileFullPaths, String zipFullName) {
+    public static boolean zipFilesAndFolders(String sourcePath,final List<String> toZipFileFullPaths,final String zipFullName) {
         boolean flag = true;
         byte[] buf = new byte[1024];
         try {
@@ -333,7 +333,7 @@ public final class FileUtil {
         return fileNames;
     }
 
-    private static void unCompress(String compressFile, String destDir) throws IOException {
+    private static void unCompress(final String compressFile,final String destDir) throws IOException {
         String upperName = compressFile.toUpperCase();
         if (upperName.endsWith(".ZIP")) {
             unZip(compressFile, destDir);
@@ -354,7 +354,7 @@ public final class FileUtil {
         }
     }
 
-    public static void renameTo(String fileFullName, String destFullName) {
+    public static void renameTo(final String fileFullName,final String destFullName) {
         if (StringUtils.isNoneBlank(fileFullName, destFullName)) {
             File dest = new File(destFullName);
             if (dest.exists()) {
@@ -373,7 +373,7 @@ public final class FileUtil {
     /**
      * Create a new file if it doesn't exist.
      */
-    public static void createNew(String fileFullName) {
+    public static void createNew(final String fileFullName) {
         if (StringUtils.isNotBlank(fileFullName)) {
             try {
                 File file = new File(fileFullName);
@@ -388,7 +388,7 @@ public final class FileUtil {
         }
     }
 
-    private static void createDirectory(String outputDir, String subDir) {
+    private static void createDirectory(final String outputDir,final String subDir) {
         File file = new File(outputDir);
         if (!(subDir == null || subDir.trim().equals(""))) {
             file = new File(outputDir + File.separator + subDir);
@@ -532,10 +532,10 @@ public final class FileUtil {
     }
 
 
-    public static boolean search(String fileFullName, String searchStr) {
+    public static boolean search(final String fileFullName,final String searchStr) {
         boolean flag = false;
         if (new File(fileFullName).isFile()) {
-            logger.info("search " + searchStr + " in " + fileFullName);
+            logger.debug("search " + searchStr + " in " + fileFullName);
             try (BufferedReader bufReader = new BufferedReader(new InputStreamReader(new FileInputStream(fileFullName),CharacterSet))) {
                 String line;
                 while ((line = bufReader.readLine()) != null) {
@@ -559,7 +559,7 @@ public final class FileUtil {
     /**
      * return table's definition in a INI file
      */
-    public static List<List<TableProps>> searchTablesDefinition(String fileFullName, String tableName) {
+    public static List<List<TableProps>> searchTablesDefinition(final String fileFullName,final String tableName) {
         List<List<TableProps>> tablesDefinition = null;
         List<TableProps> tableColumns;
         if (StringUtils.isNoneBlank(fileFullName, tableName)) {
@@ -599,7 +599,7 @@ public final class FileUtil {
     /**
      * get mixed columns from all same table's table definition
      */
-    public static List<TableProps> getMixedTablesDefinition(List<List<TableProps>> tablesDefinition) {
+    public static List<TableProps> getMixedTablesDefinition(final List<List<TableProps>> tablesDefinition) {
         List<TableProps> tableColumns = null;
         if (tablesDefinition != null && tablesDefinition.size() > 0) {
             List<String> columnNames = new ArrayList<>();
@@ -625,7 +625,7 @@ public final class FileUtil {
         return tableColumns;
     }
 
-    public static Map<String, List<TableProps>> getAllTablesMixedDefinition(String fileFullName) {
+    public static Map<String, List<TableProps>> getAllTablesMixedDefinition(final String fileFullName) {
         Map<String, List<TableProps>> mixedAllTables=null;
         List<String> tableNames=new ArrayList<>();
         List<TableProps> tableColumns;
@@ -659,7 +659,7 @@ public final class FileUtil {
     /**
      * if a file contains tableName, case insensitive, it will rewrite this table's definition at the end.
      */
-    public static void updateContent(String fileFullName, String tableName, String addedContent) {
+    public static void updateContent(final String fileFullName,final String tableName,final String addedContent) {
         logger.info("update file: " + fileFullName);
         StringBuffer strBuffer = new StringBuffer();
         try (BufferedReader bufReader = new BufferedReader(new InputStreamReader(new FileInputStream(fileFullName),CharacterSet))) {
@@ -695,7 +695,7 @@ public final class FileUtil {
     /**
      * get content of fileFullName, return String
      */
-    public static String getSQLContent(String fileFullName) {
+    public static String getSQLContent(final String fileFullName) {
         StringBuilder contents = new StringBuilder();
         if (StringUtils.isNotBlank(fileFullName)) {
             try (BufferedReader bufReader = new BufferedReader(new InputStreamReader(new FileInputStream(fileFullName),CharacterSet))) {
@@ -730,7 +730,7 @@ public final class FileUtil {
      * @return new file full path with name
      */
     @SuppressWarnings("findbugs:DM_DEFAULT_ENCODING")
-    public static String createNewFileWithSuffix(String fileFullName, String suffix, String newFilePath) {
+    public static String createNewFileWithSuffix(final String fileFullName,final String suffix,String newFilePath) {
         String newFileFullName = null;
         File file = new File(fileFullName);
         if (file.exists()) {
@@ -769,7 +769,7 @@ public final class FileUtil {
         return newFileFullName;
     }
 
-    public static void copyDirectory(String sourcePath, String destPath) {
+    public static void copyDirectory(final String sourcePath,final String destPath) {
         try {
             if (sourcePath != null && destPath != null) {
                 long begin=System.currentTimeMillis();
@@ -785,7 +785,7 @@ public final class FileUtil {
         }
     }
 
-    public static void copyExternalProject(String srcFile, String destDir, String uncompress) {
+    public static void copyExternalProject(final String srcFile,final String destDir,final String uncompress) {
         File srcFileHd = new File(srcFile);
         if (srcFileHd.exists()) {
             createDirectories(destDir);
@@ -867,7 +867,7 @@ public final class FileUtil {
         }
         return filenames;
     }
-    public static String getFolderRegex(String path, List<String> filenames) {
+    public static String getFolderRegex(final List<String> filenames) {
         //List<String> filenames = getSubFolderNames(path);
         StringBuilder names = new StringBuilder();
         if (filenames != null && filenames.size() > 0) {

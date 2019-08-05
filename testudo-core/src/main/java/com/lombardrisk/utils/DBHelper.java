@@ -310,7 +310,7 @@ public class DBHelper {
             connect();
         }
         try (Statement state = getConn().createStatement();
-             ResultSet rest = state.executeQuery(sql);) {
+             ResultSet rest = state.executeQuery(sql)) {
             ResultSetMetaData rsmd = rest.getMetaData();
 
             logger.debug("No of columns in the table:{}", rsmd.getColumnCount());
@@ -456,7 +456,7 @@ public class DBHelper {
         }
     }
 
-    public Boolean addBatch(String sql) {
+    public Boolean addBatch(final String sql) {
         Boolean flag = false;
         if (getConn() == null)
             return flag;
@@ -514,7 +514,7 @@ public class DBHelper {
      * @param sql
      * @return The number of rows updated. if error occurs return 0;
      */
-    public int update(String sql) {
+    public int update(final String sql) {
         if (getConn() == null)
             return 0;
         QueryRunner run = new QueryRunner();
@@ -531,7 +531,7 @@ public class DBHelper {
         return result;
     }
 
-    public void setConn(Connection conn) {
+    public void setConn(final Connection conn) {
         this.conn = conn;
     }
 
@@ -544,7 +544,7 @@ public class DBHelper {
         close();
         super.finalize();
     }
-    public void setAccdb(DBHelper.AccessdbHelper accdb){this.accdb=accdb;}
+    public void setAccdb(final DBHelper.AccessdbHelper accdb){this.accdb=accdb;}
     public DBHelper.AccessdbHelper getAccdb(){return accdb;}
 
 
@@ -565,10 +565,10 @@ public class DBHelper {
          * @param tableName
          * @return
          */
-        public Boolean accessTableExistence(String tableName) {
+        public Boolean accessTableExistence(final String tableName) {
 
             String dbFullName = getDatabaseServer().getSchema();
-            try (Database db = DatabaseBuilder.open(new File(dbFullName));) {
+            try (Database db = DatabaseBuilder.open(new File(dbFullName))) {
                 if (db.getTable(tableName) != null) {
                     logger.debug("accessdb table[" + tableName + "] already exists.");
                     return true;
@@ -580,7 +580,32 @@ public class DBHelper {
             return false;
         }
 
-        private List<String> getIntersectNames(List<String> dbTabHeaders, List<String> csvHeaders) {
+        /***
+         * check tableNames,return not exist ones.
+         * @param tableNames
+         * @return
+         */
+        public List<String> inexistentAccessTables(final List<String> tableNames){
+            List<String> inexistentOnes=null;
+            Helper.removeDuplicatedElements(tableNames);
+            if(!Helper.isEmptyList(tableNames)){
+                String dbFullName = getDatabaseServer().getSchema();
+                try (Database db = DatabaseBuilder.open(new File(dbFullName))) {
+                    inexistentOnes=new ArrayList<>();
+                    for(String tableName:tableNames){
+                        if(db.getTable(tableName)==null){
+                            inexistentOnes.add(tableName);
+                        }
+                    }
+                }catch (IOException e) {
+                    BuildStatus.getInstance().recordError();
+                    logger.error(e.getMessage(), e);
+                }
+            }
+            return inexistentOnes;
+        }
+
+        private List<String> getIntersectNames(final List<String> dbTabHeaders,final List<String> csvHeaders) {
             List<String> intersectNames = null;
             if (dbTabHeaders != null && dbTabHeaders.size() > 0 && csvHeaders != null && csvHeaders.size() > 0) {
                 intersectNames = new ArrayList<String>();
@@ -607,94 +632,60 @@ public class DBHelper {
          * @param importCsvFullName
          * @return
          */
-        public Boolean importCsvToAccessDB(String tableName, List<TableProps> columns, String importCsvFullName) {
+        public Boolean importCsvToAccessDB(final String tableName,final List<TableProps> columns,final String importCsvFullName) {
             Boolean flag = false;
             try (Reader in = new FileReader(importCsvFullName);
                  CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().parse(in);
                  Statement statement = getConn().createStatement()){
-                flag=importCsvToAccessDBDirect(tableName,importCsvFullName);
-                if (!flag) {
-                    List<String> dbTableColumns = new ArrayList<String>();
-                    Map<String, String> columnsDefs = new HashMap<String, String>(); // key: columns's name, value: column's type
-                    setColumnsMap(columns, dbTableColumns, columnsDefs);
-                    if (StringUtils.isNoneBlank(importCsvFullName, tableName)) {
-                        //
-                        //Reader in = new FileReader(importCsvFullName);
-                        //CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().parse(in);
-                        List<String> finalHeaders = getIntersectNames(dbTableColumns, new ArrayList<String>(parser.getHeaderMap().keySet()));
-                        if (finalHeaders == null || finalHeaders.size() == 0) {
-                            parser.close();
-                            return flag;
-                        }
-                        String header=setInsertSQLHeader(tableName,finalHeaders);// like insert into [InstanceSets] ([InstSetId],[InstSetName] ) values
-                        StringBuffer sqlBuffer = new StringBuffer();
 
-                        getConn().setAutoCommit(false);
-                        //Statement statement = getConn().createStatement();
-                        long recordsize=parser.getRecordNumber();
-                        /*List<CSVRecord> records = parser.getRecords();
+                List<String> dbTableColumns = new ArrayList<String>();
+                Map<String, String> columnsDefs = new HashMap<String, String>(); // key: columns's name, value: column's type
+                setColumnsMap(columns, dbTableColumns, columnsDefs);
 
+                List<String> finalHeaders = getIntersectNames(dbTableColumns, new ArrayList<String>(parser.getHeaderMap().keySet()));
+                if (Helper.isEmptyList(finalHeaders)) {
+                    parser.close();
+                    return flag;
+                }
+                String header=setInsertSQLHeader(tableName,finalHeaders);// like insert into [InstanceSets] ([InstSetId],[InstSetName] ) values
+                StringBuffer sqlBuffer = new StringBuffer();
 
-                        long numTrans=recordsize/BATCH_SIZE+1;    //commit times
-                        if(recordsize==0){
-                            numTrans=0;
-                            flag = true;
-                        }else if(recordsize%BATCH_SIZE==0){
-                            numTrans=recordsize/BATCH_SIZE;
-                        }
-                        int numData=0;
-                        long numMax;
+                getConn().setAutoCommit(false);
 
-                        for(int j=1;j<=numTrans;j++){
-                            numMax=numData+BATCH_SIZE;
-                            if(numMax>recordsize){
-                                numMax=recordsize;
-                            }
-                            for(int i=numData;i<numMax;i++){
-                                setInsertSQLLine(records.get(i), finalHeaders, columnsDefs, sqlBuffer, header);
-                                statement.addBatch(sqlBuffer.toString());
-                                sqlBuffer.setLength(0);//clear
-                            }
+                long recordsize=parser.getRecordNumber();
+                int count=0;
+                //int trans=0;
+                Iterator<CSVRecord> csvRecords=parser.iterator();
+                if(recordsize<=BATCH_SIZE){
+                    while(csvRecords.hasNext()){
+                        setInsertSQLLine(csvRecords.next(), finalHeaders, columnsDefs, sqlBuffer, header);
+                        statement.addBatch(sqlBuffer.toString());
+                        sqlBuffer.setLength(0);//clear
+                        count++;
+                    }
+                }else{
+                    while(csvRecords.hasNext()){
+                        setInsertSQLLine(csvRecords.next(), finalHeaders, columnsDefs, sqlBuffer, header);
+                        statement.addBatch(sqlBuffer.toString());
+                        sqlBuffer.setLength(0);//clear
+                        count++;
+                        if(count%BATCH_SIZE==0){
                             statement.executeBatch();
                             getConn().commit();
                             statement.clearBatch();
-                            numData += BATCH_SIZE;
-                        }*/
-                        int count=0;
-                        int trans=0;
-                        Iterator<CSVRecord> csvRecords=parser.iterator();
-                        if(recordsize<=BATCH_SIZE){
-                            while(csvRecords.hasNext()){
-                                setInsertSQLLine(csvRecords.next(), finalHeaders, columnsDefs, sqlBuffer, header);
-                                statement.addBatch(sqlBuffer.toString());
-                                sqlBuffer.setLength(0);//clear
-                                count++;
-                            }
-                        }else{
-                            while(csvRecords.hasNext()){
-                                setInsertSQLLine(csvRecords.next(), finalHeaders, columnsDefs, sqlBuffer, header);
-                                statement.addBatch(sqlBuffer.toString());
-                                sqlBuffer.setLength(0);//clear
-                                count++;
-                                if(count%BATCH_SIZE==0){
-                                    statement.executeBatch();
-                                    getConn().commit();
-                                    statement.clearBatch();
-                                    trans++;
-                                }
-                            }
+                            //trans++;
                         }
-                        if(count>0){
-                            statement.executeBatch();
-                            getConn().commit();
-                            statement.clearBatch();
-                        }
-                        if(trans>10){
-                            Runtime.getRuntime().gc();
-                        }
-                        flag=true;
                     }
                 }
+                if(count>0){
+                    statement.executeBatch();
+                    getConn().commit();
+                    statement.clearBatch();
+                }
+                //if(trans>10){
+                //Runtime.getRuntime().gc();
+                //}
+                flag=true;
             } catch (IOException e) {
                 BuildStatus.getInstance().recordError();
                 logger.error(e.getMessage(), e);
@@ -730,9 +721,10 @@ public class DBHelper {
         }
 
 
-        public void setColumnsMap(List<TableProps> columns, List<String> dbTableColumns, Map<String, String> columnsDefs){
+        public void setColumnsMap(final List<TableProps> columns,final List<String> dbTableColumns,final Map<String, String> columnsDefs){
             String type;
-            for (int j = 0; j < columns.size(); j++) {
+            int size=columns.size();
+            for (int j = 0; j < size; j++) {
                 dbTableColumns.add(columns.get(j).getName());
                 type = columns.get(j).getTypeSize();
                 if (type.contains("(")) {
@@ -741,10 +733,11 @@ public class DBHelper {
                 columnsDefs.put(columns.get(j).getName(), type);
             }
         }
-        public String setInsertSQLHeader(String tableName,List<String> finalHeaders){
+        public String setInsertSQLHeader(final String tableName,final List<String> finalHeaders){
             String insertSQL = "insert into [" + tableName + "] (";
             //String quotesSQL="(";
-            for (int i = 0; i < finalHeaders.size(); i++) {
+            int size=finalHeaders.size();
+            for (int i = 0; i < size; i++) {
                 insertSQL = insertSQL + " [" + finalHeaders.get(i) + "],";
                 //quotesSQL=quotesSQL+"?,";
             }
@@ -758,7 +751,8 @@ public class DBHelper {
             String value;
             String type;
             line.append(header+"(");
-            for (int i = 0; i < finalHeaders.size(); i++)
+            int size=finalHeaders.size();
+            for (int i = 0; i < size; i++)
             {
                 value = record.get(finalHeaders.get(i));
                 type = columnsDefs.get(finalHeaders.get(i)).toUpperCase();
@@ -1001,13 +995,13 @@ public class DBHelper {
          * @param tableDefinition
          * @return
          */
-        public Boolean createAccessDBTab(String tableName, List<TableProps> tableDefinition) {
+        public Boolean createAccessDBTab(final String tableName,final List<TableProps> tableDefinition) {
             Boolean flag = false;
             try {
-                flag = accessTableExistence(tableName);
+                /*flag = accessTableExistence(tableName);
                 if (flag) {
                     return flag;
-                }
+                }*/
                 //generate sql statement
                 StringBuffer sqlBuilder = new StringBuffer(CREATE_STR + tableName + CREATE_STR2);
                 for (TableProps props : tableDefinition) {

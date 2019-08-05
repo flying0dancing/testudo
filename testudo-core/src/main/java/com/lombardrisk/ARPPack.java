@@ -14,7 +14,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -83,22 +85,22 @@ public class ARPPack implements IComFolder {
         DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
         dbInfo.getDbHelper().connect();
         List<String> subFolderNames=FileUtil.getSubFolderNames(csvParentPath);
-        String folderRegex = FileUtil.getFolderRegex(csvParentPath,subFolderNames);
+        String folderRegex = FileUtil.getFolderRegex(subFolderNames);
         String userSchemaFullName=schemaFullName.replace(
                 FileUtil.getFileNameWithSuffix(schemaFullName),
                 ACCESS_SCHEMA_INI);
         dbInfo.setDefaultSchemaFullName(userSchemaFullName);
         dbInfo.setDefaultSchemaExist(userSchemaFullName);
-        dbInfo.CreateAccessDBTable("Ref",schemaFullName);
-        dbInfo.CreateAccessDBTable("GridRef",schemaFullName);
 
         List<String> realCsvFullPaths = new ArrayList<>();
         List<String> realNames=new ArrayList<>();
         List<String> realCsvFullPathsTmp;
+        Map<String,List<String>> realTabCsvFullPathMap=new HashMap<String,List<String>>();
+        List<String> metadataFullNames;
         String tableName;
         Boolean flag=true;
         long begin, end;
-        logger.info("================= import metadata into DPM =================");
+        logger.info("================= create metadata table into DPM =================");
         for (String pathTmp : csvPaths) {
             realCsvFullPathsTmp =
                     FileUtil.getFilesByFilter(Helper.reviseFilePath(csvParentPath + System.getProperty("file" +
@@ -114,18 +116,31 @@ public class ARPPack implements IComFolder {
                     realCsvFullPaths.add(pathTmp2);
                     tableName=getTableFromMetaName(pathTmp2,folderRegex);
 
-                    if(!realNames.contains(tableName)){
-                        dbInfo.CreateAccessDBTable(tableName,schemaFullName);
+                    if(realNames.contains(tableName)){
+                        metadataFullNames=realTabCsvFullPathMap.get(tableName);
+                        metadataFullNames.add(pathTmp2);
+                    }else {
                         realNames.add(tableName);
+                        metadataFullNames=new ArrayList<>();
+                        metadataFullNames.add(pathTmp2);
+                        realTabCsvFullPathMap.put(tableName,metadataFullNames);
                     }
-                    //begin=System.currentTimeMillis();
-                    flag = dbInfo.importCsvToAccess(tableName, Helper.reviseFilePath(pathTmp2));
-                    //end=System.currentTimeMillis();
+                }
+
+            }
+        }
+        flag=dbInfo.createAccessDBTables(realNames, schemaFullName);
+        if(flag){
+            logger.info("================= import metadata into DPM =================");
+            for(Map.Entry<String,List<String>> tabCsvPath: realTabCsvFullPathMap.entrySet()){
+                tableName=tabCsvPath.getKey();
+                for(String pathTemp:tabCsvPath.getValue()){
+                    flag=dbInfo.importCsvToAccess(tableName,pathTemp);
                     if (flag) {
-                        logger.info("import [" + pathTmp2 + "] to " + tableName + " successfully.");
+                        logger.info("import [" + pathTemp + "] to " + tableName + " successfully.");
                     } else {
                         BuildStatus.getInstance().recordError();
-                        logger.error("import [" + pathTmp2 + "] to " + tableName + " fail.");
+                        logger.error("import [" + pathTemp + "] to " + tableName + " fail.");
                         break;
                     }
                 }
@@ -134,8 +149,9 @@ public class ARPPack implements IComFolder {
                     break;
                 }
             }
+        }else{
+            realCsvFullPaths=null;
         }
-
         dbInfo.getDbHelper().close();
         dbInfo=null;
         if (Helper.isEmptyList(realCsvFullPaths)) {
@@ -150,7 +166,7 @@ public class ARPPack implements IComFolder {
      * @param csvFullPaths metadata (*.csv files) full paths
      * @return return a list of all returns' <I>name_version</I>, return null if error occurs.
      */
-    public List<String> getReturnNameAndVersions(List<String> csvFullPaths) {
+    public List<String> getReturnNameAndVersions(final List<String> csvFullPaths) {
         if (Helper.isEmptyList(csvFullPaths)) return null;
         List<String> nameAndVers = new ArrayList<String>();
 
@@ -179,7 +195,7 @@ public class ARPPack implements IComFolder {
         return nameAndVers;
     }
 
-    public Boolean execSQLs(String sourcePath, List<String> sqlFileNames, String excludeFileFilters) {
+    public Boolean execSQLs(final String sourcePath,final List<String> sqlFileNames,final String excludeFileFilters) {
         Boolean flag = true;
         if (Helper.isEmptyList(sqlFileNames)) return true;//means testudo.json doesn't provide sqlFiles.
         logger.info("================= execute SQLs =================");
@@ -359,7 +375,7 @@ public class ARPPack implements IComFolder {
      * @param filters
      * @return if get nothing or arguments contains blank argument, return null.
      */
-    public List<String> getFileFullPaths(String sourcePath, List<String> filters, String excludeFilters) {
+    public List<String> getFileFullPaths(String sourcePath,final List<String> filters,final String excludeFilters) {
         Helper.removeDuplicatedElements(filters);
         if (Helper.isEmptyList(filters)) return null;
         if (StringUtils.isBlank(sourcePath)) return null;
@@ -386,7 +402,7 @@ public class ARPPack implements IComFolder {
         return realFilePaths;
     }
 
-    private String getTableFromMetaName(String pathTmp2,String folderRegex){
+    private String getTableFromMetaName(final String pathTmp2,final String folderRegex){
         String name_returnId="";
         String tableNameWithDB = FileUtil.getFileNameWithoutSuffix(pathTmp2);
         logger.debug("1 table name with DB {}", tableNameWithDB);

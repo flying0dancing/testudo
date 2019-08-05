@@ -10,6 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -368,18 +370,15 @@ public class DBInfo implements IComFolder {
      //* @param schemaFullName
      * @return
      */
-    public Boolean importCsvToAccess(String tableName, String csvPath) {
+    public Boolean importCsvToAccess(final String tableName,final  String csvPath) {
         Boolean flag = false;
         if (this.getDbHelper().getDatabaseServer().getDriver().startsWith("access")) {
             List<TableProps> columns = findDbTableColumns(tableName);
-            if (columns != null && columns.size() > 0) {
-                if(StringUtils.isNotBlank(csvPath)){
-                    flag = this.dbHelper.getAccdb().importCsvToAccessDB(tableName, columns, csvPath);
-                }
-            } else {
+            if(Helper.isEmptyList(columns)) {
                 BuildStatus.getInstance().recordError();
                 logger.error("error: invalid table definition [" + tableName + "]");
-                flag = false;
+            }else{
+                flag = this.dbHelper.getAccdb().importCsvToAccessDB(tableName, columns, csvPath);
             }
         } else {
             BuildStatus.getInstance().recordError();
@@ -387,7 +386,7 @@ public class DBInfo implements IComFolder {
         }
         return flag;
     }
-    public Boolean CreateAccessDBTable(String tableName, String schemaFullName) {
+    public Boolean createAccessDBTable(final String tableName,final String schemaFullName) {
         Boolean flag = false;
         if (dbHelper.getDatabaseServer().getDriver().startsWith("access")) {
             String userSchemaFullName = getDefaultSchemaFullName();
@@ -434,15 +433,15 @@ public class DBInfo implements IComFolder {
         return dbDriverFlag;
     }
 
-    public void setDbDriverFlag(DBDriverType dbDriverFlag) {
+    public void setDbDriverFlag(final DBDriverType dbDriverFlag) {
         this.dbDriverFlag = dbDriverFlag;
     }
 
-    public void setDbTableColumns(String tableName, List<TableProps> columns) {
+    public void setDbTableColumns(final String tableName,final List<TableProps> columns) {
         this.dbTableColumns.put(tableName, columns);
     }
 
-    public List<TableProps> findDbTableColumns(String tableName) {
+    public List<TableProps> findDbTableColumns(final String tableName) {
         if (!dbTableColumns.isEmpty()) {
             for (String key : dbTableColumns.keySet()) {
                 if (key.equals(tableName)) {
@@ -482,4 +481,27 @@ public class DBInfo implements IComFolder {
         this.defaultSchemaExist = FileUtil.exists(defaultSchemaFullName);
     }
 
+    public Boolean createAccessDBTables(final List<String> tableNames,final String schemaFullName){
+        Boolean flag=false;
+        List<String> ignoreNames= new ArrayList<>(Arrays.asList("Ref", "GridRef"));
+        for(String tableName:ignoreNames){
+            if(getDefaultSchemaExist() && FileUtil.search(getDefaultSchemaFullName(), "[" + tableName + "]")){
+                tableNames.add(tableName);
+            }else{
+                if(FileUtil.search(schemaFullName, "[" + tableName + "]")){
+                    tableNames.add(tableName);
+                }
+            }
+        }
+        List<String> noExistTableNames=this.getDbHelper().getAccdb().inexistentAccessTables(tableNames);
+        if(!Helper.isEmptyList(noExistTableNames)){
+            for(String tableName:noExistTableNames){
+                flag=createAccessDBTable(tableName, schemaFullName);
+                if(!flag){
+                    break;
+                }
+            }
+        }
+        return flag;
+    }
 }
