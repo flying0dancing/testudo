@@ -567,11 +567,6 @@ public class DBHelper {
          */
         public Boolean accessTableExistence(String tableName) {
 
-            /*String sQL = "SELECT Name FROM sys.MSysObjects WHERE LCase(Name)='" + tableName.toLowerCase() + "'";
-            String returnTable=query(sQL);
-            if(returnTable!=null){
-                return true;
-            }*/
             String dbFullName = getDatabaseServer().getSchema();
             try (Database db = DatabaseBuilder.open(new File(dbFullName));) {
                 if (db.getTable(tableName) != null) {
