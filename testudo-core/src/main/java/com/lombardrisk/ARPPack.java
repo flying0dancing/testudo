@@ -76,7 +76,7 @@ public class ARPPack implements IComFolder {
             return null;
         }
         Helper.removeDuplicatedElements(csvPaths);
-        if (csvPaths == null || csvPaths.size() <= 0) {
+        if (Helper.isEmptyList(csvPaths)) {
             return null;
         }
         schemaFullName=Helper.reviseFilePath(schemaFullName);
@@ -103,7 +103,7 @@ public class ARPPack implements IComFolder {
             realCsvFullPathsTmp =
                     FileUtil.getFilesByFilter(Helper.reviseFilePath(csvParentPath + System.getProperty("file" +
                             ".separator") + pathTmp), null);
-            if (realCsvFullPathsTmp.size() <= 0) {
+            if (Helper.isEmptyList(realCsvFullPathsTmp)) {
                 logger.error("error: invalid path [" + csvParentPath + System.getProperty("file.separator") + pathTmp + "]");
             }else{
                 //realCsvFullPaths.addAll(realCsvFullPathsTmp);
@@ -138,7 +138,7 @@ public class ARPPack implements IComFolder {
 
         dbInfo.getDbHelper().close();
         dbInfo=null;
-        if (realCsvFullPaths==null || realCsvFullPaths.size() <= 0) {
+        if (Helper.isEmptyList(realCsvFullPaths)) {
             return null;
         }
         Runtime.getRuntime().gc();
@@ -151,7 +151,7 @@ public class ARPPack implements IComFolder {
      * @return return a list of all returns' <I>name_version</I>, return null if error occurs.
      */
     public List<String> getReturnNameAndVersions(List<String> csvFullPaths) {
-        if (csvFullPaths == null || csvFullPaths.size() <= 0) return null;
+        if (Helper.isEmptyList(csvFullPaths)) return null;
         List<String> nameAndVers = new ArrayList<String>();
 
         DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
@@ -181,10 +181,10 @@ public class ARPPack implements IComFolder {
 
     public Boolean execSQLs(String sourcePath, List<String> sqlFileNames, String excludeFileFilters) {
         Boolean flag = true;
-        if (sqlFileNames == null || sqlFileNames.size() <= 0) return true;//means testudo.json doesn't provide sqlFiles.
+        if (Helper.isEmptyList(sqlFileNames)) return true;//means testudo.json doesn't provide sqlFiles.
         logger.info("================= execute SQLs =================");
         List<String> realFullPaths = getFileFullPaths(sourcePath, sqlFileNames, excludeFileFilters);
-        if (realFullPaths == null || realFullPaths.size() <= 0) {
+        if (Helper.isEmptyList(realFullPaths)) {
             BuildStatus.getInstance().recordError();
             logger.error("error: sqlFiles are invalid files or filters.");
             return false;//illegal, no invalid files need to execute if it set sqlFiles
@@ -221,6 +221,9 @@ public class ARPPack implements IComFolder {
                 } else {
                     logger.info("execute OK.");
                 }
+            }
+            if(!flag){
+                break;
             }
         }
         dbInfo.getDbHelper().close();
@@ -265,7 +268,7 @@ public class ARPPack implements IComFolder {
             }
         }
         List<String> pathsInManifest = Dom4jUtil.getPathFromElement(sourcePath + MANIFEST_FILE, sourcePath);
-        if (pathsInManifest != null && pathsInManifest.size() > 0) {
+        if (!Helper.isEmptyList(pathsInManifest)) {
             for (String pathtmp : pathsInManifest) {
                 if (!realFullPaths.contains(pathtmp)) {
                     realFullPaths.add(pathtmp);
@@ -327,7 +330,7 @@ public class ARPPack implements IComFolder {
      */
     public List<String> getFileFullPaths(String sourcePath, List<String> filters) {
         Helper.removeDuplicatedElements(filters);
-        if (filters == null || filters.size() <= 0) return null;
+        if (Helper.isEmptyList(filters)) return null;
         if (StringUtils.isBlank(sourcePath)) return null;
         sourcePath = Helper.reviseFilePath(sourcePath + "/");
         List<String> realFilePaths = new ArrayList<String>();
@@ -358,7 +361,7 @@ public class ARPPack implements IComFolder {
      */
     public List<String> getFileFullPaths(String sourcePath, List<String> filters, String excludeFilters) {
         Helper.removeDuplicatedElements(filters);
-        if (filters == null || filters.size() <= 0) return null;
+        if (Helper.isEmptyList(filters)) return null;
         if (StringUtils.isBlank(sourcePath)) return null;
         sourcePath = Helper.reviseFilePath(sourcePath + "/");
         List<String> realFilePaths = new ArrayList<String>();

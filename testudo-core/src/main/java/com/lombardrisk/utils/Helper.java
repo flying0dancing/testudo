@@ -245,4 +245,13 @@ public class Helper {
         }
     }
 
+    public static <T> Boolean isEmptyList(List<T> list){
+        if(list!=null){
+            if(list.size()>0){
+                return false;
+            }
+        }
+        return true;
+    }
+
 }
