@@ -10,6 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.channels.FileChannel;
 import java.util.List;
 
 /**
@@ -18,7 +19,6 @@ import java.util.List;
 public class Testudo implements IComFolder {
 
     private static final Logger logger = LoggerFactory.getLogger(Testudo.class);
-    private static final float MILLISECONDS_PER_SECOND = 60*1000.00F;
 
     public static void main(String[] args) {
         long begin = System.currentTimeMillis();
@@ -59,7 +59,7 @@ public class Testudo implements IComFolder {
             logger.error(e.getMessage(), e);
         }
         long end = System.currentTimeMillis();
-        logger.info("total time(min):" + (end - begin) / MILLISECONDS_PER_SECOND);
+        logger.info("total time(min):" + (end - begin) / (60*MILLISECONDS_PER_SECOND));
         Runtime.getRuntime().gc();
     }
 
@@ -101,6 +101,7 @@ public class Testudo implements IComFolder {
     private static void readDBToMetadata(ARPCISetting arSetting) {
         String iniFullName =
                 Helper.reviseFilePath(arSetting.getMetadataPath() + System.getProperty("file.separator") + arSetting.getMetadataStruct());
+        FileUtil.deleteFiles(Helper.reviseFilePath(arSetting.getMetadataPath() + System.getProperty("file.separator")),ACCESS_SCHEMA_INI);
         FileUtil.createNew(iniFullName);
         List<DBAndTables> dbAndTables = arSetting.getDatabaseServerAndTables();
         List<String> tables,excludeReturnIds;

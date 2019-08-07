@@ -104,7 +104,7 @@ public class ARPPack implements IComFolder {
         for (String pathTmp : csvPaths) {
             realCsvFullPathsTmp =
                     FileUtil.getFilesByFilter(Helper.reviseFilePath(csvParentPath + System.getProperty("file" +
-                            ".separator") + pathTmp), null);
+                            ".separator") + pathTmp), null,false);
             if (Helper.isEmptyList(realCsvFullPathsTmp)) {
                 logger.error("error: invalid path [" + csvParentPath + System.getProperty("file.separator") + pathTmp + "]");
             }else{
@@ -126,30 +126,15 @@ public class ARPPack implements IComFolder {
                         realTabCsvFullPathMap.put(tableName,metadataFullNames);
                     }
                 }
-
             }
         }
         flag=dbInfo.createAccessDBTables(realNames, schemaFullName);
+
         if(flag){
             logger.info("================= import metadata into DPM =================");
-            for(Map.Entry<String,List<String>> tabCsvPath: realTabCsvFullPathMap.entrySet()){
-                tableName=tabCsvPath.getKey();
-                for(String pathTemp:tabCsvPath.getValue()){
-                    flag=dbInfo.importCsvToAccess(tableName,pathTemp);
-                    if (flag) {
-                        logger.info("import [" + pathTemp + "] to " + tableName + " successfully.");
-                    } else {
-                        BuildStatus.getInstance().recordError();
-                        logger.error("import [" + pathTemp + "] to " + tableName + " fail.");
-                        break;
-                    }
-                }
-                if(!flag){
-                    realCsvFullPaths=null;
-                    break;
-                }
-            }
-        }else{
+            flag=InnerImportMetadataToDPM(dbInfo, realTabCsvFullPathMap);
+        }
+        if(!flag){
             realCsvFullPaths=null;
         }
         dbInfo.getDbHelper().close();
@@ -159,6 +144,28 @@ public class ARPPack implements IComFolder {
         }
         Runtime.getRuntime().gc();
         return realCsvFullPaths;
+    }
+
+    private Boolean InnerImportMetadataToDPM(final DBInfo dbInfo, final Map<String,List<String>> realTabCsvFullPathMap){
+        Boolean flag=false;
+        String tableName;
+        for(Map.Entry<String,List<String>> tabCsvPath: realTabCsvFullPathMap.entrySet()){
+            tableName=tabCsvPath.getKey();
+            for(String pathTemp:tabCsvPath.getValue()){
+                flag=dbInfo.importCsvToAccess(tableName,pathTemp);
+                if (flag) {
+                    logger.info("import [" + pathTemp + "] to " + tableName + " successfully.");
+                } else {
+                    BuildStatus.getInstance().recordError();
+                    logger.error("import [" + pathTemp + "] to " + tableName + " fail.");
+                    break;
+                }
+            }
+            if(!flag){
+                break;
+            }
+        }
+        return flag;
     }
 
     /***
@@ -197,9 +204,9 @@ public class ARPPack implements IComFolder {
 
     public Boolean execSQLs(final String sourcePath,final List<String> sqlFileNames,final String excludeFileFilters) {
         Boolean flag = true;
-        if (Helper.isEmptyList(sqlFileNames)) return true;//means testudo.json doesn't provide sqlFiles.
+        if (Helper.isEmptyList(sqlFileNames)) return flag;//means testudo.json doesn't provide sqlFiles.
         logger.info("================= execute SQLs =================");
-        List<String> realFullPaths = getFileFullPaths(sourcePath, sqlFileNames, excludeFileFilters);
+        List<String> realFullPaths = getFileFullPaths(sourcePath, sqlFileNames, excludeFileFilters,false);
         if (Helper.isEmptyList(realFullPaths)) {
             BuildStatus.getInstance().recordError();
             logger.error("error: sqlFiles are invalid files or filters.");
@@ -269,7 +276,10 @@ public class ARPPack implements IComFolder {
         }
         Boolean flag = true;
         List<String> packFileNames = zipSet.getZipFiles();
-        List<String> realFullPaths = getFileFullPaths(sourcePath, packFileNames, zipSet.getExcludeFileFilters());
+        long begin=System.currentTimeMillis();
+        System.out.print("calculate compressed folders and files ");
+        List<String> realFullPaths = getFileFullPaths(sourcePath, packFileNames, zipSet.getExcludeFileFilters(),true);
+        System.out.println("used time(sec):" + (System.currentTimeMillis() - begin) / MILLISECONDS_PER_SECOND);
         if (realFullPaths == null) {
             BuildStatus.getInstance().recordError();
             logger.error("error: zipFiles are invalid files or filters.");
@@ -338,36 +348,6 @@ public class ARPPack implements IComFolder {
         return flag;
     }
 
-    /***
-     * get all file's full path under sourcePath, with filters
-     * @param sourcePath
-     * @param filters
-     * @return if get nothing or arguments contains blank argument, return null.
-     */
-    public List<String> getFileFullPaths(String sourcePath, List<String> filters) {
-        Helper.removeDuplicatedElements(filters);
-        if (Helper.isEmptyList(filters)) return null;
-        if (StringUtils.isBlank(sourcePath)) return null;
-        sourcePath = Helper.reviseFilePath(sourcePath + "/");
-        List<String> realFilePaths = new ArrayList<String>();
-
-        for (String filter : filters) {
-
-            List<String> realFullPathsTmp = FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath + filter), null);
-            if (realFullPathsTmp.size() <= 0) {
-                //BuildStatus.getInstance().recordError(); //solve ARPA-72
-                logger.warn("error: cannot search [" + filter + "] under path [" + sourcePath + "]");
-                continue;
-            }
-            for (String pathTmp : realFullPathsTmp) {
-                if (!realFilePaths.contains(pathTmp)) {
-                    realFilePaths.add(pathTmp);
-                }
-            }
-        }
-        if (realFilePaths.size() <= 0) return null;
-        return realFilePaths;
-    }
 
     /***
      * get all file's full path under sourcePath, with filters
@@ -375,17 +355,21 @@ public class ARPPack implements IComFolder {
      * @param filters
      * @return if get nothing or arguments contains blank argument, return null.
      */
-    public List<String> getFileFullPaths(String sourcePath,final List<String> filters,final String excludeFilters) {
+    public List<String> getFileFullPaths(final String sourcePath,final List<String> filters,final String excludeFilters,final Boolean keepDirStructure) {
         Helper.removeDuplicatedElements(filters);
         if (Helper.isEmptyList(filters)) return null;
         if (StringUtils.isBlank(sourcePath)) return null;
-        sourcePath = Helper.reviseFilePath(sourcePath + "/");
+        //sourcePath = Helper.reviseFilePath(sourcePath + "/");
         List<String> realFilePaths = new ArrayList<String>();
         List<String> realFullPathsTmp;
-
+        String filePathTmp;
         for (String filter : filters) {
-
-            realFullPathsTmp = FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath + filter), excludeFilters);
+            filePathTmp=Helper.reviseFilePath(sourcePath + "/"+ filter);
+            if(filter.equalsIgnoreCase("xbrl")){
+                realFullPathsTmp = FileUtil.getFilesByFilter(filePathTmp, null,false);
+            }else{
+                realFullPathsTmp = FileUtil.getFilesByFilter(filePathTmp, excludeFilters,keepDirStructure);
+            }
             if (realFullPathsTmp.size() <= 0) {
                 //BuildStatus.getInstance().recordError(); //solve ARPA-72
                 logger.warn("error: cannot search [" + filter + "] under path [" + sourcePath + "]");

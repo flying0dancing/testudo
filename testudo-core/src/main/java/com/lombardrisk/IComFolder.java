@@ -41,4 +41,7 @@ public interface IComFolder {
 
     //user-defined, access database's table schema name
     String ACCESS_SCHEMA_INI = "ACCESS_FORM_META.ini";
+
+    //display sec
+    float MILLISECONDS_PER_SECOND = 1000.00F;
 }
