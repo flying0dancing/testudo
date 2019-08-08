@@ -14,7 +14,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -73,7 +72,7 @@ public class ARPPack implements IComFolder {
      * @param schemaFullName It's a configuration file, which contains all tables' definition.
      * @return return metadata (*.csv files) full paths, return null if error occurs.
      */
-    public List<String> importMetadataToDpm(String csvParentPath, List<String> csvPaths, String schemaFullName) {
+    public List<String> importMetadataToDpm(final String csvParentPath,final List<String> csvPaths, String schemaFullName) {
         if (StringUtils.isBlank(csvParentPath)) {
             return null;
         }
@@ -92,51 +91,52 @@ public class ARPPack implements IComFolder {
         dbInfo.setDefaultSchemaFullName(userSchemaFullName);
         dbInfo.setDefaultSchemaExist(userSchemaFullName);
 
+        dbInfo.createAccessDBTable("Ref",schemaFullName);
+        dbInfo.createAccessDBTable("GridRef",schemaFullName);
+
         List<String> realCsvFullPaths = new ArrayList<>();
         List<String> realNames=new ArrayList<>();
         List<String> realCsvFullPathsTmp;
-        Map<String,List<String>> realTabCsvFullPathMap=new HashMap<String,List<String>>();
-        List<String> metadataFullNames;
+        //Map<String,List<String>> realTabCsvFullPathMap=new HashMap<String,List<String>>();
+        //List<String> metadataFullNames;
         String tableName;
         Boolean flag=true;
-        long begin, end;
-        logger.info("================= create metadata table into DPM =================");
+        //long begin, end;
+        logger.info("================= import metadata into DPM =================");
         for (String pathTmp : csvPaths) {
             realCsvFullPathsTmp =
                     FileUtil.getFilesByFilter(Helper.reviseFilePath(csvParentPath + System.getProperty("file" +
                             ".separator") + pathTmp), null,false);
-            if (Helper.isEmptyList(realCsvFullPathsTmp)) {
+            if (realCsvFullPathsTmp.size() <= 0) {
                 logger.error("error: invalid path [" + csvParentPath + System.getProperty("file.separator") + pathTmp + "]");
             }else{
                 //realCsvFullPaths.addAll(realCsvFullPathsTmp);
                 for(String pathTmp2:realCsvFullPathsTmp){
-                    if(realCsvFullPaths.contains(pathTmp2)){
-                        continue;
-                    }
                     realCsvFullPaths.add(pathTmp2);
                     tableName=getTableFromMetaName(pathTmp2,folderRegex);
 
-                    if(realNames.contains(tableName)){
-                        metadataFullNames=realTabCsvFullPathMap.get(tableName);
-                        metadataFullNames.add(pathTmp2);
-                    }else {
+                    if(!realNames.contains(tableName)){
+                        dbInfo.createAccessDBTable(tableName,schemaFullName);
                         realNames.add(tableName);
-                        metadataFullNames=new ArrayList<>();
-                        metadataFullNames.add(pathTmp2);
-                        realTabCsvFullPathMap.put(tableName,metadataFullNames);
+                    }
+                    //begin=System.currentTimeMillis();
+                    flag = dbInfo.importCsvToAccess(tableName, Helper.reviseFilePath(pathTmp2));
+                    //end=System.currentTimeMillis();
+                    if (!flag) {
+                        BuildStatus.getInstance().recordError();
+                        logger.error("import [" + pathTmp2 + "] to " + tableName + " fail.");
+                        break;
+                    } else {
+                        logger.info("import [" + pathTmp2 + "] to " + tableName + " successfully.");
                     }
                 }
             }
+            if(!flag){
+                realCsvFullPaths=null;
+                break;
+            }
         }
-        flag=dbInfo.createAccessDBTables(realNames, schemaFullName);
 
-        if(flag){
-            logger.info("================= import metadata into DPM =================");
-            flag=InnerImportMetadataToDPM(dbInfo, realTabCsvFullPathMap);
-        }
-        if(!flag){
-            realCsvFullPaths=null;
-        }
         dbInfo.getDbHelper().close();
         dbInfo=null;
         if (Helper.isEmptyList(realCsvFullPaths)) {
@@ -277,9 +277,9 @@ public class ARPPack implements IComFolder {
         Boolean flag = true;
         List<String> packFileNames = zipSet.getZipFiles();
         long begin=System.currentTimeMillis();
-        System.out.print("calculate compressed folders and files ");
+        System.out.println("calculate compressed folders and files ");
         List<String> realFullPaths = getFileFullPaths(sourcePath, packFileNames, zipSet.getExcludeFileFilters(),true);
-        System.out.println("used time(sec):" + (System.currentTimeMillis() - begin) / MILLISECONDS_PER_SECOND);
+        System.out.println("calculate used time(sec):" + (System.currentTimeMillis() - begin) / MILLISECONDS_PER_SECOND);
         if (realFullPaths == null) {
             BuildStatus.getInstance().recordError();
             logger.error("error: zipFiles are invalid files or filters.");

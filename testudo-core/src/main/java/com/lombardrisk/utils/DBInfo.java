@@ -370,7 +370,7 @@ public class DBInfo implements IComFolder {
      //* @param schemaFullName
      * @return
      */
-    public Boolean importCsvToAccess(final String tableName,final  String csvPath) {
+    public Boolean importCsvToAccess(final String tableName,final String csvPath) {
         Boolean flag = false;
         if (this.getDbHelper().getDatabaseServer().getDriver().startsWith("access")) {
             List<TableProps> columns = findDbTableColumns(tableName);
@@ -410,14 +410,7 @@ public class DBInfo implements IComFolder {
             }
             if (columns != null && columns.size() > 0) {
                 setDbTableColumns(tableName, columns);
-
                 flag = this.dbHelper.getAccdb().createAccessDBTab(tableName, columns);
-                if(flag){
-                    logger.info("create table ["+tableName+"] successfully.");
-                }else{
-                    BuildStatus.getInstance().recordError();
-                    logger.error("fail to create table [" + tableName + "]");
-                }
             } else {
                 logger.warn("invalid table definition [" + tableName + "]");
                 flag = false;
@@ -483,6 +476,7 @@ public class DBInfo implements IComFolder {
 
     public Boolean createAccessDBTables(final List<String> tableNames,final String schemaFullName){
         Boolean flag=false;
+        long begin=System.currentTimeMillis();
         List<String> ignoreNames= new ArrayList<>(Arrays.asList("Ref", "GridRef"));
         for(String tableName:ignoreNames){
             if(getDefaultSchemaExist() && FileUtil.search(getDefaultSchemaFullName(), "[" + tableName + "]")){
@@ -495,13 +489,14 @@ public class DBInfo implements IComFolder {
         }
         List<String> noExistTableNames=this.getDbHelper().getAccdb().inexistentAccessTables(tableNames);
         if(!Helper.isEmptyList(noExistTableNames)){
-            for(String tableName:noExistTableNames){
-                flag=createAccessDBTable(tableName, schemaFullName);
-                if(!flag){
+            for (String tableName : noExistTableNames) {
+                flag = createAccessDBTable(tableName, schemaFullName);
+                if (!flag) {
                     break;
                 }
             }
         }
+        System.out.println("create tables used time(sec):" + (System.currentTimeMillis() - begin) / MILLISECONDS_PER_SECOND);
         return flag;
     }
 }

@@ -435,7 +435,7 @@ public final class FileUtil {
      * The destination directory is created if it does not exist.
      * If the destination file exists, then this method will overwrite it.
      */
-    public static boolean copyFileToDirectory(String srcFileFullName, String destDirFullPath) {
+    public static boolean copyFileToDirectory(String srcFileFullName,String destDirFullPath) {
         File srcFile = new File(srcFileFullName);
         File destDir = new File(destDirFullPath);
         try {
@@ -454,7 +454,8 @@ public final class FileUtil {
      * get all file paths by filePath, maybe one file path return, or maybe more file paths return.
      * @param filePath maybe contains "*"
      */
-    public static List<String> getFilesByFilter(String filePath, String excludeFilters,final boolean keepDirStructure) {
+    public static List<String> getFilesByFilter(final String filePath,final String excludeFilters,
+                                                final boolean keepDirStructure) {
         if (StringUtils.isNotBlank(filePath)) {
             return listFilesByFilter(filePath, null, excludeFilters,keepDirStructure);
         }

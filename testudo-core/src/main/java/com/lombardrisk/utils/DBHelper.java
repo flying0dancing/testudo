@@ -472,7 +472,7 @@ public class DBHelper {
             if (sqlLow.startsWith("update") || (sqlLow.contains("create") && sqlLow.contains("select") && sqlLow.contains("with"))) {
                 statement.executeUpdate(sql);
                 flag = true;
-            } else if (sqlLow.startsWith("alter") && sqlLow.contains("rename to")) {
+            }else if (sqlLow.startsWith("alter") && sqlLow.contains("rename to")) {
                 String tableName = "";
                 String newTableName = "";
                 String regexDROP = "alter\\s+TABLE\\s+\\[?(\\w+)\\]?\\s+rename\\s+to\\s+\\[?(\\w+)\\]?";
@@ -602,6 +602,7 @@ public class DBHelper {
                     logger.error(e.getMessage(), e);
                 }
             }
+            logger.info("need to create tables:"+inexistentOnes);
             return inexistentOnes;
         }
 
@@ -998,10 +999,10 @@ public class DBHelper {
         public Boolean createAccessDBTab(final String tableName,final List<TableProps> tableDefinition) {
             Boolean flag = false;
             try {
-                /*flag = accessTableExistence(tableName);
+                flag = accessTableExistence(tableName);
                 if (flag) {
                     return flag;
-                }*/
+                }
                 //generate sql statement
                 StringBuffer sqlBuilder = new StringBuffer(CREATE_STR + tableName + CREATE_STR2);
                 for (TableProps props : tableDefinition) {
@@ -1016,10 +1017,16 @@ public class DBHelper {
                     }
                     sqlBuilder.append("[" + props.getName() + "] " + props.getTypeSize() + props.getNullable() + ",");
                 }
-                String sql = sqlBuilder.deleteCharAt(sqlBuilder.length() - 1).append(")").toString();
-                flag = addBatch(sql);//create table
+                String sql =sqlBuilder.deleteCharAt(sqlBuilder.length() - 1).append(")").toString();
+                //flag = addBatch(sql);//create table
+                try(Statement statement = getConn().createStatement()){
+                    statement.execute(sql);//result false is not quite sure
+                    flag=true;
+                    logger.info("create table ["+tableName+"] successfully.");
+                }
             } catch (Exception e) {
                 BuildStatus.getInstance().recordError();
+                logger.error("fail to create table [" + tableName + "]");
                 logger.error(e.getMessage(), e);
             }
             return flag;
