@@ -62,9 +62,11 @@ public class DBInfo implements IComFolder {
     }
 
     private String queryRecord(String sql) {
-        dbHelper.connect();
+        if(dbHelper.getConn()==null){
+            dbHelper.connect();
+        }
         String rst = dbHelper.query(sql);
-        dbHelper.close();
+        //dbHelper.close();
         return rst;
     }
 
@@ -124,29 +126,31 @@ public class DBInfo implements IComFolder {
         String csvSuffix=".csv";
 
         logger.info("================= export single tables =================");
-        for (String tab : tableList) {
-            tabName=tab.replace(sharpFlag, prefix);
-            tableName = getTableNameFromDB(tabName);
-            if (StringUtils.isNotBlank(tableName)) {
-                dividedTableField=DivideTableFieldList.getDividedField(tableName);
+        if(dbHelper.connect()){
+            for (String tab : tableList) {
+                tabName=tab.replace(sharpFlag, prefix);
+                tableName = getTableNameFromDB(tabName);
+                if (StringUtils.isNotBlank(tableName)) {
+                    dividedTableField=DivideTableFieldList.getDividedField(tableName);
 
-                logger.info("----------- " + tableName + " ----------- ");
-                tab = tab.replace(sharpFlag, emptyStr);
-                metadataName= tab + idOfDBAndTable + csvSuffix;
-                exportFullPath = exportPath + ACTUAL_FILE_SEPERATOR + metadataName;
-                if (new File(exportFullPath).exists()) {
-                    logger.warn("warn: duplicated [" + tab + idOfDBAndTable + "] in metadata, overwriting existed one.");
+                    logger.info("----------- " + tableName + " ----------- ");
+                    tab = tab.replace(sharpFlag, emptyStr);
+                    metadataName= tab + idOfDBAndTable + csvSuffix;
+                    exportFullPath = exportPath + ACTUAL_FILE_SEPERATOR + metadataName;
+                    if (new File(exportFullPath).exists()) {
+                        logger.warn("warn: duplicated [" + tab + idOfDBAndTable + "] in metadata, overwriting existed one.");
+                    }
+
+                    sQL=getSQLForExportToSingle(tableName,dividedTableField,excludeReturnIds);
+                    logger.info("export metadata struct to " + iNIName);
+                    dbHelper.exportToINI(tab + idOfDBAndTable, sQL, new File(exportPath).getPath() + ACTUAL_FILE_SEPERATOR + iNIName);
+
+                    logger.info("metadata exports to:" + metadataName);
+                    dbHelper.exportToCsv(sQL, exportFullPath);
+
+                } else {
+                    logger.warn(WARN_TABLE + tabName + "] doesn't exist.");
                 }
-
-                sQL=getSQLForExportToSingle(tableName,dividedTableField,excludeReturnIds);
-                logger.info("export metadata struct to " + iNIName);
-                dbHelper.exportToINI(tab + idOfDBAndTable, sQL, new File(exportPath).getPath() + ACTUAL_FILE_SEPERATOR + iNIName);
-
-                logger.info("metadata exports to:" + metadataName);
-                dbHelper.exportToCsv(sQL, exportFullPath);
-
-            } else {
-                logger.warn(WARN_TABLE + tabName + "] doesn't exist.");
             }
         }
         dbHelper.close();
@@ -240,17 +244,19 @@ public class DBInfo implements IComFolder {
         String tableName;
 
         logger.info("================= export tables need to be divided by ReturnId =================");
-        for (String tab : tableList) {
-            tabName=tab.replace(sharpFlag, prefix);
-            tableName = getTableNameFromDB(tabName);
-            if (StringUtils.isNotBlank(tableName)) {
-                logger.info("----------- " + tableName + " ----------- ");
-                tab = tab.replace(sharpFlag, emptyStr);
-                exportDividedMetadata(new File(exportPath).getPath(), tab,tableName,iNIName,
-                        excludeReturnIds,
-                        idOfDBAndTable);
-            } else {
-                logger.warn(WARN_TABLE + tabName + "] doesn't exist.");
+        if(dbHelper.connect()){
+            for (String tab : tableList) {
+                tabName=tab.replace(sharpFlag, prefix);
+                tableName = getTableNameFromDB(tabName);
+                if (StringUtils.isNotBlank(tableName)) {
+                    logger.info("----------- " + tableName + " ----------- ");
+                    tab = tab.replace(sharpFlag, emptyStr);
+                    exportDividedMetadata(new File(exportPath).getPath(), tab,tableName,iNIName,
+                            excludeReturnIds,
+                            idOfDBAndTable);
+                } else {
+                    logger.warn(WARN_TABLE + tabName + "] doesn't exist.");
+                }
             }
         }
         dbHelper.close();

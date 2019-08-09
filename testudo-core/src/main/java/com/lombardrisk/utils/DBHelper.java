@@ -305,7 +305,7 @@ public class DBHelper {
         return type;
     }
 
-    public void exportToINI(String tableName, String sql, String fileFullName) {
+    public void exportToINI(final String tableName,final String sql,final String fileFullName) {
         if (getConn() == null) {
             connect();
         }
@@ -333,11 +333,11 @@ public class DBHelper {
             logger.error("error: Exception in [{}]", sql);
             logger.error(e.getMessage(), e);
         } finally {
-            close();
+            //close();
         }
     }
 
-    public String getColumnType(String sql, String columnName) {
+    public String getColumnType(final String sql,final String columnName) {
         if (getConn() == null) {
             connect();
         }
@@ -363,7 +363,7 @@ public class DBHelper {
             logger.error("error: Exception in [" + sql + "]");
             logger.error(e.getMessage(), e);
         } finally {
-            close();
+            //close();
         }
         return colProp;
     }
@@ -374,7 +374,7 @@ public class DBHelper {
      * @param sql
      * @param fileFullName
      */
-    public void exportToCsv(String sql, String fileFullName) {
+    public void exportToCsv(final String sql,final String fileFullName) {
         if (getConn() == null) {
             connect();
         }
@@ -444,7 +444,7 @@ public class DBHelper {
             logger.error("error: Exception in [" + sql + "]");
             logger.error(e.getMessage(), e);
         } finally {
-            close();
+            //close();
             /*try {
                 bufOutFile.close();
                 csvName.close();
