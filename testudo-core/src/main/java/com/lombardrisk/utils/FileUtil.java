@@ -17,6 +17,7 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -30,25 +31,27 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 
 public final class FileUtil {
-
+    private static final String CharacterSet="UTF-8";
     private FileUtil() {
     }
 
     private static final Logger logger = LoggerFactory.getLogger(FileUtil.class);
     private static final int BUFFER_SIZE = 2048;
+    private static final float MILLISECONDS_PER_SECOND = 1000.00F;
 
-    public static boolean exists(String fileFullName) {
+    public static boolean exists(final String fileFullName) {
         if (StringUtils.isNotBlank(fileFullName)) {
             File file = new File(fileFullName);
             return file.exists();
@@ -63,10 +66,12 @@ public final class FileUtil {
      * @param zipFullName zip full path with name
      */
     @SuppressWarnings("squid:S109")
-    public static boolean zipFilesAndFolders(String sourcePath, List<String> toZipFileFullPaths, String zipFullName) {
+    public static boolean zipFilesAndFolders(String sourcePath,final List<String> toZipFileFullPaths,final String zipFullName) {
         boolean flag = true;
         byte[] buf = new byte[1024];
         try {
+            logger.info("start compressing");
+            long begin=System.currentTimeMillis();
             int lastSlash = zipFullName.lastIndexOf("\\") == -1 ? zipFullName.lastIndexOf("/") : zipFullName.lastIndexOf("\\");
             String zipsPath = zipFullName.substring(0, lastSlash);//get zip's path
             File zipPathHd = new File(zipsPath);
@@ -86,8 +91,12 @@ public final class FileUtil {
             sourcePath = sourcePathHd.getAbsolutePath();
             try (OutputStream os = new BufferedOutputStream(new FileOutputStream(zipFullName));
                  ZipArchiveOutputStream zipOut = new ZipArchiveOutputStream(os)) {
-                zipOut.setEncoding("UTF-8");
-                for (String fileFullPath : toZipFileFullPaths) {
+                zipOut.setEncoding(CharacterSet);
+                ListIterator<String> listIterator = toZipFileFullPaths.listIterator();
+                String fileFullPath;
+
+                while (listIterator.hasNext()){
+                    fileFullPath=listIterator.next();
                     File fileHd = new File(fileFullPath);
                     String toZipPath = fileFullPath.substring(sourcePath.length() + 1);
                     if (fileHd.isDirectory()) {
@@ -104,8 +113,10 @@ public final class FileUtil {
                             zipOut.closeArchiveEntry();
                         }
                     }
+
                 }
             }
+            logger.info("compression used time(sec):" + (System.currentTimeMillis() - begin) / MILLISECONDS_PER_SECOND);
         } catch (Exception e) {
             flag = false;
             BuildStatus.getInstance().recordError();
@@ -116,9 +127,11 @@ public final class FileUtil {
 
     private static List<String> un7z1(File file, String destDir) throws IOException {
         List<String> fileNames = new ArrayList<>();
-
         try (SevenZFile sevenZFile = new SevenZFile(file)) {
+            logger.info(file.getName()+"\textracting");
             SevenZArchiveEntry entry;
+
+            long begin=System.currentTimeMillis();
             while ((entry = sevenZFile.getNextEntry()) != null) {
                 fileNames.add(entry.getName());
                 if (entry.isDirectory()) {
@@ -130,14 +143,21 @@ public final class FileUtil {
                         byte[] content = new byte[(int) entry.getSize()];
                         sevenZFile.read(content, 0, content.length);
                         out.write(content);
+                    }catch (Exception e){
+                        BuildStatus.getInstance().recordError();
+                        logger.error(e.getMessage(), e);
+                        throw e;
                     }
                 }
+
             }
+            logger.info("extraction time(sec):" + (System.currentTimeMillis() - begin) / MILLISECONDS_PER_SECOND);
         } catch (IOException e) {
             BuildStatus.getInstance().recordError();
             logger.error(e.getMessage(), e);
             throw e;
         }
+        Runtime.getRuntime().gc();
         return fileNames;
     }
 
@@ -320,7 +340,7 @@ public final class FileUtil {
         return fileNames;
     }
 
-    private static void unCompress(String compressFile, String destDir) throws IOException {
+    private static void unCompress(final String compressFile,final String destDir) throws IOException {
         String upperName = compressFile.toUpperCase();
         if (upperName.endsWith(".ZIP")) {
             unZip(compressFile, destDir);
@@ -341,7 +361,7 @@ public final class FileUtil {
         }
     }
 
-    public static void renameTo(String fileFullName, String destFullName) {
+    public static void renameTo(final String fileFullName,final String destFullName) {
         if (StringUtils.isNoneBlank(fileFullName, destFullName)) {
             File dest = new File(destFullName);
             if (dest.exists()) {
@@ -360,7 +380,7 @@ public final class FileUtil {
     /**
      * Create a new file if it doesn't exist.
      */
-    public static void createNew(String fileFullName) {
+    public static void createNew(final String fileFullName) {
         if (StringUtils.isNotBlank(fileFullName)) {
             try {
                 File file = new File(fileFullName);
@@ -375,7 +395,7 @@ public final class FileUtil {
         }
     }
 
-    private static void createDirectory(String outputDir, String subDir) {
+    private static void createDirectory(final String outputDir,final String subDir) {
         File file = new File(outputDir);
         if (!(subDir == null || subDir.trim().equals(""))) {
             file = new File(outputDir + File.separator + subDir);
@@ -409,7 +429,7 @@ public final class FileUtil {
      * The destination directory is created if it does not exist.
      * If the destination file exists, then this method will overwrite it.
      */
-    public static boolean copyFileToDirectory(String srcFileFullName, String destDirFullPath) {
+    public static boolean copyFileToDirectory(String srcFileFullName,String destDirFullPath) {
         File srcFile = new File(srcFileFullName);
         File destDir = new File(destDirFullPath);
         try {
@@ -428,14 +448,15 @@ public final class FileUtil {
      * get all file paths by filePath, maybe one file path return, or maybe more file paths return.
      * @param filePath maybe contains "*"
      */
-    public static List<String> getFilesByFilter(String filePath, String excludeFilters) {
+    public static List<String> getFilesByFilter(final String filePath,final String excludeFilters,
+                                                final boolean keepDirStructure) {
         if (StringUtils.isNotBlank(filePath)) {
-            return listFilesByFilter(filePath, null, excludeFilters);
+            return listFilesByFilter(filePath, null, excludeFilters,keepDirStructure);
         }
         return new ArrayList<>();
     }
 
-    private static Pair<File, String> splitFilePathIntoParentFileAndFileName(String filePathParam) {
+    protected static Pair<File, String> splitFilePathIntoParentFileAndFileName(String filePathParam) {
         String filePath = filePathParam.replace("\"", "");
         if (filePath.endsWith("/") || filePath.endsWith("\\")) {
             filePath = filePath.substring(0, filePath.length() - 1);
@@ -447,24 +468,33 @@ public final class FileUtil {
         return Pair.of(parentPath, fileName);
     }
 
-    private static List<String> listFilesByFilter(String filePath, String filterStr, String exfilterStr) {
+    private static List<String> listFilesByFilter(final String filePath,final String filterStr,
+                                                  final String exfilterStr,final boolean keepDirStructure) {
         List<String> filePaths = new ArrayList<>();
         File fileFullPath = new File(filePath);
-        if (StringUtils.isBlank(filterStr)) {
+        /*if (StringUtils.isBlank(filterStr)) {
             filterStr = "";
         }
         if (StringUtils.isBlank(exfilterStr)) {
             exfilterStr = "";
-        }
+        }*/
         if (fileFullPath.exists()) {
             if (fileFullPath.isDirectory()) {
                 File[] files = filterFilesAndSubFolders(fileFullPath, filterStr, exfilterStr);
+                Boolean flag=true;
                 for (File file : files) {
-                    filePaths.addAll(listFilesByFilter(file.getAbsolutePath(), filterStr, exfilterStr));
+                    if(file.isFile()){
+                        if(keepDirStructure && flag){
+                            filePaths.add(file.getParent());
+                            flag=false;
+                        }
+                        filePaths.add(file.getAbsolutePath());
+                    }else{
+                        filePaths.addAll(listFilesByFilter(file.getAbsolutePath(), filterStr, exfilterStr,keepDirStructure));
+                    }
                 }
-            }
-            if (fileFullPath.isFile()) {
-                filePaths.add(fileFullPath.getAbsolutePath());
+            }else{
+                filePaths.add(filePath);
             }
         } else {
             Pair<File, String> pathParts = splitFilePathIntoParentFileAndFileName(filePath);
@@ -474,7 +504,11 @@ public final class FileUtil {
             if (parentPath.isDirectory()) {
                 File[] files = filterFilesAndSubFolders(parentPath, fileName, exfilterStr);
                 for (File file : files) {
-                    filePaths.addAll(listFilesByFilter(file.getAbsolutePath(), fileName, exfilterStr));
+                    if(file.isFile()){
+                        filePaths.add(file.getAbsolutePath());
+                    }else{
+                        filePaths.addAll(listFilesByFilter(file.getAbsolutePath(), fileName, exfilterStr,keepDirStructure));
+                    }
                 }
             } else {
                 BuildStatus.getInstance().recordError();
@@ -484,9 +518,9 @@ public final class FileUtil {
         return filePaths;
     }
 
-    private static File[] filterFilesAndSubFolders(File parentPath, String filterStr, String excludeFileStr) {
-        final String[] filters = filterStr.toLowerCase().split("\\*");
-        final String[] exfilters = excludeFileStr.toLowerCase().replaceAll("^\\*(.*)", "$1").split(";");
+    protected static File[] filterFilesAndSubFolders(final File parentPath,final String filterStr,final String excludeFileStr) {
+        final String[] filters = StringUtils.isBlank(filterStr)?null:filterStr.toLowerCase().split("\\*");
+        final String[] exfilters = StringUtils.isBlank(excludeFileStr)?null:excludeFileStr.toLowerCase().replaceAll("^\\*(.*)", "$1").split(";");
 
         return parentPath.listFiles(new CustomFileNameFilter(filters, exfilters));
     }
@@ -518,41 +552,39 @@ public final class FileUtil {
         return fileFullName.substring(lastSlash + 1);
     }
 
-    @SuppressWarnings("findbugs:DM_DEFAULT_ENCODING")
-    public static boolean search(String fileFullName, String searchStr) {
-        logger.info("search " + searchStr + " in " + fileFullName);
-        File filehd = new File(fileFullName);
-        if (!filehd.exists() || !filehd.isFile()) {
+
+    public static boolean search(final String fileFullName,final String searchStr) {
+        boolean flag = false;
+        if (new File(fileFullName).isFile()) {
+            logger.debug("search " + searchStr + " in " + fileFullName);
+            try (BufferedReader bufReader = new BufferedReader(new InputStreamReader(new FileInputStream(fileFullName),CharacterSet))) {
+                String line;
+                while ((line = bufReader.readLine()) != null) {
+                    if (line.equalsIgnoreCase(searchStr)) {
+                        flag = true;
+                        logger.info("found " + searchStr + " in " + fileFullName);
+                        break;
+                    }
+                }
+            } catch (IOException e) {
+                BuildStatus.getInstance().recordError();
+                logger.error(e.getMessage(), e);
+            }
+        }else{
             logger.warn("File Not Found: " + fileFullName);
-            return false;
         }
 
-        boolean flag = false;
-        try (BufferedReader bufReader = new BufferedReader(new FileReader(fileFullName))) {
-            String line;
-            while ((line = bufReader.readLine()) != null) {
-                if (line.equalsIgnoreCase(searchStr)) {
-                    flag = true;
-                    logger.info("found " + searchStr + " in " + fileFullName);
-                    break;
-                }
-            }
-        } catch (IOException e) {
-            BuildStatus.getInstance().recordError();
-            logger.error(e.getMessage(), e);
-        }
         return flag;
     }
 
     /**
      * return table's definition in a INI file
      */
-    @SuppressWarnings({"squid:S109","findbugs:DM_DEFAULT_ENCODING"})
-    public static List<List<TableProps>> searchTablesDefinition(String fileFullName, String tableName) {
+    public static List<List<TableProps>> searchTablesDefinition(final String fileFullName,final String tableName) {
         List<List<TableProps>> tablesDefinition = null;
         List<TableProps> tableColumns;
         if (StringUtils.isNoneBlank(fileFullName, tableName)) {
-            try (BufferedReader bufReader = new BufferedReader(new FileReader(fileFullName))) {
+            try (BufferedReader bufReader = new BufferedReader(new InputStreamReader(new FileInputStream(fileFullName),CharacterSet))) {
                 tablesDefinition = new ArrayList<>();
                 String line;
                 while ((line = bufReader.readLine()) != null) {
@@ -588,7 +620,7 @@ public final class FileUtil {
     /**
      * get mixed columns from all same table's table definition
      */
-    public static List<TableProps> getMixedTablesDefinition(List<List<TableProps>> tablesDefinition) {
+    public static List<TableProps> getMixedTablesDefinition(final List<List<TableProps>> tablesDefinition) {
         List<TableProps> tableColumns = null;
         if (tablesDefinition != null && tablesDefinition.size() > 0) {
             List<String> columnNames = new ArrayList<>();
@@ -613,7 +645,8 @@ public final class FileUtil {
         }
         return tableColumns;
     }
-    public static Map<String, List<TableProps>> getAllTablesMixedDefinition(String fileFullName) {
+
+    public static Map<String, List<TableProps>> getAllTablesMixedDefinition(final String fileFullName) {
         Map<String, List<TableProps>> mixedAllTables=null;
         List<String> tableNames=new ArrayList<>();
         List<TableProps> tableColumns;
@@ -647,11 +680,10 @@ public final class FileUtil {
     /**
      * if a file contains tableName, case insensitive, it will rewrite this table's definition at the end.
      */
-    @SuppressWarnings("findbugs:DM_DEFAULT_ENCODING")
-    public static void updateContent(String fileFullName, String tableName, String addedContent) {
+    public static void updateContent(final String fileFullName,final String tableName,final String addedContent) {
         logger.info("update file: " + fileFullName);
-        StringBuilder strBuffer = new StringBuilder();
-        try (BufferedReader bufReader = new BufferedReader(new FileReader(fileFullName))) {
+        StringBuffer strBuffer = new StringBuffer();
+        try (BufferedReader bufReader = new BufferedReader(new InputStreamReader(new FileInputStream(fileFullName),CharacterSet))) {
             String line;
             while ((line = bufReader.readLine()) != null) {    //delete searched string and its sub fields
                 if (line.toLowerCase().contains(tableName.toLowerCase())) {
@@ -668,7 +700,7 @@ public final class FileUtil {
             }
             bufReader.close();
 
-            try (BufferedWriter bufWriter = new BufferedWriter(new FileWriter(fileFullName))) {
+            try (BufferedWriter bufWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileFullName),CharacterSet))) {
 
                 bufWriter.append(strBuffer);
                 bufWriter.flush();
@@ -684,11 +716,10 @@ public final class FileUtil {
     /**
      * get content of fileFullName, return String
      */
-    @SuppressWarnings("findbugs:DM_DEFAULT_ENCODING")
-    public static String getSQLContent(String fileFullName) {
+    public static String getSQLContent(final String fileFullName) {
         StringBuilder contents = new StringBuilder();
         if (StringUtils.isNotBlank(fileFullName)) {
-            try (BufferedReader bufReader = new BufferedReader(new FileReader(fileFullName))) {
+            try (BufferedReader bufReader = new BufferedReader(new InputStreamReader(new FileInputStream(fileFullName),CharacterSet))) {
                 String line;
                 while ((line = bufReader.readLine()) != null) {
                     line=line.trim();
@@ -720,7 +751,7 @@ public final class FileUtil {
      * @return new file full path with name
      */
     @SuppressWarnings("findbugs:DM_DEFAULT_ENCODING")
-    public static String createNewFileWithSuffix(String fileFullName, String suffix, String newFilePath) {
+    public static String createNewFileWithSuffix(final String fileFullName,final String suffix,String newFilePath) {
         String newFileFullName = null;
         File file = new File(fileFullName);
         if (file.exists()) {
@@ -759,13 +790,15 @@ public final class FileUtil {
         return newFileFullName;
     }
 
-    public static void copyDirectory(String sourcePath, String destPath) {
+    public static void copyDirectory(final String sourcePath,final String destPath) {
         try {
             if (sourcePath != null && destPath != null) {
+                long begin=System.currentTimeMillis();
                 File sourceFile = new File(sourcePath);
                 File destFile = new File(destPath);
                 createDirectories(destPath);
                 FileUtils.copyDirectory(sourceFile, destFile);
+                logger.info("copy folder time(sec):"+(System.currentTimeMillis()-begin)/1000.00F);
             }
         } catch (Exception e) {
             BuildStatus.getInstance().recordError();
@@ -773,8 +806,7 @@ public final class FileUtil {
         }
     }
 
-    public static void copyExternalProject(String srcFile, String destDir, String uncompress) {
-
+    public static void copyExternalProject(final String srcFile,final String destDir,final String uncompress) {
         File srcFileHd = new File(srcFile);
         if (srcFileHd.exists()) {
             createDirectories(destDir);
@@ -782,15 +814,19 @@ public final class FileUtil {
                 copyDirectory(srcFile, destDir);
             }
             if (srcFileHd.isFile()) {
-                String srcFileSuffix = srcFile.substring(srcFile.lastIndexOf(".") + 1).toUpperCase();
-                List<String> compressTypes = new ArrayList<>(Arrays.asList("ZIP", "7Z", "GZ", "TAR", "BZ2", "WAR"));
-                if (compressTypes.contains(srcFileSuffix) && StringUtils.containsIgnoreCase("yes", uncompress)) {
+                if (StringUtils.containsIgnoreCase("yes", uncompress)) {
                     try {
-                        unCompress(srcFile, destDir);
+                        String var2 = System.getProperty("os.name").split(" ")[0];
+                        if(var2.equalsIgnoreCase("windows")){
+                            SevenZipServer.extractZIP7Parallel(srcFile,destDir+File.separator);
+                        }else {
+                            unCompress(srcFile, destDir);
+                        }
                     } catch (Exception e) {
                         BuildStatus.getInstance().recordError();
                         logger.error(e.getMessage(), e);
                     }
+                    Runtime.getRuntime().gc();
                 } else {
                     copyFileToDirectory(srcFile, destDir);
                 }
@@ -852,7 +888,7 @@ public final class FileUtil {
         }
         return filenames;
     }
-    public static String getFolderRegex(String path, List<String> filenames) {
+    public static String getFolderRegex(final List<String> filenames) {
         //List<String> filenames = getSubFolderNames(path);
         StringBuilder names = new StringBuilder();
         if (filenames != null && filenames.size() > 0) {
@@ -869,45 +905,67 @@ public final class FileUtil {
         return names.toString();
     }
 
+    public static void deleteFiles(final String path, final String excludeFilter){
+        File file=new File(path);
+        final String[] excludeName=new String[]{excludeFilter.toLowerCase()};
+        if(file.exists()){
+            deleteFiles(file,excludeName);
+        }
+    }
+    public static void deleteFiles(final File file,final String[] excludeName){
+        if(file.isDirectory()){
+            File[] files=file.listFiles(new CustomFileNameFilter(null,excludeName));
+            for(File file1:files){
+                deleteFiles(file1,excludeName);
+            }
+        }
+        if(file.isFile()){
+            file.delete();
+        }
+    }
     private static class CustomFileNameFilter implements FilenameFilter {
-
+        private static final String regex="\\*";
         private final String[] filters;
         private final String[] exFilters;
 
-        public CustomFileNameFilter(String[] filters, String[] exFilters){
+        public CustomFileNameFilter(final String[] filters,final String[] exFilters){
 
             this.filters = filters;
             this.exFilters = exFilters;
         }
 
         @Override
-        public boolean accept(File dir, String name) {
+        public boolean accept(final File dir,final String name) {
             if (new File(dir, name).isDirectory() && !name.startsWith(".")) {
                 return true;
             }
-            for (String filter : filters) {
-                if (StringUtils.isNotBlank(filter) && !name.toLowerCase().contains(filter)) {
-                    return false;
+            if(ArrayUtils.isNotEmpty(filters)){
+                for (String filter : filters) {
+                    if (StringUtils.isNotBlank(filter) && !name.toLowerCase().contains(filter)) {
+                        return false;
+                    }
                 }
             }
             return runExcludeFilters(name);
         }
 
         private boolean runExcludeFilters(final String name) {
-            for (String exfilter : exFilters) {
-                boolean exflag = false;
-                if (StringUtils.isNotBlank(exfilter)) {
-                    exflag = true;
-                    String[] subfilters = exfilter.split("\\*");
-                    for (String subexfilter : subfilters) {
-                        if (StringUtils.isNotBlank(subexfilter) && !name.toLowerCase().contains(subexfilter)) {
-                            exflag = false;
-                            break;
+            if(ArrayUtils.isNotEmpty(exFilters)){
+                for (String exfilter : exFilters) {
+                    boolean exflag = false;
+                    if (StringUtils.isNotBlank(exfilter)) {
+                        exflag = true;
+                        String[] subfilters = exfilter.split(regex);
+                        for (String subexfilter : subfilters) {
+                            if (StringUtils.isNotBlank(subexfilter) && !name.toLowerCase().contains(subexfilter)) {
+                                exflag = false;
+                                break;
+                            }
                         }
                     }
-                }
-                if (exflag) {
-                    return false;
+                    if (exflag) {
+                        return false;
+                    }
                 }
             }
             return true;

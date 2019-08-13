@@ -15,6 +15,7 @@ import java.lang.reflect.Method;
 import java.sql.Blob;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class Helper {
@@ -172,7 +173,7 @@ public class Helper {
      * @param commons
      * @return
      */
-    public static Boolean runCmdCommand(String[] commons) {
+    public static Boolean runCmdCommand(final String[] commons) {
         Boolean flag = true;
         logger.info(String.join(" ", commons));
         try {
@@ -212,4 +213,43 @@ public class Helper {
         }
         return flag;
     }
+
+
+    public static <T> void removeDuplicatedElements(final List<T> list){
+        if(list!=null){
+            removeBlanks(list);
+            int size=list.size();
+            if(size>1){
+                for(int i=0;i<size-1;i++){
+                    for(int j=i+1;j<size;j++){
+                        if(list.get(i).equals(list.get(j))){
+                            list.remove(j);
+                            size--;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static <T> void removeBlanks(final List<T> list){
+        if(list!=null) {
+            Iterator it=list.iterator();
+            while(it.hasNext()){
+                T obj=(T)it.next();
+                if(obj.equals("")){
+                    it.remove();
+                }
+            }
+            it=null;
+        }
+    }
+
+    public static <T> Boolean isEmptyList(final List<T> list){
+        if(list!=null && list.size()>0){
+            return false;
+        }
+        return true;
+    }
+
 }

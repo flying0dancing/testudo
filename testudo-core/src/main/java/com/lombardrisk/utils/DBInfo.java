@@ -10,6 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +33,8 @@ public class DBInfo implements IComFolder {
     }
 
     private Map<String, List<TableProps>> dbTableColumns= new HashMap<>();//be carefully, mvn package all products together using static will get wrong.
-
+    private String defaultSchemaFullName;
+    private Boolean defaultSchemaExist;
     public DBInfo(DatabaseServer databaseServer) {
         setDbHelper(databaseServer);
         if (dbHelper.getDatabaseServer().getDriver().startsWith("ora")) {
@@ -49,21 +52,20 @@ public class DBInfo implements IComFolder {
 
     private void setDbHelper(DatabaseServer databaseServer) {
         this.dbHelper = new DBHelper(databaseServer);
+        this.dbHelper.setAccdb(this.dbHelper.new AccessdbHelper());
     }
 
-    public Boolean executeSQL(String sql) {
-        dbHelper.connect();
-        Boolean flag = dbHelper.addBatch(sql);
-        dbHelper.close();
 
+    public Boolean executeSQL(String sql) {
+        Boolean flag = dbHelper.addBatch(sql);
         return flag;
     }
 
     private String queryRecord(String sql) {
-        dbHelper.connect();
-        String rst = dbHelper.query(sql);
-        dbHelper.close();
-        return rst;
+        if(dbHelper.getConn()==null){
+            dbHelper.connect();
+        }
+        return  dbHelper.query(sql);
     }
 
     private List<String> queryRecords(String sql) {
@@ -122,29 +124,31 @@ public class DBInfo implements IComFolder {
         String csvSuffix=".csv";
 
         logger.info("================= export single tables =================");
-        for (String tab : tableList) {
-            tabName=tab.replace(sharpFlag, prefix);
-            tableName = getTableNameFromDB(tabName);
-            if (StringUtils.isNotBlank(tableName)) {
-                dividedTableField=DivideTableFieldList.getDividedField(tableName);
+        if(dbHelper.connect()){
+            for (String tab : tableList) {
+                tabName=tab.replace(sharpFlag, prefix);
+                tableName = getTableNameFromDB(tabName);
+                if (StringUtils.isNotBlank(tableName)) {
+                    dividedTableField=DivideTableFieldList.getDividedField(tableName);
 
-                logger.info("----------- " + tableName + " ----------- ");
-                tab = tab.replace(sharpFlag, emptyStr);
-                metadataName= tab + idOfDBAndTable + csvSuffix;
-                exportFullPath = exportPath + ACTUAL_FILE_SEPERATOR + metadataName;
-                if (new File(exportFullPath).exists()) {
-                    logger.warn("warn: duplicated [" + tab + idOfDBAndTable + "] in metadata, overwriting existed one.");
+                    logger.info("----------- " + tableName + " ----------- ");
+                    tab = tab.replace(sharpFlag, emptyStr);
+                    metadataName= tab + idOfDBAndTable + csvSuffix;
+                    exportFullPath = exportPath + ACTUAL_FILE_SEPERATOR + metadataName;
+                    if (new File(exportFullPath).exists()) {
+                        logger.warn("warn: duplicated [" + tab + idOfDBAndTable + "] in metadata, overwriting existed one.");
+                    }
+
+                    sQL=getSQLForExportToSingle(tableName,dividedTableField,excludeReturnIds);
+                    logger.info("export metadata struct to " + iNIName);
+                    dbHelper.exportToINI(tab + idOfDBAndTable, sQL, new File(exportPath).getPath() + ACTUAL_FILE_SEPERATOR + iNIName);
+
+                    logger.info("metadata exports to:" + metadataName);
+                    dbHelper.exportToCsv(sQL, exportFullPath);
+
+                } else {
+                    logger.warn(WARN_TABLE + tabName + "] doesn't exist.");
                 }
-
-                sQL=getSQLForExportToSingle(tableName,dividedTableField,excludeReturnIds);
-                logger.info("export metadata struct to " + iNIName);
-                dbHelper.exportToINI(tab + idOfDBAndTable, sQL, new File(exportPath).getPath() + ACTUAL_FILE_SEPERATOR + iNIName);
-
-                logger.info("metadata exports to:" + metadataName);
-                dbHelper.exportToCsv(sQL, exportFullPath);
-
-            } else {
-                logger.warn(WARN_TABLE + tabName + "] doesn't exist.");
             }
         }
         dbHelper.close();
@@ -195,7 +199,6 @@ public class DBInfo implements IComFolder {
     }
 
     public String combineSqlCondition(String dividedField,List<String> excludeReturnIds) {
-
         if (excludeReturnIds != null && excludeReturnIds.size() > 0) {
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append(" where \""+dividedField+"\" not in (");
@@ -232,29 +235,26 @@ public class DBInfo implements IComFolder {
             return;
         }
         String emptyStr="";
-
         prefix=StringUtils.isBlank(prefix)?emptyStr:prefix;
         idOfDBAndTable=StringUtils.isBlank(idOfDBAndTable)?emptyStr:idOfDBAndTable;
-
         String sharpFlag="#";
         String tabName;
         String tableName;
 
         logger.info("================= export tables need to be divided by ReturnId =================");
-        for (String tab : tableList) {
-            tabName=tab.replace(sharpFlag, prefix);
-            tableName = getTableNameFromDB(tabName);
-            if (StringUtils.isNotBlank(tableName)) {
-
-                logger.info("----------- " + tableName + " ----------- ");
-                tab = tab.replace(sharpFlag, emptyStr);
-
-                exportDividedMetadata(new File(exportPath).getPath(), tab,tableName,iNIName,
-                        excludeReturnIds,
-                        idOfDBAndTable);
-
-            } else {
-                logger.warn(WARN_TABLE + tabName + "] doesn't exist.");
+        if(dbHelper.connect()){
+            for (String tab : tableList) {
+                tabName=tab.replace(sharpFlag, prefix);
+                tableName = getTableNameFromDB(tabName);
+                if (StringUtils.isNotBlank(tableName)) {
+                    logger.info("----------- " + tableName + " ----------- ");
+                    tab = tab.replace(sharpFlag, emptyStr);
+                    exportDividedMetadata(new File(exportPath).getPath(), tab,tableName,iNIName,
+                            excludeReturnIds,
+                            idOfDBAndTable);
+                } else {
+                    logger.warn(WARN_TABLE + tabName + "] doesn't exist.");
+                }
             }
         }
         dbHelper.close();
@@ -338,8 +338,7 @@ public class DBInfo implements IComFolder {
     public boolean createAccessDB() {
         String dbFullName = dbHelper.getDatabaseServer().getSchema();
         if (!new File(dbFullName).exists()) {
-            DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
-            return accdb.createAccessDB(dbHelper.getDatabaseServer().getSchema());
+            return this.dbHelper.getAccdb().createAccessDB(dbHelper.getDatabaseServer().getSchema());
         }
         return true;
     }
@@ -354,17 +353,8 @@ public class DBInfo implements IComFolder {
         String returnAndVer = "";
         String tableName = "Rets";
         if (getDbDriverFlag() == DBDriverType.ACCESSDB) {
-            dbHelper.connect();
-            DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
-            if (!accdb.accessTableExistence(tableName)) {
-                BuildStatus.getInstance().recordError();
-                logger.error("cannot found " + tableName);
-            } else {
-                String sQL = "SELECT Return & \"_v\" & Version AS Expr1 from [" + tableName + "] WHERE ReturnId=" + returnId;
-                returnAndVer = dbHelper.query(sQL);
-            }
-
-            dbHelper.close();
+            String sQL = "SELECT Return & \"_v\" & Version AS Expr1 from [" + tableName + "] WHERE ReturnId=" + returnId;
+            returnAndVer = dbHelper.query(sQL);
         } else {
             BuildStatus.getInstance().recordError();
             logger.error("this function should be worked on access database.");
@@ -372,7 +362,6 @@ public class DBInfo implements IComFolder {
         if (returnAndVer == null) {
             returnAndVer = "";
         }
-
         return returnAndVer;
     }
 
@@ -385,45 +374,31 @@ public class DBInfo implements IComFolder {
      //* @param schemaFullName
      * @return
      */
-    public Boolean importCsvToAccess(String tableName, String csvPath) {
+    public Boolean importCsvToAccess(final String tableName,final String csvPath) {
         Boolean flag = false;
         if (this.getDbHelper().getDatabaseServer().getDriver().startsWith("access")) {
-            //this.getDbHelper().connect();
-            /*String userSchemaFullName = schemaFullName.replace(
-                    FileUtil.getFileNameWithSuffix(schemaFullName),
-                    ACCESS_SCHEMA_INI);*/
             List<TableProps> columns = findDbTableColumns(tableName);
-            if (columns != null && columns.size() > 0) {
-                DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
-                if(StringUtils.isNotBlank(csvPath)){
-                    flag = accdb.importCsvToAccessDB(tableName, columns, csvPath);
-                }
-
-            } else {
+            if(Helper.isEmptyList(columns)) {
                 BuildStatus.getInstance().recordError();
                 logger.error("error: invalid table definition [" + tableName + "]");
-                flag = false;
+            }else{
+                flag = this.dbHelper.getAccdb().importCsvToAccessDB(tableName, columns, csvPath);
             }
-            //this.getDbHelper().close();
         } else {
             BuildStatus.getInstance().recordError();
             logger.error("this method should be worked on access database.");
         }
         return flag;
     }
-    public Boolean CreateAccessDBTable(String tableName, String schemaFullName) {
-
+    public Boolean createAccessDBTable(final String tableName,final String schemaFullName) {
         Boolean flag = false;
         if (dbHelper.getDatabaseServer().getDriver().startsWith("access")) {
-            //dbHelper.connect();
-            String userSchemaFullName = schemaFullName.replace(
-                    FileUtil.getFileNameWithSuffix(schemaFullName),
-                    ACCESS_SCHEMA_INI);
+            String userSchemaFullName = getDefaultSchemaFullName();
             List<TableProps> columns = findDbTableColumns(tableName);
             if(columns!=null){
                 return true;
             }
-            if (FileUtil.search(userSchemaFullName, "[" + tableName + "]")) {
+            if (getDefaultSchemaExist() && FileUtil.search(userSchemaFullName, "[" + tableName + "]")) {
                 logger.debug("using user schema: {}", userSchemaFullName);
                 columns = FileUtil.getMixedTablesDefinition(FileUtil.searchTablesDefinition(
                         userSchemaFullName,
@@ -436,45 +411,34 @@ public class DBInfo implements IComFolder {
                         schemaFullName,
                         tableName));
                 logger.debug("full schema columns {}", columns);
-
             }
             if (columns != null && columns.size() > 0) {
                 setDbTableColumns(tableName, columns);
-                DBHelper.AccessdbHelper accdb = dbHelper.new AccessdbHelper();
-
-                flag = accdb.createAccessDBTab(tableName, columns);
-                if(flag){
-                    logger.info("create table ["+tableName+"] successfully.");
-                }else{
-                    BuildStatus.getInstance().recordError();
-                    logger.error("fail to create table [" + tableName + "]");
-                }
+                flag = this.dbHelper.getAccdb().createAccessDBTab(tableName, columns);
             } else {
                 logger.warn("invalid table definition [" + tableName + "]");
                 flag = false;
             }
-            //dbHelper.close();
         } else {
             BuildStatus.getInstance().recordError();
             logger.error("this method should be worked on access database.");
         }
         return flag;
-
     }
 
     public DBDriverType getDbDriverFlag() {
         return dbDriverFlag;
     }
 
-    public void setDbDriverFlag(DBDriverType dbDriverFlag) {
+    public void setDbDriverFlag(final DBDriverType dbDriverFlag) {
         this.dbDriverFlag = dbDriverFlag;
     }
 
-    public void setDbTableColumns(String tableName, List<TableProps> columns) {
+    public void setDbTableColumns(final String tableName,final List<TableProps> columns) {
         this.dbTableColumns.put(tableName, columns);
     }
 
-    public List<TableProps> findDbTableColumns(String tableName) {
+    public List<TableProps> findDbTableColumns(final String tableName) {
         if (!dbTableColumns.isEmpty()) {
             for (String key : dbTableColumns.keySet()) {
                 if (key.equals(tableName)) {
@@ -494,5 +458,49 @@ public class DBInfo implements IComFolder {
             sQL = "SELECT Name FROM sys.MSysObjects WHERE LCase(Name)='" + tab.toLowerCase() + "'";
         }
         return queryRecord(sQL);
+    }
+
+
+    public String getDefaultSchemaFullName() {
+        return defaultSchemaFullName;
+    }
+
+    public void setDefaultSchemaFullName(final String defaultSchemaFullName) {
+        this.defaultSchemaFullName = defaultSchemaFullName;
+    }
+
+
+    public Boolean getDefaultSchemaExist() {
+        return defaultSchemaExist;
+    }
+
+    public void setDefaultSchemaExist(final String defaultSchemaFullName) {
+        this.defaultSchemaExist = FileUtil.exists(defaultSchemaFullName);
+    }
+
+    public Boolean createAccessDBTables(final List<String> tableNames,final String schemaFullName){
+        Boolean flag=false;
+        long begin=System.currentTimeMillis();
+        List<String> ignoreNames= new ArrayList<>(Arrays.asList("Ref", "GridRef"));
+        for(String tableName:ignoreNames){
+            if(getDefaultSchemaExist() && FileUtil.search(getDefaultSchemaFullName(), "[" + tableName + "]")){
+                tableNames.add(tableName);
+            }else{
+                if(FileUtil.search(schemaFullName, "[" + tableName + "]")){
+                    tableNames.add(tableName);
+                }
+            }
+        }
+        List<String> noExistTableNames=this.getDbHelper().getAccdb().inexistentAccessTables(tableNames);
+        if(!Helper.isEmptyList(noExistTableNames)){
+            for (String tableName : noExistTableNames) {
+                flag = createAccessDBTable(tableName, schemaFullName);
+                if (!flag) {
+                    break;
+                }
+            }
+        }
+        logger.info("create tables used time(sec):" + (System.currentTimeMillis() - begin) / MILLISECONDS_PER_SECOND);
+        return flag;
     }
 }

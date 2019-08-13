@@ -142,7 +142,7 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder {
                                     externalpro.getProject() + File.separator + externalpro.getSrcFile()), destDir, externalpro.getUncompress());
                             String dmpType = accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf('.'));
                             List<String> accdbfiles =
-                                    FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath + "/" + DPM_PATH + "*" + dmpType), null);
+                                    FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath + "/" + DPM_PATH + "*" + dmpType), null,false);
                             if (accdbfiles.size() > 0) {
                                 String accdbFileName = FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
                                 if (!accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)) {

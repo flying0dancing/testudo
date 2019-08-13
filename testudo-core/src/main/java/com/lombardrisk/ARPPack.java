@@ -14,20 +14,19 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ARPPack implements IComFolder {
 
     private final static Logger logger = LoggerFactory.getLogger(ARPPack.class);
-    private String dbFullName;
+    private final static String REGEX_1="#.*?_";
+    private final static String UNDERLINE_1 ="_";
+    private final static String REGEX_2="#.*";
+    private final static String SHARP_1="#";
+    private final static String BLANK="";
+
     public enum DBInfoSingle {
         INSTANCE;
         private DBInfo dbInfo;
@@ -48,7 +47,6 @@ public class ARPPack implements IComFolder {
      */
     public Boolean createNewDpm(String dbFullName) {
         Boolean flag = false;
-        this.dbFullName=dbFullName;
         DBInfoSingle.INSTANCE.setDbInfo(dbFullName);
         flag = DBInfoSingle.INSTANCE.getDbInfo().createAccessDB();
         return flag;
@@ -73,150 +71,142 @@ public class ARPPack implements IComFolder {
      * @param schemaFullName It's a configuration file, which contains all tables' definition.
      * @return return metadata (*.csv files) full paths, return null if error occurs.
      */
-    public List<String> importMetadataToDpm(String csvParentPath, List<String> csvPaths, String schemaFullName) {
+    public List<String> importMetadataToDpm(final String csvParentPath,final List<String> csvPaths, String schemaFullName) {
         if (StringUtils.isBlank(csvParentPath)) {
             return null;
         }
-        if (csvPaths == null || csvPaths.size() <= 0) {
+        Helper.removeDuplicatedElements(csvPaths);
+        if (Helper.isEmptyList(csvPaths)) {
             return null;
         }
         schemaFullName=Helper.reviseFilePath(schemaFullName);
         DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
         dbInfo.getDbHelper().connect();
-        //dbInfo.createAccessTables(schemaFullName);
         List<String> subFolderNames=FileUtil.getSubFolderNames(csvParentPath);
-        String folderRegex = FileUtil.getFolderRegex(csvParentPath,subFolderNames);
-        /*subFolderNames.addAll(FileUtil.getSingleMetadataNames(csvParentPath));
-        for(String namRe:subFolderNames){
-            dbInfo.CreateAccessDBTable(name,schemaFullName);
-        }*/
-        dbInfo.CreateAccessDBTable("Ref",schemaFullName);
-        dbInfo.CreateAccessDBTable("GridRef",schemaFullName);
+        String folderRegex = FileUtil.getFolderRegex(subFolderNames);
+        String userSchemaFullName=schemaFullName.replace(
+                FileUtil.getFileNameWithSuffix(schemaFullName),
+                ACCESS_SCHEMA_INI);
+        dbInfo.setDefaultSchemaFullName(userSchemaFullName);
+        dbInfo.setDefaultSchemaExist(userSchemaFullName);
+
+        dbInfo.createAccessDBTable("Ref",schemaFullName);
+        dbInfo.createAccessDBTable("GridRef",schemaFullName);
+
         List<String> realCsvFullPaths = new ArrayList<>();
         List<String> realNames=new ArrayList<>();
-        Map<String,String> realCsvPathTableMap=new HashMap<String,String>();
-        String name_returnId;
-
-        long begin, end;
+        List<String> realCsvFullPathsTmp;
+        //Map<String,List<String>> realTabCsvFullPathMap=new HashMap<String,List<String>>();
+        //List<String> metadataFullNames;
+        String tableName;
+        Boolean flag=true;
+        //long begin, end;
         logger.info("================= import metadata into DPM =================");
         for (String pathTmp : csvPaths) {
-            List<String> realCsvFullPathsTmp =
+            realCsvFullPathsTmp =
                     FileUtil.getFilesByFilter(Helper.reviseFilePath(csvParentPath + System.getProperty("file" +
-                            ".separator") + pathTmp), null);
+                            ".separator") + pathTmp), null,false);
             if (realCsvFullPathsTmp.size() <= 0) {
-                BuildStatus.getInstance().recordError();
                 logger.error("error: invalid path [" + csvParentPath + System.getProperty("file.separator") + pathTmp + "]");
-                continue;
-            }
-            for (String pathTmp2 : realCsvFullPathsTmp) {
-                if (!realCsvPathTableMap.containsKey(pathTmp2)) {
-                    name_returnId = "";
-                    //logger.info("metadata file:" + pathTmp2);
-                    String tableNameWithDB = FileUtil.getFileNameWithoutSuffix(pathTmp2);
-                    logger.debug("1 table name with DB {}", tableNameWithDB);
-                    String tableName = tableNameWithDB.replaceAll("#.*?_", "_");
-                    logger.debug("1 table name {}", tableName);
+            }else{
 
-                    if (!tableName.contains("_")) {
-                        tableName = tableNameWithDB.replaceAll("#.*", "");
-                        logger.debug("2 table name {}", tableName);
-                    }
-                    Pattern p = Pattern.compile(folderRegex, Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
-                    Matcher m = p.matcher(tableName);
-                    if (m.find()) {
-                        tableName = m.group(1);
-                        logger.debug("3 table name {}", tableName);
-                        name_returnId = m.group(2);
-                    }
-                    tableNameWithDB = tableNameWithDB.replace(name_returnId, "");
-                    if (name_returnId.equals("") && tableNameWithDB.contains("_")) {
-                        tableName = tableNameWithDB.split("#")[0];
-                        logger.debug("4 table name {}", tableName);
-                    }
-                    logger.debug("X table name {}", tableName);
+                for(String pathTmp2:realCsvFullPathsTmp){
+                    realCsvFullPaths.add(pathTmp2);
+                    tableName=getTableFromMetaName(pathTmp2,folderRegex);
+
                     if(!realNames.contains(tableName)){
-                        dbInfo.CreateAccessDBTable(tableName,schemaFullName);
+                        dbInfo.createAccessDBTable(tableName,schemaFullName);
                         realNames.add(tableName);
                     }
-                    realCsvFullPaths.add(pathTmp2);
-                    realCsvPathTableMap.put(pathTmp2,tableName);
-                    begin=System.currentTimeMillis();
-                    Boolean flag = dbInfo.importCsvToAccess(tableName, Helper.reviseFilePath(pathTmp2));
-                    end=System.currentTimeMillis();
+                    //begin=System.currentTimeMillis();
+                    flag = dbInfo.importCsvToAccess(tableName, Helper.reviseFilePath(pathTmp2));
+                    //end=System.currentTimeMillis();
                     if (!flag) {
                         BuildStatus.getInstance().recordError();
-                        logger.error("import metadata[" + pathTmp2 + "] to " + tableName + " fail.");
+                        logger.error("import [" + pathTmp2 + "] to " + tableName + " fail.");
+                        break;
                     } else {
-                        logger.info("import metadata[" + pathTmp2 + "] to " + tableName + " successfully.");
+                        logger.info("import [" + pathTmp2 + "] to " + tableName + " successfully.");
                     }
                 }
             }
-        }
-        dbInfo.getDbHelper().close();
-        if (realCsvPathTableMap.size() <= 0) {
-            return null;
+            if(!flag){
+                realCsvFullPaths=null;
+                break;
+            }
         }
 
+        dbInfo.getDbHelper().close();
+        dbInfo=null;
+        if (Helper.isEmptyList(realCsvFullPaths)) {
+            return null;
+        }
+        Runtime.getRuntime().gc();
         return realCsvFullPaths;
     }
+
+
 
     /***
      * read metadata (*.csv file) name's returnId, and then through dbFullName and its tableName(rets which stored definition of all returns), find its return name and version
      * @param csvFullPaths metadata (*.csv files) full paths
      * @return return a list of all returns' <I>name_version</I>, return null if error occurs.
      */
-    public List<String> getReturnNameAndVersions(List<String> csvFullPaths) {
-        if (csvFullPaths == null || csvFullPaths.size() <= 0) return null;
+    public List<String> getReturnNameAndVersions(final List<String> csvFullPaths) {
+        if (Helper.isEmptyList(csvFullPaths)) {
+            return null;
+        }
         List<String> nameAndVers = new ArrayList<String>();
 
         DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
-        for (String csvPath : csvFullPaths) {
-            String csvName = FileUtil.getFileNameWithoutSuffix(csvPath);
-            if (!csvName.contains("_")) continue;
-            String[] nameParts = csvName.split("_");
-            if (!nameParts[1].matches("\\d+")) continue;
-            String returnId = nameParts[1];
-            String returnNameVer = dbInfo.getReturnAndVersion(returnId);
-            if (!returnNameVer.equals("") && !nameAndVers.contains(returnNameVer)) {
-                nameAndVers.add(returnNameVer);
+        dbInfo.getDbHelper().connect();
+        Boolean flag=dbInfo.getDbHelper().getAccdb().accessTableExistence("Rets");
+        if(flag){
+            for (String csvPath : csvFullPaths) {
+                String csvName = FileUtil.getFileNameWithoutSuffix(csvPath);
+                if (!csvName.contains(UNDERLINE_1)) continue;
+                String[] nameParts = csvName.split(UNDERLINE_1);
+                if (!nameParts[1].matches("\\d+")) continue;
+                String returnId = nameParts[1];
+                String returnNameVer = dbInfo.getReturnAndVersion(returnId);
+                if (!returnNameVer.equals(BLANK) && !nameAndVers.contains(returnNameVer)) {
+                    nameAndVers.add(returnNameVer);
+                }
             }
+        }else{
+            BuildStatus.getInstance().recordError();
+            logger.error("cannot found Rets");
         }
+        dbInfo.getDbHelper().close();
+        dbInfo=null;
         if (nameAndVers.size() <= 0) return null;
         return nameAndVers;
     }
 
-    public Boolean execSQLs(String sourcePath, List<String> sqlFileNames, String excludeFileFilters) {
+    public Boolean execSQLs(final String sourcePath,final List<String> sqlFileNames,final String excludeFileFilters) {
         Boolean flag = true;
-        if (sqlFileNames == null || sqlFileNames.size() <= 0) return true;//means testudo.json doesn't provide sqlFiles.
+        if (Helper.isEmptyList(sqlFileNames)) {
+            //means testudo.json doesn't provide sqlFiles.
+            return flag;
+        }
         logger.info("================= execute SQLs =================");
-        List<String> realFullPaths = getFileFullPaths(sourcePath, sqlFileNames, excludeFileFilters);
-        if (realFullPaths == null || realFullPaths.size() <= 0) {
+        List<String> realFullPaths = getFileFullPaths(sourcePath, sqlFileNames, excludeFileFilters,false);
+        if (Helper.isEmptyList(realFullPaths)) {
             BuildStatus.getInstance().recordError();
             logger.error("error: sqlFiles are invalid files or filters.");
             return false;//illegal, no invalid files need to execute if it set sqlFiles
         }
         DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
+        dbInfo.getDbHelper().connect();
+        Boolean status;
         for (String fileFullPath : realFullPaths) {
             logger.info("sql statements in file: " + fileFullPath);
             String fileContent = FileUtil.getSQLContent(fileFullPath);
             if (fileContent.contains(";")) {
-                String[] sqlStatements = fileContent.split(";");
-                for (String sql : sqlStatements) {
-                    if (StringUtils.isNotBlank(sql)) {
-                        logger.info("execute sql:" + sql.trim());
-                        Boolean status = dbInfo.executeSQL(sql.trim());
-                        if (!status) {
-                            BuildStatus.getInstance().recordError();
-                            logger.error("execute failed.");
-                            flag = false;
-                        } else {
-                            logger.info("execute OK.");
-                        }
-                    }
-                }
+                flag=executeSQLs(dbInfo,fileContent);
             } else if (StringUtils.isNotBlank(fileContent)) {
                 logger.info("execute sql:" + fileContent);
-                Boolean status = dbInfo.executeSQL(fileContent.trim());
+                status = dbInfo.executeSQL(fileContent.trim());
                 if (!status) {
                     BuildStatus.getInstance().recordError();
                     logger.error("execute failed.");
@@ -225,11 +215,33 @@ public class ARPPack implements IComFolder {
                     logger.info("execute OK.");
                 }
             }
+            if(!flag){
+                break;
+            }
         }
-
+        dbInfo.getDbHelper().close();
+        dbInfo=null;
         return flag;
     }
 
+    private Boolean executeSQLs(final DBInfo dbInfo,final String fileContent){
+        Boolean status=true;
+        String[] sqlStatements = fileContent.split(";");
+        for (String sql : sqlStatements) {
+            if (StringUtils.isNotBlank(sql)) {
+                logger.info("execute sql:" + sql.trim());
+                status = dbInfo.executeSQL(sql.trim());
+                if (!status) {
+                    BuildStatus.getInstance().recordError();
+                    logger.error("execute failed.");
+                    break;
+                } else {
+                    logger.info("execute OK.");
+                }
+            }
+        }
+        return status;
+    }
     /**
      * @param sourcePath    should follow AR for product's folder structure
      * @param zipSet
@@ -248,11 +260,14 @@ public class ARPPack implements IComFolder {
         String productPrefix = Dom4jUtil.updateElement(sourcePath + MANIFEST_FILE, PREFIX, null);
         if (StringUtils.isBlank(productPrefix)) {
             productPrefix = FileUtil.getFileNameWithSuffix(Helper.getParentPath(sourcePath))
-                    .toUpperCase().replaceAll("\\(\\d+\\)", "");
+                    .toUpperCase().replaceAll("\\(\\d+\\)", BLANK);
         }
         Boolean flag = true;
         List<String> packFileNames = zipSet.getZipFiles();
-        List<String> realFullPaths = getFileFullPaths(sourcePath, packFileNames, zipSet.getExcludeFileFilters());
+        long begin=System.currentTimeMillis();
+        System.out.println("calculate compressed folders and files ");
+        List<String> realFullPaths = getFileFullPaths(sourcePath, packFileNames, zipSet.getExcludeFileFilters(),true);
+        System.out.println("calculate used time(sec):" + (System.currentTimeMillis() - begin) / MILLISECONDS_PER_SECOND);
         if (realFullPaths == null) {
             BuildStatus.getInstance().recordError();
             logger.error("error: zipFiles are invalid files or filters.");
@@ -267,7 +282,7 @@ public class ARPPack implements IComFolder {
             }
         }
         List<String> pathsInManifest = Dom4jUtil.getPathFromElement(sourcePath + MANIFEST_FILE, sourcePath);
-        if (pathsInManifest != null && pathsInManifest.size() > 0) {
+        if (!Helper.isEmptyList(pathsInManifest)) {
             for (String pathtmp : pathsInManifest) {
                 if (!realFullPaths.contains(pathtmp)) {
                     realFullPaths.add(pathtmp);
@@ -285,9 +300,9 @@ public class ARPPack implements IComFolder {
 
         //zipped and lrm product
         String packageNamePrefix = PropHelper.getProperty(PACKAGE_NAME_PREFIX);
-        packageNamePrefix = StringUtils.isBlank(packageNamePrefix) ? productPrefix + "_" : packageNamePrefix + productPrefix + "_";
+        packageNamePrefix = StringUtils.isBlank(packageNamePrefix) ? productPrefix + UNDERLINE_1 : packageNamePrefix + productPrefix + UNDERLINE_1;
         String packageNameSuffix = null;//PropHelper.getProperty(AR_INSTALLER_VERSION);
-        packageNameSuffix = StringUtils.isBlank(packageNameSuffix) ? "" : "_for_AR_v" + packageNameSuffix;
+        packageNameSuffix = StringUtils.isBlank(packageNameSuffix) ? BLANK : "_for_AR_v" + packageNameSuffix;
         String zipFileNameWithoutSuffix = packageNamePrefix + "v" + packageVersion + packageNameSuffix;
         String zipFullPathWithoutSuffix = Helper.reviseFilePath(zipPath + "/" + zipFileNameWithoutSuffix);
 
@@ -317,32 +332,42 @@ public class ARPPack implements IComFolder {
             BuildStatus.getInstance().recordError();
             logger.error("error: package with failures.");
         }
-
+        Runtime.getRuntime().gc();
         return flag;
     }
 
+
     /***
      * get all file's full path under sourcePath, with filters
      * @param sourcePath
      * @param filters
      * @return if get nothing or arguments contains blank argument, return null.
      */
-    public List<String> getFileFullPaths(String sourcePath, List<String> filters) {
-        if (filters == null || filters.size() <= 0) return null;
-        if (StringUtils.isBlank(sourcePath)) return null;
-        sourcePath = Helper.reviseFilePath(sourcePath + "/");
-        List<String> realFilePaths = new ArrayList<String>();
-        for (String filter : filters) {
+    public List<String> getFileFullPaths(final String sourcePath,final List<String> filters,final String excludeFilters,final Boolean keepDirStructure) {
+        Helper.removeDuplicatedElements(filters);
+        if (Helper.isEmptyList(filters) || StringUtils.isBlank(sourcePath)) {
+            return null;
+        }
 
-            List<String> realFullPathsTmp = FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath + filter), null);
+        List<String> realFilePaths = new ArrayList<String>();
+        List<String> realFullPathsTmp;
+        String filePathTmp;
+        for (String filter : filters) {
+            filePathTmp=Helper.reviseFilePath(sourcePath + "/"+ filter);
+            if(filter.equalsIgnoreCase("xbrl")){
+                realFullPathsTmp = FileUtil.getFilesByFilter(filePathTmp, null,false);
+            }else{
+                realFullPathsTmp = FileUtil.getFilesByFilter(filePathTmp, excludeFilters,keepDirStructure);
+            }
             if (realFullPathsTmp.size() <= 0) {
                 //BuildStatus.getInstance().recordError(); //solve ARPA-72
                 logger.warn("error: cannot search [" + filter + "] under path [" + sourcePath + "]");
-                continue;
-            }
-            for (String pathTmp : realFullPathsTmp) {
-                if (!realFilePaths.contains(pathTmp)) {
-                    realFilePaths.add(pathTmp);
+
+            }else{
+                for (String pathTmp : realFullPathsTmp) {
+                    if (!realFilePaths.contains(pathTmp)) {
+                        realFilePaths.add(pathTmp);
+                    }
                 }
             }
         }
@@ -350,32 +375,30 @@ public class ARPPack implements IComFolder {
         return realFilePaths;
     }
 
-    /***
-     * get all file's full path under sourcePath, with filters
-     * @param sourcePath
-     * @param filters
-     * @return if get nothing or arguments contains blank argument, return null.
-     */
-    public List<String> getFileFullPaths(String sourcePath, List<String> filters, String excludeFilters) {
-        if (filters == null || filters.size() <= 0) return null;
-        if (StringUtils.isBlank(sourcePath)) return null;
-        sourcePath = Helper.reviseFilePath(sourcePath + "/");
-        List<String> realFilePaths = new ArrayList<String>();
-        for (String filter : filters) {
+    private String getTableFromMetaName(final String pathTmp2,final String folderRegex){
+        String name_returnId="";
+        String tableNameWithDB = FileUtil.getFileNameWithoutSuffix(pathTmp2);
+        logger.debug("1 table name with DB {}", tableNameWithDB);
+        String tableName = tableNameWithDB.replaceAll(REGEX_1, UNDERLINE_1);
+        logger.debug("1 table name {}", tableName);
 
-            List<String> realFullPathsTmp = FileUtil.getFilesByFilter(Helper.reviseFilePath(sourcePath + filter), excludeFilters);
-            if (realFullPathsTmp.size() <= 0) {
-                //BuildStatus.getInstance().recordError(); //solve ARPA-72
-                logger.warn("error: cannot search [" + filter + "] under path [" + sourcePath + "]");
-                continue;
-            }
-            for (String pathTmp : realFullPathsTmp) {
-                if (!realFilePaths.contains(pathTmp)) {
-                    realFilePaths.add(pathTmp);
-                }
-            }
+        if (!tableName.contains("_")) {
+            tableName = tableNameWithDB.replaceAll(REGEX_2, BLANK);
+            logger.debug("2 table name {}", tableName);
         }
-        if (realFilePaths.size() <= 0) return null;
-        return realFilePaths;
+        Pattern p = Pattern.compile(folderRegex, Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+        Matcher m = p.matcher(tableName);
+        if (m.find()) {
+            tableName = m.group(1);
+            logger.debug("3 table name {}", tableName);
+            name_returnId = m.group(2);
+        }
+        tableNameWithDB = tableNameWithDB.replace(name_returnId, BLANK);
+        if (name_returnId.equals(BLANK) && tableNameWithDB.contains(UNDERLINE_1)) {
+            tableName = tableNameWithDB.split(SHARP_1)[0];
+            logger.debug("4 table name {}", tableName);
+        }
+        logger.debug("X table name {}", tableName);
+        return tableName;
     }
 }

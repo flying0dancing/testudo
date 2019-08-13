@@ -18,7 +18,8 @@ import java.util.List;
 public class Testudo implements IComFolder {
 
     private static final Logger logger = LoggerFactory.getLogger(Testudo.class);
-    private static final float MILLISECONDS_PER_SECOND = 1000.00F;
+    private static final String FILE_SEPARATOR=System.getProperty("file.separator");
+    private static final int MINUTE=60;
 
     public static void main(String[] args) {
         long begin = System.currentTimeMillis();
@@ -59,7 +60,8 @@ public class Testudo implements IComFolder {
             logger.error(e.getMessage(), e);
         }
         long end = System.currentTimeMillis();
-        logger.info("total time(sec):" + (end - begin) / MILLISECONDS_PER_SECOND);
+        logger.info("total time(min):" + (end - begin) / (MINUTE*MILLISECONDS_PER_SECOND));
+        Runtime.getRuntime().gc();
     }
 
     private static void convertArgumentsToSystemProperties(final String[] args) {
@@ -99,48 +101,52 @@ public class Testudo implements IComFolder {
 
     private static void readDBToMetadata(ARPCISetting arSetting) {
         String iniFullName =
-                Helper.reviseFilePath(arSetting.getMetadataPath() + System.getProperty("file.separator") + arSetting.getMetadataStruct());
+                Helper.reviseFilePath(arSetting.getMetadataPath() + FILE_SEPARATOR + arSetting.getMetadataStruct());
+        FileUtil.deleteFiles(Helper.reviseFilePath(arSetting.getMetadataPath() + FILE_SEPARATOR),ACCESS_SCHEMA_INI);
         FileUtil.createNew(iniFullName);
         List<DBAndTables> dbAndTables = arSetting.getDatabaseServerAndTables();
+        List<String> tables,excludeReturnIds;
+        String prefix,metadataPath,metadataStruct;
         if (dbAndTables != null && dbAndTables.size() > 0) {
             DBAndTables dbAndTable = dbAndTables.get(0);
             DBInfo db = new DBInfo(dbAndTable.getDatabaseServer());
-            db.exportToDivides(arSetting.getPrefix(),
-                    dbAndTable.getRequiredTables().getDividedByReturnIds(),
-                    arSetting.getMetadataPath(),
-                    arSetting.getMetadataStruct(),
-                    dbAndTable.getRequiredTables().getExcludeReturnIds(),
-                    null);
-            db.exportToSingle(arSetting.getPrefix(),
-                    dbAndTable.getRequiredTables().getSingles(),
-                    arSetting.getMetadataPath(),
-                    arSetting.getMetadataStruct(),
-                    dbAndTable.getRequiredTables().getExcludeReturnIds(),
-                    null);
+            prefix=arSetting.getPrefix();
+            metadataPath=arSetting.getMetadataPath();
+            metadataStruct=arSetting.getMetadataStruct();
+
+            excludeReturnIds=dbAndTable.getRequiredTables().getExcludeReturnIds();
+            Helper.removeDuplicatedElements(excludeReturnIds);
+
+            tables=dbAndTable.getRequiredTables().getDividedByReturnIds();
+            Helper.removeDuplicatedElements(tables);
+            db.exportToDivides(prefix,tables,metadataPath,metadataStruct,excludeReturnIds,null);
+
+            tables=dbAndTable.getRequiredTables().getSingles();
+            Helper.removeDuplicatedElements(tables);
+            db.exportToSingle(prefix,tables,metadataPath,metadataStruct,excludeReturnIds,null);
 
             for (int i = 1; i < dbAndTables.size(); i++) {
                 dbAndTable = dbAndTables.get(i);
                 db = new DBInfo(dbAndTable.getDatabaseServer());
                 String idOfDBAndTable = "#" + dbAndTable.getID();
-                db.exportToDivides(arSetting.getPrefix(),
-                        dbAndTable.getRequiredTables().getDividedByReturnIds(),
-                        arSetting.getMetadataPath(),
-                        arSetting.getMetadataStruct(),
-                        dbAndTable.getRequiredTables().getExcludeReturnIds(),
-                        idOfDBAndTable);
-                db.exportToSingle(arSetting.getPrefix(),
-                        dbAndTable.getRequiredTables().getSingles(),
-                        arSetting.getMetadataPath(),
-                        arSetting.getMetadataStruct(),
-                        dbAndTable.getRequiredTables().getExcludeReturnIds(),
-                        idOfDBAndTable);
+
+                excludeReturnIds=dbAndTable.getRequiredTables().getExcludeReturnIds();
+                Helper.removeDuplicatedElements(excludeReturnIds);
+
+                tables=dbAndTable.getRequiredTables().getDividedByReturnIds();
+                Helper.removeDuplicatedElements(tables);
+                db.exportToDivides(prefix,tables,metadataPath,metadataStruct,excludeReturnIds,idOfDBAndTable);
+
+                tables=dbAndTable.getRequiredTables().getSingles();
+                Helper.removeDuplicatedElements(tables);
+                db.exportToSingle(prefix,tables,metadataPath,metadataStruct,excludeReturnIds,idOfDBAndTable);
             }
         }
     }
 
     private static void packMetadataAndFiles(ARPCISetting arSetting) {
         String iniFullName =
-                Helper.reviseFilePath(arSetting.getMetadataPath() + System.getProperty("file.separator") + arSetting.getMetadataStruct());
+                Helper.reviseFilePath(arSetting.getMetadataPath() + FILE_SEPARATOR + arSetting.getMetadataStruct());
         ARPPack azipFile = new ARPPack();
         Boolean flag = azipFile.createNewDpm(arSetting.getZipSettings().getDpmFullPath());
         if (!flag) {
@@ -148,20 +154,27 @@ public class Testudo implements IComFolder {
             logger.error("error: create access database unsuccessful.");
             return;
         }
+        List<String> requiredMetadata=arSetting.getZipSettings().getRequiredMetadata();
         List<String> metadataPaths = azipFile.importMetadataToDpm(arSetting.getMetadataPath(),
-                arSetting.getZipSettings().getRequiredMetadata(), iniFullName);
+                requiredMetadata, iniFullName);
         if (metadataPaths != null) {
-            List<String> returnNameVers = azipFile.getReturnNameAndVersions(metadataPaths);
-            if (returnNameVers != null) {
-                arSetting.getZipSettings().getZipFiles().addAll(returnNameVers);
+            if(!requiredMetadata.contains("*.csv")){
+                List<String> returnNameVers = azipFile.getReturnNameAndVersions(metadataPaths);
+                if (returnNameVers != null) {
+                    arSetting.getZipSettings().getZipFiles().addAll(returnNameVers);
+                }
             }
+            Boolean status = azipFile.execSQLs(arSetting.getTargetSrcPath(),
+                    arSetting.getZipSettings().getSqlFiles(), arSetting.getZipSettings().getExcludeFileFilters());
+            if (status) {
+                azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(),
+                        Helper.getParentPath(arSetting.getTargetSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
+            }
+        }else{
+            BuildStatus.getInstance().recordError();
+            logger.error("error: not found any requiredMetadata or import failures.");
         }
 
-        Boolean status = azipFile.execSQLs(arSetting.getTargetSrcPath(),
-                arSetting.getZipSettings().getSqlFiles(), arSetting.getZipSettings().getExcludeFileFilters());
-        if (status) {
-            azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(),
-                    Helper.getParentPath(arSetting.getTargetSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
-        }
     }
+
 }

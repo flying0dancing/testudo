@@ -24,13 +24,13 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -39,9 +39,9 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -55,7 +55,8 @@ public class DBHelper {
     private static final List<String> types = new ArrayList<String>(Arrays.asList("MEMO", "LONGTEXT", "VARCHAR"));
     private static final String dateRegex =
             "((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?(?:\\.\\d+)?)";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
-
+    private DBHelper.AccessdbHelper accdb;
+    private static final String CharacterSet="UTF-8";
     public DBHelper(DatabaseServer databaseServer) {
         this.databaseServer = databaseServer;
 
@@ -109,11 +110,21 @@ public class DBHelper {
             dbmsDriver = "net.ucanaccess.jdbc.UcanaccessDriver";
             if (StringUtils.isBlank(this.databaseServer.getUrl())) {
                 this.databaseServer.setUrl(String.format(
-                        "jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY",
+                        "jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY;",
                         this.databaseServer.getSchema()));
+                String dbSchema=this.databaseServer.getSchema();
+                File dbSchemaHD=new File(dbSchema);
+                if(dbSchemaHD.exists()){
+                    long dbSchemaSize=dbSchemaHD.length();
+                    if(dbSchemaSize>104857600){//100MB
+                        this.databaseServer.setUrl(String.format(
+                                "jdbc:ucanaccess://%s;memory=false;sysSchema=TRUE;columnOrder=DISPLAY;mirrorFolder=java.io.tmpdir;",//jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY
+                                this.databaseServer.getSchema()));
+                    }
+                }
             }
         }
-    }
+     }
 
     public DatabaseServer getDatabaseServer() {
         return databaseServer;
@@ -164,10 +175,9 @@ public class DBHelper {
             return null;
         logger.debug("Sql Statement: [" + sql + "]");
         String value = null;
-        try {
-            ResultSet rs = null;
-            Statement stmt = getConn().createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);//
-            rs = stmt.executeQuery(sql);
+        try (Statement stmt = getConn().createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+             ResultSet rs = stmt.executeQuery(sql);){
+
             if (rs.getRow() >= 0) {
                 ResultSetMetaData rsmd = rs.getMetaData();
                 while (rs.next()) {
@@ -295,12 +305,12 @@ public class DBHelper {
         return type;
     }
 
-    public void exportToINI(String tableName, String sql, String fileFullName) {
+    public void exportToINI(final String tableName,final String sql,final String fileFullName) {
         if (getConn() == null) {
             connect();
         }
         try (Statement state = getConn().createStatement();
-             ResultSet rest = state.executeQuery(sql);) {
+             ResultSet rest = state.executeQuery(sql)) {
             ResultSetMetaData rsmd = rest.getMetaData();
 
             logger.debug("No of columns in the table:{}", rsmd.getColumnCount());
@@ -322,12 +332,10 @@ public class DBHelper {
             BuildStatus.getInstance().recordError();
             logger.error("error: Exception in [{}]", sql);
             logger.error(e.getMessage(), e);
-        } finally {
-            close();
         }
     }
 
-    public String getColumnType(String sql, String columnName) {
+    public String getColumnType(final String sql,final String columnName) {
         if (getConn() == null) {
             connect();
         }
@@ -352,8 +360,6 @@ public class DBHelper {
             BuildStatus.getInstance().recordError();
             logger.error("error: Exception in [" + sql + "]");
             logger.error(e.getMessage(), e);
-        } finally {
-            close();
         }
         return colProp;
     }
@@ -364,19 +370,14 @@ public class DBHelper {
      * @param sql
      * @param fileFullName
      */
-    public void exportToCsv(String sql, String fileFullName) {
-        if (getConn() == null) {
-            connect();
-        }
-        FileWriter csvName = null;
-        BufferedWriter bufOutFile = null;
+    public void exportToCsv(final String sql,final String fileFullName) {
+
         try (Statement state = getConn().createStatement();
-             ResultSet rest = state.executeQuery(sql);) {
+             ResultSet rest = state.executeQuery(sql);
+             BufferedWriter bufOutFile = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileFullName),CharacterSet))) {
 
             ResultSetMetaData rsmd = rest.getMetaData();
 
-            csvName = new FileWriter(fileFullName);
-            bufOutFile = new BufferedWriter(csvName);
             logger.debug("start \"export to csv\"");
             StringBuffer strBuf = new StringBuffer();
             //csv header
@@ -397,22 +398,7 @@ public class DBHelper {
                     String classvar = rsmd.getColumnClassName(col);
                     @SuppressWarnings("unused")
                     String colTypevar = rsmd.getColumnTypeName(col);
-                    if (classvar.contains("Blob")) {
-                        value = Helper.convertBlobToStr(rest.getBlob(col));
-                    } else if (classvar.contains("Timestamp")) {
-                        value = StringUtils.isBlank(rest.getString(col)) ? "" : rest.getString(col);
-                        value = value.replaceAll("(\")", "\"$1").replaceAll("\\.*", "");
-                    } else if (classvar.contains("Decimal")) {
-
-                        value = StringUtils.isBlank(rest.getString(col)) ? "" : rest.getBigDecimal(col).toPlainString();
-                    } else if (classvar.contains("Int") || classvar.contains("Boolean")) {
-
-                        value = StringUtils.isBlank(rest.getString(col)) ? "" : rest.getString(col).replaceAll("(\")", "\"$1");
-                    } else {
-
-                        value = StringUtils.isBlank(rest.getString(col)) ? "" : "\"" + rest.getString(col).replaceAll("(\")", "\"$1") + "\"";
-                    }
-
+                    value=getValueForCSVItem(classvar,rest,col);
                     if (col != rsmd.getColumnCount()) {
                         bufOutFile.append(value + ",");
                     } else {
@@ -432,36 +418,46 @@ public class DBHelper {
             BuildStatus.getInstance().recordError();
             logger.error("error: Exception in [" + sql + "]");
             logger.error(e.getMessage(), e);
-        } finally {
-            close();
-            try {
-                bufOutFile.close();
-                csvName.close();
-            } catch (IOException e) {
-                BuildStatus.getInstance().recordError();
-                logger.error("error: fail to closing file handlers.");
-                logger.error(e.getMessage(), e);
-            }
         }
     }
+    private String getValueForCSVItem(final String classvar,final ResultSet rest,final int col){
+        String value=null;
+        try{
+            if (classvar.contains("Blob")) {
+                value = Helper.convertBlobToStr(rest.getBlob(col));
+            } else if (classvar.contains("Timestamp")) {
+                value = StringUtils.isBlank(rest.getString(col)) ? "" : rest.getString(col);
+                value = value.replaceAll("(\")", "\"$1").replaceAll("\\.*", "");
+            } else if (classvar.contains("Decimal")) {
 
-    public Boolean addBatch(String sql) {
-        Boolean flag = false;
-        if (getConn() == null)
-            return flag;
-        try {
-            getConn().setAutoCommit(false);
+                value = StringUtils.isBlank(rest.getString(col)) ? "" : rest.getBigDecimal(col).toPlainString();
+            } else if (classvar.contains("Int") || classvar.contains("Boolean")) {
+
+                value = StringUtils.isBlank(rest.getString(col)) ? "" : rest.getString(col).replaceAll("(\")", "\"$1");
+            } else {
+
+                value = StringUtils.isBlank(rest.getString(col)) ? "" : "\"" + rest.getString(col).replaceAll("(\")", "\"$1") + "\"";
+            }
         } catch (SQLException e) {
             BuildStatus.getInstance().recordError();
-            logger.error("Error setting autocommit false", e);
-            return false;
+            logger.error("error: SQLException in exportToCsv");
+            logger.error(e.getMessage(), e);
         }
-        try (Statement statement = getConn().createStatement();) {
+        return value;
+    }
+    public Boolean addBatch(final String sql) {
+        Boolean flag = false;
+        if (getConn() == null){
+            return flag;
+        }
+
+        try (Statement statement = getConn().createStatement();){
+            getConn().setAutoCommit(false);
             String sqlLow = sql.trim().toLowerCase().replaceAll("(\\s)+", "$1");
             if (sqlLow.startsWith("update") || (sqlLow.contains("create") && sqlLow.contains("select") && sqlLow.contains("with"))) {
                 statement.executeUpdate(sql);
                 flag = true;
-            } else if (sqlLow.startsWith("alter") && sqlLow.contains("rename to")) {
+            }else if (sqlLow.startsWith("alter") && sqlLow.contains("rename to")) {
                 String tableName = "";
                 String newTableName = "";
                 String regexDROP = "alter\\s+TABLE\\s+\\[?(\\w+)\\]?\\s+rename\\s+to\\s+\\[?(\\w+)\\]?";
@@ -471,8 +467,8 @@ public class DBHelper {
                     tableName = match.group(1);
                     newTableName = match.group(2);
                 }
-                DBHelper.AccessdbHelper accessDBH = this.new AccessdbHelper();
-                flag = accessDBH.renameAccessDBTable(tableName, newTableName);
+                //DBHelper.AccessdbHelper accessDBH = this.new AccessdbHelper();
+                flag = getAccdb().renameAccessDBTable(tableName, newTableName);
             } else if (sqlLow.startsWith("drop")) {
                 String tableName = "";
                 String regexDROP = "DROP\\s+TABLE\\s+\\[?(\\w+)\\]?";
@@ -481,8 +477,8 @@ public class DBHelper {
                 if (match.find()) {
                     tableName = match.group(1);
                 }
-                DBHelper.AccessdbHelper accessDBH = this.new AccessdbHelper();
-                flag = accessDBH.deleteAccessDBTable(tableName);
+                //DBHelper.AccessdbHelper accessDBH = this.new AccessdbHelper();
+                flag = getAccdb().deleteAccessDBTable(tableName);
             } else {
                 statement.execute(sql);//result false is not quite sure
                 flag = true;
@@ -503,7 +499,7 @@ public class DBHelper {
      * @param sql
      * @return The number of rows updated. if error occurs return 0;
      */
-    public int update(String sql) {
+    public int update(final String sql) {
         if (getConn() == null)
             return 0;
         QueryRunner run = new QueryRunner();
@@ -520,7 +516,7 @@ public class DBHelper {
         return result;
     }
 
-    public void setConn(Connection conn) {
+    public void setConn(final Connection conn) {
         this.conn = conn;
     }
 
@@ -533,16 +529,31 @@ public class DBHelper {
         close();
         super.finalize();
     }
+    public void setAccdb(final DBHelper.AccessdbHelper accdb){this.accdb=accdb;}
+    public DBHelper.AccessdbHelper getAccdb(){return accdb;}
+
 
     public class AccessdbHelper {
+
+        private final static String CREATE_STR="CREATE TABLE [";
+        private final static String CREATE_STR2="] (";
+        private final static String LONGTXT_STR="LONGTEXT";
+        private final static String MEMO_STR="MEMO";
+        private final static String BOOLEAN_STR="BOOLEAN";
+        private final static String YESNO_STR="YESNO";
+        private final static String DATE_STR="DATE";
+        private final static String DATETIME_STR="DATETIME";
+        private final static String NUMERIC_STR="NUMERIC";
+        private final static String DECIMAL_STR="DECIMAL";
         /***
          * existence of access table
          * @param tableName
          * @return
          */
-        public Boolean accessTableExistence(String tableName) {
+        public Boolean accessTableExistence(final String tableName) {
+
             String dbFullName = getDatabaseServer().getSchema();
-            try (Database db = DatabaseBuilder.open(new File(dbFullName));) {
+            try (Database db = DatabaseBuilder.open(new File(dbFullName))) {
                 if (db.getTable(tableName) != null) {
                     logger.debug("accessdb table[" + tableName + "] already exists.");
                     return true;
@@ -554,7 +565,33 @@ public class DBHelper {
             return false;
         }
 
-        private List<String> getIntersectNames(List<String> dbTabHeaders, List<String> csvHeaders) {
+        /***
+         * check tableNames,return not exist ones.
+         * @param tableNames
+         * @return
+         */
+        public List<String> inexistentAccessTables(final List<String> tableNames){
+            List<String> inexistentOnes=null;
+            Helper.removeDuplicatedElements(tableNames);
+            if(!Helper.isEmptyList(tableNames)){
+                String dbFullName = getDatabaseServer().getSchema();
+                try (Database db = DatabaseBuilder.open(new File(dbFullName))) {
+                    inexistentOnes=new ArrayList<>();
+                    for(String tableName:tableNames){
+                        if(db.getTable(tableName)==null){
+                            inexistentOnes.add(tableName);
+                        }
+                    }
+                }catch (IOException e) {
+                    BuildStatus.getInstance().recordError();
+                    logger.error(e.getMessage(), e);
+                }
+            }
+            logger.info("need to create tables:"+inexistentOnes);
+            return inexistentOnes;
+        }
+
+        private List<String> getIntersectNames(final List<String> dbTabHeaders,final List<String> csvHeaders) {
             List<String> intersectNames = null;
             if (dbTabHeaders != null && dbTabHeaders.size() > 0 && csvHeaders != null && csvHeaders.size() > 0) {
                 intersectNames = new ArrayList<String>();
@@ -581,81 +618,74 @@ public class DBHelper {
          * @param importCsvFullName
          * @return
          */
-        public Boolean importCsvToAccessDB(String tableName, List<TableProps> columns, String importCsvFullName) {
-            synchronized (this){
-                Boolean flag = false;
-                try {
-                    flag=importCsvToAccessDBDirect(tableName,importCsvFullName);
-                    if (!flag) {
-                        List<String> dbTableColumns = new ArrayList<String>();
-                        Map<String, String> columnsDefs = new HashMap<String, String>(); // key: columns's name, value: column's type
-                        setColumnsMap(columns, dbTableColumns, columnsDefs);
-                        if (StringUtils.isNoneBlank(importCsvFullName, tableName)) {
-                            //
-                            Reader in = new FileReader(importCsvFullName);
-                            CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().parse(in);
-                            List<String> finalHeaders = getIntersectNames(dbTableColumns, new ArrayList<String>(parser.getHeaderMap().keySet()));
-                            if (finalHeaders == null || finalHeaders.size() == 0) {
-                                parser.close();
-                                return flag;
-                            }
-                            String header=setInsertSQLHeader(tableName,finalHeaders);// like insert into [InstanceSets] ([InstSetId],[InstSetName] ) values
-                            StringBuffer sqlBuffer = new StringBuffer();
+        public Boolean importCsvToAccessDB(final String tableName,final List<TableProps> columns,final String importCsvFullName) {
+            Boolean flag = false;
+            try (Reader in = new FileReader(importCsvFullName);
+                 CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().parse(in);
+                 Statement statement = getConn().createStatement()){
 
-                            getConn().setAutoCommit(false);
-                            Statement statement = getConn().createStatement();
+                List<String> dbTableColumns = new ArrayList<String>();
+                Map<String, String> columnsDefs = new HashMap<String, String>(); // key: columns's name, value: column's type
+                setColumnsMap(columns, dbTableColumns, columnsDefs);
 
-                            List<CSVRecord> records = parser.getRecords();
-                            int recordsize=records.size();
+                List<String> finalHeaders = getIntersectNames(dbTableColumns, new ArrayList<String>(parser.getHeaderMap().keySet()));
+                if (Helper.isEmptyList(finalHeaders)) {
+                    parser.close();
+                    return flag;
+                }
+                String header=setInsertSQLHeader(tableName,finalHeaders);// like insert into [InstanceSets] ([InstSetId],[InstSetName] ) values
+                StringBuffer sqlBuffer = new StringBuffer();
 
-                            int numTrans=recordsize/BATCH_SIZE+1;    //commit times
-                            if(recordsize==0){
-                                numTrans=0;
-                                flag = true;
-                            }else if(recordsize%BATCH_SIZE==0){
-                                numTrans=recordsize/BATCH_SIZE;
-                            }
-                            int numData=0;
-                            int numMax;
-                            for(int j=1;j<=numTrans;j++){
-                                numMax=numData+BATCH_SIZE;
-                                if(numMax>recordsize){
-                                    numMax=recordsize;
-                                }
-                                for(int i=numData;i<numMax;i++){
-                                    setInsertSQLLine(records.get(i), finalHeaders, columnsDefs, sqlBuffer, header);
-                                    statement.addBatch(sqlBuffer.toString());
-                                    //int rowAffectCount=statement.executeUpdate(sqlBuffer.toString());
-                                    //logger.debug(String.format("record %s affected count %s",i,rowAffectCount));
-                                    sqlBuffer.setLength(0);//clear
-                                }
-                                statement.executeBatch();
-                                getConn().commit();
-                                statement.clearBatch();
-                                numData += BATCH_SIZE;
-                            }
-                            statement.close();
-                            parser.close();
-                            flag=true;
+                getConn().setAutoCommit(false);
+
+                long recordsize=parser.getRecordNumber();
+                int count=0;
+                //int trans=0;
+                Iterator<CSVRecord> csvRecords=parser.iterator();
+                if(recordsize<=BATCH_SIZE){
+                    while(csvRecords.hasNext()){
+                        setInsertSQLLine(csvRecords.next(), finalHeaders, columnsDefs, sqlBuffer, header);
+                        statement.addBatch(sqlBuffer.toString());
+                        sqlBuffer.setLength(0);//clear
+                        count++;
+                    }
+                }else{
+                    while(csvRecords.hasNext()){
+                        setInsertSQLLine(csvRecords.next(), finalHeaders, columnsDefs, sqlBuffer, header);
+                        statement.addBatch(sqlBuffer.toString());
+                        sqlBuffer.setLength(0);//clear
+                        count++;
+                        if(count%BATCH_SIZE==0){
+                            statement.executeBatch();
+                            getConn().commit();
+                            statement.clearBatch();
+                            //trans++;
                         }
                     }
-                } catch (IOException e) {
-                    BuildStatus.getInstance().recordError();
-                    logger.error(e.getMessage(), e);
-                } catch (SQLException e) {
-                    BuildStatus.getInstance().recordError();
-                    logger.error(e.getMessage(), e);
                 }
-                return flag;
+                if(count>0){
+                    statement.executeBatch();
+                    getConn().commit();
+                    statement.clearBatch();
+                }
+                //if(trans>10){
+                //Runtime.getRuntime().gc();
+                //}
+                flag=true;
+            } catch (IOException e) {
+                BuildStatus.getInstance().recordError();
+                logger.error(e.getMessage(), e);
+            } catch (SQLException e) {
+                BuildStatus.getInstance().recordError();
+                logger.error(e.getMessage(), e);
             }
-
+            return flag;
         }
 
         public Boolean importCsvToAccessDBDirect(String tableName,String importCsvFullName){
             Boolean flag = false;
             String dbFullName = getDatabaseServer().getSchema();
             Database db;
-            Builder builder;
             try {
                 db = DatabaseBuilder.open(new File(dbFullName));
                 if (db.getTable(tableName) != null) {
@@ -663,7 +693,7 @@ public class DBHelper {
                     logger.debug("accessdb table[" + tableName + "] already exists.");
                 }else{
                     logger.warn("accessdb table[" + tableName + "] doesn't exist, import csv directly.");
-                    builder = new ImportUtil.Builder(db, tableName);
+                    Builder builder = new ImportUtil.Builder(db, tableName);
                     builder.setUseExistingTable(false);
                     builder.setDelimiter(",").setHeader(true).importReader(new BufferedReader(new FileReader(new File(importCsvFullName))));
                     flag = true;
@@ -677,9 +707,10 @@ public class DBHelper {
         }
 
 
-        public void setColumnsMap(List<TableProps> columns, List<String> dbTableColumns, Map<String, String> columnsDefs){
+        public void setColumnsMap(final List<TableProps> columns,final List<String> dbTableColumns,final Map<String, String> columnsDefs){
             String type;
-            for (int j = 0; j < columns.size(); j++) {
+            int size=columns.size();
+            for (int j = 0; j < size; j++) {
                 dbTableColumns.add(columns.get(j).getName());
                 type = columns.get(j).getTypeSize();
                 if (type.contains("(")) {
@@ -688,10 +719,11 @@ public class DBHelper {
                 columnsDefs.put(columns.get(j).getName(), type);
             }
         }
-        public String setInsertSQLHeader(String tableName,List<String> finalHeaders){
+        public String setInsertSQLHeader(final String tableName,final List<String> finalHeaders){
             String insertSQL = "insert into [" + tableName + "] (";
             //String quotesSQL="(";
-            for (int i = 0; i < finalHeaders.size(); i++) {
+            int size=finalHeaders.size();
+            for (int i = 0; i < size; i++) {
                 insertSQL = insertSQL + " [" + finalHeaders.get(i) + "],";
                 //quotesSQL=quotesSQL+"?,";
             }
@@ -701,11 +733,12 @@ public class DBHelper {
         }
 
 
-        public void setInsertSQLLine(CSVRecord record, List<String> finalHeaders, Map<String, String> columnsDefs,StringBuffer line, String header) {
+        public void setInsertSQLLine(CSVRecord record, List<String> finalHeaders, Map<String, String> columnsDefs,StringBuffer line,String header) {
             String value;
             String type;
             line.append(header+"(");
-            for (int i = 0; i < finalHeaders.size(); i++)
+            int size=finalHeaders.size();
+            for (int i = 0; i < size; i++)
             {
                 value = record.get(finalHeaders.get(i));
                 type = columnsDefs.get(finalHeaders.get(i)).toUpperCase();
@@ -910,18 +943,18 @@ public class DBHelper {
                     return flag;
                 }
                 //generate sql statement
-                StringBuilder sqlBuilder = new StringBuilder("CREATE TABLE [" + tableName + "] (");
+                StringBuilder sqlBuilder = new StringBuilder(CREATE_STR + tableName + CREATE_STR2);
                 for (String str : tableDefinition) {
                     String[] strArr = str.split("\\=| ");
 
-                    if (strArr[2].equalsIgnoreCase("LONGTEXT")) {
-                        strArr[2] = "MEMO";
-                    } else if (strArr[2].equalsIgnoreCase("BOOLEAN")) {
-                        strArr[2] = "YESNO";//Optional
-                    } else if (strArr[2].equalsIgnoreCase("DATE")) {
-                        strArr[2] = "DATETIME";//Optional
-                    } else if (strArr[2].equalsIgnoreCase("DECIMAL")) {
-                        strArr[2] = "NUMERIC";//Optional
+                    if (strArr[2].equalsIgnoreCase(LONGTXT_STR)) {
+                        strArr[2] = MEMO_STR;
+                    } else if (strArr[2].equalsIgnoreCase(BOOLEAN_STR)) {
+                        strArr[2] = YESNO_STR;//Optional
+                    } else if (strArr[2].equalsIgnoreCase(DATE_STR)) {
+                        strArr[2] = DATETIME_STR;//Optional
+                    } else if (strArr[2].equalsIgnoreCase(DECIMAL_STR)) {
+                        strArr[2] = NUMERIC_STR;//Optional
                     }
                     if (strArr.length == 3) {
                         sqlBuilder.append("[" + strArr[1] + "] " + strArr[2] + " NOT NULL,");
@@ -940,6 +973,7 @@ public class DBHelper {
             return flag;
         }
 
+
         /**
          * create access table
          *
@@ -947,7 +981,7 @@ public class DBHelper {
          * @param tableDefinition
          * @return
          */
-        public Boolean createAccessDBTab(String tableName, List<TableProps> tableDefinition) {
+        public Boolean createAccessDBTab(final String tableName,final List<TableProps> tableDefinition) {
             Boolean flag = false;
             try {
                 flag = accessTableExistence(tableName);
@@ -955,23 +989,29 @@ public class DBHelper {
                     return flag;
                 }
                 //generate sql statement
-                StringBuffer sqlBuilder = new StringBuffer("CREATE TABLE [" + tableName + "] (");
+                StringBuffer sqlBuilder = new StringBuffer(CREATE_STR + tableName + CREATE_STR2);
                 for (TableProps props : tableDefinition) {
-                    if (props.getTypeSize().equalsIgnoreCase("LONGTEXT")) {
-                        props.setTypeSize("MEMO");
-                    } else if (props.getTypeSize().equalsIgnoreCase("BOOLEAN")) {
-                        props.setTypeSize("YESNO");//Optional
-                    } else if (props.getTypeSize().equalsIgnoreCase("DATE")) {
-                        props.setTypeSize("DATETIME");
-                    } else if (props.getTypeSize().equalsIgnoreCase("DECIMAL")) {
-                        props.setTypeSize("NUMERIC");
+                    if (props.getTypeSize().equalsIgnoreCase(LONGTXT_STR)) {
+                        props.setTypeSize(MEMO_STR);
+                    } else if (props.getTypeSize().equalsIgnoreCase(BOOLEAN_STR)) {
+                        props.setTypeSize(YESNO_STR);//Optional
+                    } else if (props.getTypeSize().equalsIgnoreCase(DATE_STR)) {
+                        props.setTypeSize(DATETIME_STR);
+                    } else if (props.getTypeSize().equalsIgnoreCase(DECIMAL_STR)) {
+                        props.setTypeSize(NUMERIC_STR);
                     }
                     sqlBuilder.append("[" + props.getName() + "] " + props.getTypeSize() + props.getNullable() + ",");
                 }
-                String sql = sqlBuilder.deleteCharAt(sqlBuilder.length() - 1).append(")").toString();
-                flag = addBatch(sql);//create table
+                //flag = addBatch(sql);//create table
+                try(Statement statement = getConn().createStatement()){
+                    String sql =sqlBuilder.deleteCharAt(sqlBuilder.length() - 1).append(")").toString();
+                    statement.execute(sql);//result false is not quite sure
+                    flag=true;
+                    logger.info("create table ["+tableName+"] successfully.");
+                }
             } catch (Exception e) {
                 BuildStatus.getInstance().recordError();
+                logger.error("fail to create table [" + tableName + "]");
                 logger.error(e.getMessage(), e);
             }
             return flag;
@@ -983,7 +1023,7 @@ public class DBHelper {
                 logger.info("table name is blank, please check sql syntax.");
                 return flag;
             }
-            try {
+            try{
                 String dbFullName = getDatabaseServer().getSchema();
                 Database db = DatabaseBuilder.open(new File(dbFullName));
                 Table sysTable = db.getSystemTable("MSysObjects");
@@ -1040,10 +1080,10 @@ public class DBHelper {
                 if (type.startsWith("VARCHAR")) {
                     return Types.NVARCHAR;
                 }
-                if (type.equalsIgnoreCase("LONGTEXT")) {
+                if (type.equalsIgnoreCase(LONGTXT_STR)) {
                     return Types.NCLOB;
                 }
-                if (type.equalsIgnoreCase("DATE")) {
+                if (type.equalsIgnoreCase(DATE_STR)) {
                     return Types.DATE;
                 }
                 if (type.equalsIgnoreCase("LONG")) {
@@ -1058,10 +1098,10 @@ public class DBHelper {
                 if (type.equalsIgnoreCase("DOUBLE")) {
                     return Types.DOUBLE;
                 }
-                if (type.equalsIgnoreCase("DECIMAL")) {
+                if (type.equalsIgnoreCase(DECIMAL_STR)) {
                     return Types.DECIMAL;
                 }
-                if (type.equalsIgnoreCase("BOOLEAN")) {
+                if (type.equalsIgnoreCase(BOOLEAN_STR)) {
                     return Types.BOOLEAN;
                 }
             }
