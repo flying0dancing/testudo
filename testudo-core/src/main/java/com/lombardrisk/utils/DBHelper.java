@@ -332,8 +332,6 @@ public class DBHelper {
             BuildStatus.getInstance().recordError();
             logger.error("error: Exception in [{}]", sql);
             logger.error(e.getMessage(), e);
-        } finally {
-            //close();
         }
     }
 
@@ -362,8 +360,6 @@ public class DBHelper {
             BuildStatus.getInstance().recordError();
             logger.error("error: Exception in [" + sql + "]");
             logger.error(e.getMessage(), e);
-        } finally {
-            //close();
         }
         return colProp;
     }
@@ -375,19 +371,13 @@ public class DBHelper {
      * @param fileFullName
      */
     public void exportToCsv(final String sql,final String fileFullName) {
-        if (getConn() == null) {
-            connect();
-        }
-        //FileWriter csvName = null;
-        //BufferedWriter bufOutFile = null;
+
         try (Statement state = getConn().createStatement();
              ResultSet rest = state.executeQuery(sql);
              BufferedWriter bufOutFile = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileFullName),CharacterSet))) {
 
             ResultSetMetaData rsmd = rest.getMetaData();
 
-            //csvName = new FileWriter(fileFullName);
-            //bufOutFile = new BufferedWriter(csvName);
             logger.debug("start \"export to csv\"");
             StringBuffer strBuf = new StringBuffer();
             //csv header
@@ -408,22 +398,7 @@ public class DBHelper {
                     String classvar = rsmd.getColumnClassName(col);
                     @SuppressWarnings("unused")
                     String colTypevar = rsmd.getColumnTypeName(col);
-                    if (classvar.contains("Blob")) {
-                        value = Helper.convertBlobToStr(rest.getBlob(col));
-                    } else if (classvar.contains("Timestamp")) {
-                        value = StringUtils.isBlank(rest.getString(col)) ? "" : rest.getString(col);
-                        value = value.replaceAll("(\")", "\"$1").replaceAll("\\.*", "");
-                    } else if (classvar.contains("Decimal")) {
-
-                        value = StringUtils.isBlank(rest.getString(col)) ? "" : rest.getBigDecimal(col).toPlainString();
-                    } else if (classvar.contains("Int") || classvar.contains("Boolean")) {
-
-                        value = StringUtils.isBlank(rest.getString(col)) ? "" : rest.getString(col).replaceAll("(\")", "\"$1");
-                    } else {
-
-                        value = StringUtils.isBlank(rest.getString(col)) ? "" : "\"" + rest.getString(col).replaceAll("(\")", "\"$1") + "\"";
-                    }
-
+                    value=getValueForCSVItem(classvar,rest,col);
                     if (col != rsmd.getColumnCount()) {
                         bufOutFile.append(value + ",");
                     } else {
@@ -443,31 +418,41 @@ public class DBHelper {
             BuildStatus.getInstance().recordError();
             logger.error("error: Exception in [" + sql + "]");
             logger.error(e.getMessage(), e);
-        } finally {
-            //close();
-            /*try {
-                bufOutFile.close();
-                csvName.close();
-            } catch (IOException e) {
-                BuildStatus.getInstance().recordError();
-                logger.error("error: fail to closing file handlers.");
-                logger.error(e.getMessage(), e);
-            }*/
         }
     }
+    private String getValueForCSVItem(final String classvar,final ResultSet rest,final int col){
+        String value=null;
+        try{
+            if (classvar.contains("Blob")) {
+                value = Helper.convertBlobToStr(rest.getBlob(col));
+            } else if (classvar.contains("Timestamp")) {
+                value = StringUtils.isBlank(rest.getString(col)) ? "" : rest.getString(col);
+                value = value.replaceAll("(\")", "\"$1").replaceAll("\\.*", "");
+            } else if (classvar.contains("Decimal")) {
 
-    public Boolean addBatch(final String sql) {
-        Boolean flag = false;
-        if (getConn() == null)
-            return flag;
-        try {
-            getConn().setAutoCommit(false);
+                value = StringUtils.isBlank(rest.getString(col)) ? "" : rest.getBigDecimal(col).toPlainString();
+            } else if (classvar.contains("Int") || classvar.contains("Boolean")) {
+
+                value = StringUtils.isBlank(rest.getString(col)) ? "" : rest.getString(col).replaceAll("(\")", "\"$1");
+            } else {
+
+                value = StringUtils.isBlank(rest.getString(col)) ? "" : "\"" + rest.getString(col).replaceAll("(\")", "\"$1") + "\"";
+            }
         } catch (SQLException e) {
             BuildStatus.getInstance().recordError();
-            logger.error("Error setting autocommit false", e);
-            return false;
+            logger.error("error: SQLException in exportToCsv");
+            logger.error(e.getMessage(), e);
         }
+        return value;
+    }
+    public Boolean addBatch(final String sql) {
+        Boolean flag = false;
+        if (getConn() == null){
+            return flag;
+        }
+
         try (Statement statement = getConn().createStatement();){
+            getConn().setAutoCommit(false);
             String sqlLow = sql.trim().toLowerCase().replaceAll("(\\s)+", "$1");
             if (sqlLow.startsWith("update") || (sqlLow.contains("create") && sqlLow.contains("select") && sqlLow.contains("with"))) {
                 statement.executeUpdate(sql);
@@ -1017,9 +1002,9 @@ public class DBHelper {
                     }
                     sqlBuilder.append("[" + props.getName() + "] " + props.getTypeSize() + props.getNullable() + ",");
                 }
-                String sql =sqlBuilder.deleteCharAt(sqlBuilder.length() - 1).append(")").toString();
                 //flag = addBatch(sql);//create table
                 try(Statement statement = getConn().createStatement()){
+                    String sql =sqlBuilder.deleteCharAt(sqlBuilder.length() - 1).append(")").toString();
                     statement.execute(sql);//result false is not quite sure
                     flag=true;
                     logger.info("create table ["+tableName+"] successfully.");

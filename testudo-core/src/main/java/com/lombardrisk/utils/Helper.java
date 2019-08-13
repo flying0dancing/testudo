@@ -246,10 +246,8 @@ public class Helper {
     }
 
     public static <T> Boolean isEmptyList(final List<T> list){
-        if(list!=null){
-            if(list.size()>0){
-                return false;
-            }
+        if(list!=null && list.size()>0){
+            return false;
         }
         return true;
     }

@@ -18,6 +18,8 @@ import java.util.List;
 public class Testudo implements IComFolder {
 
     private static final Logger logger = LoggerFactory.getLogger(Testudo.class);
+    private static final String FILE_SEPARATOR=System.getProperty("file.separator");
+    private static final int MINUTE=60;
 
     public static void main(String[] args) {
         long begin = System.currentTimeMillis();
@@ -58,7 +60,7 @@ public class Testudo implements IComFolder {
             logger.error(e.getMessage(), e);
         }
         long end = System.currentTimeMillis();
-        logger.info("total time(min):" + (end - begin) / (60*MILLISECONDS_PER_SECOND));
+        logger.info("total time(min):" + (end - begin) / (MINUTE*MILLISECONDS_PER_SECOND));
         Runtime.getRuntime().gc();
     }
 
@@ -99,8 +101,8 @@ public class Testudo implements IComFolder {
 
     private static void readDBToMetadata(ARPCISetting arSetting) {
         String iniFullName =
-                Helper.reviseFilePath(arSetting.getMetadataPath() + System.getProperty("file.separator") + arSetting.getMetadataStruct());
-        FileUtil.deleteFiles(Helper.reviseFilePath(arSetting.getMetadataPath() + System.getProperty("file.separator")),ACCESS_SCHEMA_INI);
+                Helper.reviseFilePath(arSetting.getMetadataPath() + FILE_SEPARATOR + arSetting.getMetadataStruct());
+        FileUtil.deleteFiles(Helper.reviseFilePath(arSetting.getMetadataPath() + FILE_SEPARATOR),ACCESS_SCHEMA_INI);
         FileUtil.createNew(iniFullName);
         List<DBAndTables> dbAndTables = arSetting.getDatabaseServerAndTables();
         List<String> tables,excludeReturnIds;
@@ -144,7 +146,7 @@ public class Testudo implements IComFolder {
 
     private static void packMetadataAndFiles(ARPCISetting arSetting) {
         String iniFullName =
-                Helper.reviseFilePath(arSetting.getMetadataPath() + System.getProperty("file.separator") + arSetting.getMetadataStruct());
+                Helper.reviseFilePath(arSetting.getMetadataPath() + FILE_SEPARATOR + arSetting.getMetadataStruct());
         ARPPack azipFile = new ARPPack();
         Boolean flag = azipFile.createNewDpm(arSetting.getZipSettings().getDpmFullPath());
         if (!flag) {

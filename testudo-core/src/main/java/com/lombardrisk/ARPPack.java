@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -110,7 +109,7 @@ public class ARPPack implements IComFolder {
             if (realCsvFullPathsTmp.size() <= 0) {
                 logger.error("error: invalid path [" + csvParentPath + System.getProperty("file.separator") + pathTmp + "]");
             }else{
-                //realCsvFullPaths.addAll(realCsvFullPathsTmp);
+
                 for(String pathTmp2:realCsvFullPathsTmp){
                     realCsvFullPaths.add(pathTmp2);
                     tableName=getTableFromMetaName(pathTmp2,folderRegex);
@@ -146,27 +145,7 @@ public class ARPPack implements IComFolder {
         return realCsvFullPaths;
     }
 
-    private Boolean InnerImportMetadataToDPM(final DBInfo dbInfo, final Map<String,List<String>> realTabCsvFullPathMap){
-        Boolean flag=false;
-        String tableName;
-        for(Map.Entry<String,List<String>> tabCsvPath: realTabCsvFullPathMap.entrySet()){
-            tableName=tabCsvPath.getKey();
-            for(String pathTemp:tabCsvPath.getValue()){
-                flag=dbInfo.importCsvToAccess(tableName,pathTemp);
-                if (flag) {
-                    logger.info("import [" + pathTemp + "] to " + tableName + " successfully.");
-                } else {
-                    BuildStatus.getInstance().recordError();
-                    logger.error("import [" + pathTemp + "] to " + tableName + " fail.");
-                    break;
-                }
-            }
-            if(!flag){
-                break;
-            }
-        }
-        return flag;
-    }
+
 
     /***
      * read metadata (*.csv file) name's returnId, and then through dbFullName and its tableName(rets which stored definition of all returns), find its return name and version
@@ -174,7 +153,9 @@ public class ARPPack implements IComFolder {
      * @return return a list of all returns' <I>name_version</I>, return null if error occurs.
      */
     public List<String> getReturnNameAndVersions(final List<String> csvFullPaths) {
-        if (Helper.isEmptyList(csvFullPaths)) return null;
+        if (Helper.isEmptyList(csvFullPaths)) {
+            return null;
+        }
         List<String> nameAndVers = new ArrayList<String>();
 
         DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
@@ -204,7 +185,10 @@ public class ARPPack implements IComFolder {
 
     public Boolean execSQLs(final String sourcePath,final List<String> sqlFileNames,final String excludeFileFilters) {
         Boolean flag = true;
-        if (Helper.isEmptyList(sqlFileNames)) return flag;//means testudo.json doesn't provide sqlFiles.
+        if (Helper.isEmptyList(sqlFileNames)) {
+            //means testudo.json doesn't provide sqlFiles.
+            return flag;
+        }
         logger.info("================= execute SQLs =================");
         List<String> realFullPaths = getFileFullPaths(sourcePath, sqlFileNames, excludeFileFilters,false);
         if (Helper.isEmptyList(realFullPaths)) {
@@ -219,21 +203,7 @@ public class ARPPack implements IComFolder {
             logger.info("sql statements in file: " + fileFullPath);
             String fileContent = FileUtil.getSQLContent(fileFullPath);
             if (fileContent.contains(";")) {
-                String[] sqlStatements = fileContent.split(";");
-                for (String sql : sqlStatements) {
-                    if (StringUtils.isNotBlank(sql)) {
-                        logger.info("execute sql:" + sql.trim());
-                        status = dbInfo.executeSQL(sql.trim());
-                        if (!status) {
-                            BuildStatus.getInstance().recordError();
-                            logger.error("execute failed.");
-                            flag = false;
-                            break;
-                        } else {
-                            logger.info("execute OK.");
-                        }
-                    }
-                }
+                flag=executeSQLs(dbInfo,fileContent);
             } else if (StringUtils.isNotBlank(fileContent)) {
                 logger.info("execute sql:" + fileContent);
                 status = dbInfo.executeSQL(fileContent.trim());
@@ -254,6 +224,24 @@ public class ARPPack implements IComFolder {
         return flag;
     }
 
+    private Boolean executeSQLs(final DBInfo dbInfo,final String fileContent){
+        Boolean status=true;
+        String[] sqlStatements = fileContent.split(";");
+        for (String sql : sqlStatements) {
+            if (StringUtils.isNotBlank(sql)) {
+                logger.info("execute sql:" + sql.trim());
+                status = dbInfo.executeSQL(sql.trim());
+                if (!status) {
+                    BuildStatus.getInstance().recordError();
+                    logger.error("execute failed.");
+                    break;
+                } else {
+                    logger.info("execute OK.");
+                }
+            }
+        }
+        return status;
+    }
     /**
      * @param sourcePath    should follow AR for product's folder structure
      * @param zipSet
@@ -357,9 +345,10 @@ public class ARPPack implements IComFolder {
      */
     public List<String> getFileFullPaths(final String sourcePath,final List<String> filters,final String excludeFilters,final Boolean keepDirStructure) {
         Helper.removeDuplicatedElements(filters);
-        if (Helper.isEmptyList(filters)) return null;
-        if (StringUtils.isBlank(sourcePath)) return null;
-        //sourcePath = Helper.reviseFilePath(sourcePath + "/");
+        if (Helper.isEmptyList(filters) || StringUtils.isBlank(sourcePath)) {
+            return null;
+        }
+
         List<String> realFilePaths = new ArrayList<String>();
         List<String> realFullPathsTmp;
         String filePathTmp;

@@ -70,7 +70,7 @@ public final class FileUtil {
         boolean flag = true;
         byte[] buf = new byte[1024];
         try {
-            System.out.print("start compressing .");
+            logger.info("start compressing");
             long begin=System.currentTimeMillis();
             int lastSlash = zipFullName.lastIndexOf("\\") == -1 ? zipFullName.lastIndexOf("/") : zipFullName.lastIndexOf("\\");
             String zipsPath = zipFullName.substring(0, lastSlash);//get zip's path
@@ -94,7 +94,7 @@ public final class FileUtil {
                 zipOut.setEncoding(CharacterSet);
                 ListIterator<String> listIterator = toZipFileFullPaths.listIterator();
                 String fileFullPath;
-                int i=1;
+
                 while (listIterator.hasNext()){
                     fileFullPath=listIterator.next();
                     File fileHd = new File(fileFullPath);
@@ -113,13 +113,10 @@ public final class FileUtil {
                             zipOut.closeArchiveEntry();
                         }
                     }
-                    if(i%BUFFER_SIZE==0){
-                        System.out.print(".");
-                    }
-                    i++;
+
                 }
             }
-            System.out.println("100%, used time(sec):" + (System.currentTimeMillis() - begin) / MILLISECONDS_PER_SECOND);
+            logger.info("compression used time(sec):" + (System.currentTimeMillis() - begin) / MILLISECONDS_PER_SECOND);
         } catch (Exception e) {
             flag = false;
             BuildStatus.getInstance().recordError();
@@ -131,9 +128,9 @@ public final class FileUtil {
     private static List<String> un7z1(File file, String destDir) throws IOException {
         List<String> fileNames = new ArrayList<>();
         try (SevenZFile sevenZFile = new SevenZFile(file)) {
-            System.out.print(file.getName()+"\textracting");
+            logger.info(file.getName()+"\textracting");
             SevenZArchiveEntry entry;
-            int i=1;
+
             long begin=System.currentTimeMillis();
             while ((entry = sevenZFile.getNextEntry()) != null) {
                 fileNames.add(entry.getName());
@@ -152,12 +149,9 @@ public final class FileUtil {
                         throw e;
                     }
                 }
-                if(i%BUFFER_SIZE==0){
-                    System.out.print(".");
-                }
-                i++;
+
             }
-            System.out.println("100% extraction time(sec):" + (System.currentTimeMillis() - begin) / MILLISECONDS_PER_SECOND);
+            logger.info("extraction time(sec):" + (System.currentTimeMillis() - begin) / MILLISECONDS_PER_SECOND);
         } catch (IOException e) {
             BuildStatus.getInstance().recordError();
             logger.error(e.getMessage(), e);
@@ -474,7 +468,8 @@ public final class FileUtil {
         return Pair.of(parentPath, fileName);
     }
 
-    private static List<String> listFilesByFilter(final String filePath,final String filterStr,final String exfilterStr,final boolean keepDirStructure) {
+    private static List<String> listFilesByFilter(final String filePath,final String filterStr,
+                                                  final String exfilterStr,final boolean keepDirStructure) {
         List<String> filePaths = new ArrayList<>();
         File fileFullPath = new File(filePath);
         /*if (StringUtils.isBlank(filterStr)) {
@@ -803,7 +798,7 @@ public final class FileUtil {
                 File destFile = new File(destPath);
                 createDirectories(destPath);
                 FileUtils.copyDirectory(sourceFile, destFile);
-                System.out.println("copy folder time(sec):"+(System.currentTimeMillis()-begin)/1000.00F);
+                logger.info("copy folder time(sec):"+(System.currentTimeMillis()-begin)/1000.00F);
             }
         } catch (Exception e) {
             BuildStatus.getInstance().recordError();
@@ -929,7 +924,7 @@ public final class FileUtil {
         }
     }
     private static class CustomFileNameFilter implements FilenameFilter {
-        private static final String regStr="\\*";
+        private static final String regex="\\*";
         private final String[] filters;
         private final String[] exFilters;
 
@@ -960,7 +955,7 @@ public final class FileUtil {
                     boolean exflag = false;
                     if (StringUtils.isNotBlank(exfilter)) {
                         exflag = true;
-                        String[] subfilters = exfilter.split(regStr);
+                        String[] subfilters = exfilter.split(regex);
                         for (String subexfilter : subfilters) {
                             if (StringUtils.isNotBlank(subexfilter) && !name.toLowerCase().contains(subexfilter)) {
                                 exflag = false;

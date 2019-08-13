@@ -65,9 +65,7 @@ public class DBInfo implements IComFolder {
         if(dbHelper.getConn()==null){
             dbHelper.connect();
         }
-        String rst = dbHelper.query(sql);
-        //dbHelper.close();
-        return rst;
+        return  dbHelper.query(sql);
     }
 
     private List<String> queryRecords(String sql) {
@@ -502,7 +500,7 @@ public class DBInfo implements IComFolder {
                 }
             }
         }
-        System.out.println("create tables used time(sec):" + (System.currentTimeMillis() - begin) / MILLISECONDS_PER_SECOND);
+        logger.info("create tables used time(sec):" + (System.currentTimeMillis() - begin) / MILLISECONDS_PER_SECOND);
         return flag;
     }
 }
