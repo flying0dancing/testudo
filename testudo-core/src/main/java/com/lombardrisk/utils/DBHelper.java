@@ -371,7 +371,9 @@ public class DBHelper {
      * @param fileFullName
      */
     public void exportToCsv(final String sql,final String fileFullName) {
-
+        if(getConn()==null){
+            connect();
+        }
         try (Statement state = getConn().createStatement();
              ResultSet rest = state.executeQuery(sql);
              BufferedWriter bufOutFile = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileFullName),CharacterSet))) {
