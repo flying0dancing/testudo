@@ -3,6 +3,7 @@ package com.lombardrisk;
 import com.google.gson.JsonSyntaxException;
 import com.lombardrisk.pojo.ARPCISetting;
 import com.lombardrisk.pojo.ExternalProject;
+import com.lombardrisk.pojo.TempACCESSDB;
 import com.lombardrisk.pojo.ZipSettings;
 import com.lombardrisk.status.BuildStatus;
 import com.lombardrisk.utils.Dom4jUtil;
@@ -123,9 +124,12 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder 
         List<String> accdbfiles = FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath + "/" + DPM_PATH + "*" + dmpType), null,false);
         if (!accdbfiles.isEmpty()) {
             String accdbFileName = FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
-            if (!accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)) {
-                logger.info("Rename dpm name: {} to {}", accdbFileName, accdbFileNameInManifest);
-                FileUtil.renameTo(accdbfiles.get(0), targetSrcPath + File.separator + DPM_PATH + accdbFileNameInManifest);
+			TempACCESSDB.INSTANCE.initial(accdbfiles.get(0),accdbFileName);
+            if (accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)) {
+				String draftName="drft"+dmpType;
+                logger.info("Rename dpm name: {} to {}", accdbFileName, draftName);
+                FileUtil.renameTo(accdbfiles.get(0), targetSrcPath + File.separator + DPM_PATH + draftName);
+				TempACCESSDB.INSTANCE.initial(targetSrcPath + File.separator + DPM_PATH + draftName,draftName);
             }
         }
     }

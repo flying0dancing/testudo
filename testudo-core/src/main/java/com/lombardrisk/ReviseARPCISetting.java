@@ -3,6 +3,7 @@ package com.lombardrisk;
 import com.google.gson.JsonSyntaxException;
 import com.lombardrisk.pojo.ARPCISetting;
 import com.lombardrisk.pojo.ExternalProject;
+import com.lombardrisk.pojo.TempACCESSDB;
 import com.lombardrisk.pojo.ZipSettings;
 import com.lombardrisk.status.BuildStatus;
 import com.lombardrisk.utils.Dom4jUtil;
@@ -133,6 +134,7 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder {
                 dpmFullName = Helper.reviseFilePath(targetSrcPath + DPM_PATH + accdbFileNameInManifest);
                 List<ExternalProject> externalProjects = zipSetting.getExternalProjects();
                 if (externalProjects != null && externalProjects.size() > 0) {
+
                     for (ExternalProject externalpro : externalProjects) {
                         if (StringUtils.isNoneBlank(externalpro.getProject(), externalpro.getSrcFile())) {
                             String destDir = StringUtils.isBlank(externalpro.getDestDir()) ? targetSrcPath :
@@ -145,9 +147,12 @@ public class ReviseARPCISetting implements IReviseARPCISetting, IComFolder {
                                     FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath + "/" + DPM_PATH + "*" + dmpType), null,false);
                             if (accdbfiles.size() > 0) {
                                 String accdbFileName = FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
-                                if (!accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)) {
-                                    logger.info("Rename dpm name: " + accdbFileName + " to " + accdbFileNameInManifest);
-                                    FileUtil.renameTo(accdbfiles.get(0), targetSrcPath + File.separator + DPM_PATH + accdbFileNameInManifest);
+                                TempACCESSDB.INSTANCE.initial(accdbfiles.get(0),accdbFileName);
+                                if (accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)) {
+                                    String draftName="drft"+dmpType;
+                                    logger.info("Rename dpm name: " + accdbFileName + " to " + draftName);
+                                    FileUtil.renameTo(accdbfiles.get(0), targetSrcPath + File.separator + DPM_PATH + draftName);
+                                    TempACCESSDB.INSTANCE.initial(targetSrcPath + File.separator + DPM_PATH + draftName,draftName);
                                 }
                             }
                         } else {

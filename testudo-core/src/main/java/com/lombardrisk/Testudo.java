@@ -147,27 +147,17 @@ public class Testudo implements IComFolder {
     private static void packMetadataAndFiles(ARPCISetting arSetting) {
         String iniFullName =
                 Helper.reviseFilePath(arSetting.getMetadataPath() + FILE_SEPARATOR + arSetting.getMetadataStruct());
-        ARPPack azipFile = new ARPPack();
-        Boolean flag = azipFile.createNewDpm(arSetting.getZipSettings().getDpmFullPath());
-        if (!flag) {
-            BuildStatus.getInstance().recordError();
-            logger.error("error: create access database unsuccessful.");
-            return;
-        }
+
         List<String> requiredMetadata=arSetting.getZipSettings().getRequiredMetadata();
-        List<String> metadataPaths = azipFile.importMetadataToDpm(arSetting.getMetadataPath(),
-                requiredMetadata, iniFullName);
+        List<String> metadataPaths = ARPPack.importMetadataToDpm(arSetting.getMetadataPath(),
+                requiredMetadata, iniFullName,arSetting.getZipSettings());
         if (metadataPaths != null) {
-            if(!requiredMetadata.contains("*.csv")){
-                List<String> returnNameVers = azipFile.getReturnNameAndVersions(metadataPaths);
-                if (returnNameVers != null) {
-                    arSetting.getZipSettings().getZipFiles().addAll(returnNameVers);
-                }
-            }
-            Boolean status = azipFile.execSQLs(arSetting.getTargetSrcPath(),
+            
+            String dbFullName=arSetting.getZipSettings().getDpmFullPath();
+            Boolean status = ARPPack.execSQLs(dbFullName,arSetting.getTargetSrcPath(),
                     arSetting.getZipSettings().getSqlFiles(), arSetting.getZipSettings().getExcludeFileFilters());
             if (status) {
-                azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(),
+                ARPPack.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(),
                         Helper.getParentPath(arSetting.getTargetSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
             }
         }else{
