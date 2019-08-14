@@ -58,6 +58,7 @@ public class DBHelper {
             "((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?(?:\\.\\d+)?)";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
     private DBHelper.AccessdbHelper accdb;
     private static final String CharacterSet="UTF-8";
+    private static final float MILLISECONDS_PER_SECOND = 1000.00F;
     public DBHelper(DatabaseServer databaseServer) {
         this.databaseServer = databaseServer;
 
@@ -119,8 +120,9 @@ public class DBHelper {
                 if(dbSchemaHD.exists()){
                     long dbSchemaSize=dbSchemaHD.length();
                     if(dbSchemaSize>104857600){//100MB
+                        //jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY
                         this.databaseServer.setUrl(String.format(
-                                "jdbc:ucanaccess://%s;memory=false;sysSchema=TRUE;columnOrder=DISPLAY;mirrorFolder=java.io.tmpdir;",//jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY
+                                "jdbc:ucanaccess://%s;memory=false;sysSchema=TRUE;columnOrder=DISPLAY;mirrorFolder=java.io.tmpdir;",
                                 this.databaseServer.getSchema()));
                     }
                 }
@@ -1095,15 +1097,14 @@ public class DBHelper {
                         logger.info("copy external project's tables...");
                         for(String tableName:tableNames){
                             try (ResultSet rs = statement.executeQuery(SELECT_STR + tableName + SELECT_STR2)) {
-
-                                ImportUtil.importResultSet(rs, dbTarget, tableName,SimpleImportFilter.INSTANCE,true);  // create new table
-                                logger.info(".");
+                                JackcessUtil.importResultSet(rs, dbTarget, tableName,SimpleImportFilter.INSTANCE,true);  // create new table
+                                ImportUtil.importResultSet(rs, dbTarget, tableName,SimpleImportFilter.INSTANCE,true);
                             } catch (IOException e) {
                                 BuildStatus.getInstance().recordError();
                                 logger.error(e.getMessage(), e);
                             }
                         }
-                        logger.info(" used time(sec):"+(System.currentTimeMillis()-begin)/1000.00F);
+                        logger.info("used time(sec):"+(System.currentTimeMillis()-begin)/MILLISECONDS_PER_SECOND);
                     }
                 }
             } catch (SQLException e) {
