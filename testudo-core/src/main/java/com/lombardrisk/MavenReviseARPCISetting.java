@@ -2,23 +2,16 @@ package com.lombardrisk;
 
 import com.google.gson.JsonSyntaxException;
 import com.lombardrisk.pojo.ARPCISetting;
-import com.lombardrisk.pojo.ExternalProject;
 import com.lombardrisk.pojo.ZipSettings;
-import com.lombardrisk.status.BuildStatus;
 import com.lombardrisk.utils.Dom4jUtil;
 import com.lombardrisk.utils.FileUtil;
 import com.lombardrisk.utils.Helper;
 import com.lombardrisk.utils.ReviseStrHelper;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.List;
 
 public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder {
-
-    private static final Logger logger = LoggerFactory.getLogger(MavenReviseARPCISetting.class);
 
     @Override
     public ARPCISetting reviseARPCISetting(ARPCISetting arCIConfg) {
@@ -82,7 +75,7 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder 
             } else {
                 String accdbFileNameInManifest = Dom4jUtil.updateElement(targetSrcPath + MANIFEST_FILE, ACCESSFILE, null);
                 dpmFullName = Helper.reviseFilePath(targetSrcPath + DPM_PATH + accdbFileNameInManifest);
-                copyExternalProjects(zipSetting, targetSrcPath, targetProjectPath, accdbFileNameInManifest);
+
             }
             zipSetting.setDpmFullPath(dpmFullName);
             String productPropsPath = zipSetting.getProductProperties();
@@ -91,42 +84,4 @@ public class MavenReviseARPCISetting implements IReviseARPCISetting, IComFolder 
         return zipSetting;
     }
 
-    private void copyExternalProjects(
-            final ZipSettings zipSetting,
-            final String targetSrcPath,
-            final String targetProjectPath,
-            final String accdbFileNameInManifest) {
-        List<ExternalProject> externalProjects = zipSetting.getExternalProjects();
-        if (externalProjects != null && !externalProjects.isEmpty()) {
-            for (ExternalProject externalpro : externalProjects) {
-                if (StringUtils.isNoneBlank(externalpro.getProject(), externalpro.getSrcFile())) {
-                    copyExternalProject(targetSrcPath, targetProjectPath, accdbFileNameInManifest, externalpro);
-                } else {
-                    BuildStatus.getInstance().recordError();
-                    logger.error("externalProjects->project,srcFile cannot be null.");
-                }
-            }
-        }
-    }
-
-    private void copyExternalProject(
-            final String targetSrcPath,
-            final String targetProjectPath,
-            final String accdbFileNameInManifest,
-            final ExternalProject externalpro) {
-        String destDir = StringUtils.isBlank(externalpro.getDestDir()) ? targetSrcPath :
-                Helper.reviseFilePath(targetSrcPath + File.separator + externalpro.getDestDir());
-        String externalProjectParent = Helper.getParentPath(targetProjectPath);
-        FileUtil.copyExternalProject(Helper.reviseFilePath(externalProjectParent +
-                externalpro.getProject() + File.separator + externalpro.getSrcFile()), destDir, externalpro.getUncompress());
-        String dmpType = accdbFileNameInManifest.substring(accdbFileNameInManifest.lastIndexOf('.'));
-        List<String> accdbfiles = FileUtil.getFilesByFilter(Helper.reviseFilePath(targetSrcPath + "/" + DPM_PATH + "*" + dmpType), null,false);
-        if (!accdbfiles.isEmpty()) {
-            String accdbFileName = FileUtil.getFileNameWithSuffix(accdbfiles.get(0));
-            if (!accdbFileName.equalsIgnoreCase(accdbFileNameInManifest)) {
-                logger.info("Rename dpm name: {} to {}", accdbFileName, accdbFileNameInManifest);
-                FileUtil.renameTo(accdbfiles.get(0), targetSrcPath + File.separator + DPM_PATH + accdbFileNameInManifest);
-            }
-        }
-    }
 }

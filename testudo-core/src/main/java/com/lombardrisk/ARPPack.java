@@ -1,6 +1,7 @@
 package com.lombardrisk;
 
 import com.lombardrisk.pojo.DatabaseServer;
+import com.lombardrisk.pojo.TempACCESSDB;
 import com.lombardrisk.pojo.ZipSettings;
 import com.lombardrisk.status.BuildStatus;
 import com.lombardrisk.utils.DBInfo;
@@ -18,7 +19,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ARPPack implements IComFolder {
+public final class ARPPack implements IComFolder {
 
     private final static Logger logger = LoggerFactory.getLogger(ARPPack.class);
     private final static String REGEX_1="#.*?_";
@@ -27,60 +28,28 @@ public class ARPPack implements IComFolder {
     private final static String SHARP_1="#";
     private final static String BLANK="";
 
-    public enum DBInfoSingle {
-        INSTANCE;
-        private DBInfo dbInfo;
-
-        public DBInfo getDbInfo() {
-            return dbInfo;
-        }
-
-        public void setDbInfo(String dbFullName) {
-            this.dbInfo = new DBInfo(new DatabaseServer("accessdb", "", dbFullName, "", ""));
-        }
-    }
-
-    /***
-     * create a new access database(.accdb) if no existed, otherwise use the existed one.
-     * @param dbFullName
-     * @return
-     */
-    public Boolean createNewDpm(String dbFullName) {
-        Boolean flag = false;
-        DBInfoSingle.INSTANCE.setDbInfo(dbFullName);
-        flag = DBInfoSingle.INSTANCE.getDbInfo().createAccessDB();
-        return flag;
-    }
-
-    /***
-     * import all filtered metadata (*.csv files) to access database
-     * @param db it's a access database, its location or schema should be get value from <I>json file</I>->"zipSettings"->"dpmFullPath"
-     * @param csvParentPath it gets value from <I>json file</I> ->"exportPath"
-     * @param csvPaths it gets value from <I>json file</I>->"zipSettings"->"requiredMetadata"
-     * @param schemaFullName It's a configuration file, which contains all tables' definition.
-     * @return return metadata (*.csv files) full paths
-     */
-    public List<String> importMetadataToDpm(DBInfo db, String csvParentPath, List<String> csvPaths, String schemaFullName) {
-        return importMetadataToDpm(csvParentPath, csvPaths, schemaFullName);
-    }
+    private ARPPack(){}
 
     /***
      * import all filtered metadata (*.csv files) to access database
      * @param csvParentPath it gets value from <I>json file</I> ->"exportPath"
-     * @param csvPaths it gets value from <I>json file</I>->"zipSettings"->"requiredMetadata"
      * @param schemaFullName It's a configuration file, which contains all tables' definition.
      * @return return metadata (*.csv files) full paths, return null if error occurs.
      */
-    public List<String> importMetadataToDpm(final String csvParentPath,final List<String> csvPaths, String schemaFullName) {
+    public static List<String> importMetadataToDpm(final String csvParentPath, String schemaFullName,
+													final ZipSettings zipSet) {
         if (StringUtils.isBlank(csvParentPath)) {
             return null;
         }
+        //it gets value from <I>json file</I>->"zipSettings"->"requiredMetadata"
+        List<String> csvPaths=zipSet.getRequiredMetadata();
         Helper.removeDuplicatedElements(csvPaths);
         if (Helper.isEmptyList(csvPaths)) {
             return null;
         }
         schemaFullName=Helper.reviseFilePath(schemaFullName);
-        DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
+        String dbFullName=zipSet.getDpmFullPath();
+        DBInfo dbInfo = new DBInfo(new DatabaseServer("accessdb", "", dbFullName, "", ""));
         dbInfo.getDbHelper().connect();
         List<String> subFolderNames=FileUtil.getSubFolderNames(csvParentPath);
         String folderRegex = FileUtil.getFolderRegex(subFolderNames);
@@ -90,18 +59,17 @@ public class ARPPack implements IComFolder {
         dbInfo.setDefaultSchemaFullName(userSchemaFullName);
         dbInfo.setDefaultSchemaExist(userSchemaFullName);
 
-        dbInfo.createAccessDBTable("Ref",schemaFullName);
-        dbInfo.createAccessDBTable("GridRef",schemaFullName);
-
         List<String> realCsvFullPaths = new ArrayList<>();
         List<String> realNames=new ArrayList<>();
         List<String> realCsvFullPathsTmp;
-        //Map<String,List<String>> realTabCsvFullPathMap=new HashMap<String,List<String>>();
-        //List<String> metadataFullNames;
+       
         String tableName;
         Boolean flag=true;
         //long begin, end;
         logger.info("================= import metadata into DPM =================");
+        dbInfo.createAccessDBTable("Ref",schemaFullName);
+        dbInfo.createAccessDBTable("GridRef",schemaFullName);
+
         for (String pathTmp : csvPaths) {
             realCsvFullPathsTmp =
                     FileUtil.getFilesByFilter(Helper.reviseFilePath(csvParentPath + System.getProperty("file" +
@@ -136,30 +104,52 @@ public class ARPPack implements IComFolder {
             }
         }
 
-        dbInfo.getDbHelper().close();
-        dbInfo=null;
         if (Helper.isEmptyList(realCsvFullPaths)) {
+            dbInfo.getDbHelper().close();
             return null;
+        }else {
+            addReturnNamesAndVersionWrap(dbInfo,realCsvFullPaths,csvPaths,zipSet);
+            String draftDBFullName=TempACCESSDB.INSTANCE.getDbFullName();
+            dbInfo.getDbHelper().getAccdb().copyAccessDBTables(realNames,draftDBFullName);
+            dbInfo.getDbHelper().close();
+
+            changeDpmName(dbFullName);
         }
         Runtime.getRuntime().gc();
         return realCsvFullPaths;
     }
 
 
+    private static void addReturnNamesAndVersionWrap(final DBInfo dbInfo, final List<String> realCsvFullPaths,
+                                                     final List<String> csvPaths,final ZipSettings zipSet){
+        if(!csvPaths.contains("*.csv")){
+            List<String> returnNameVers=getReturnNameAndVersions(dbInfo,realCsvFullPaths);
+            if(!Helper.isEmptyList(returnNameVers)){
+                zipSet.getZipFiles().addAll(returnNameVers);
+            }
+        }
+    }
+
+    private static void changeDpmName(String dbFullName){
+        String draftDBFullName=TempACCESSDB.INSTANCE.getDbFullName();
+        if(StringUtils.isNotBlank(draftDBFullName)){
+            logger.info("Rename dpm name: " + TempACCESSDB.INSTANCE.getName()+ " to " + FileUtil.getFileNameWithSuffix(dbFullName));
+            FileUtil.renameTo(draftDBFullName, dbFullName);
+            TempACCESSDB.INSTANCE.initial(null,null);//must set to null for all sub products running.
+        }
+    }
 
     /***
      * read metadata (*.csv file) name's returnId, and then through dbFullName and its tableName(rets which stored definition of all returns), find its return name and version
      * @param csvFullPaths metadata (*.csv files) full paths
      * @return return a list of all returns' <I>name_version</I>, return null if error occurs.
      */
-    public List<String> getReturnNameAndVersions(final List<String> csvFullPaths) {
+    public static List<String> getReturnNameAndVersions(final DBInfo dbInfo, final List<String> csvFullPaths) {
         if (Helper.isEmptyList(csvFullPaths)) {
             return null;
         }
         List<String> nameAndVers = new ArrayList<String>();
 
-        DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
-        dbInfo.getDbHelper().connect();
         Boolean flag=dbInfo.getDbHelper().getAccdb().accessTableExistence("Rets");
         if(flag){
             for (String csvPath : csvFullPaths) {
@@ -177,13 +167,11 @@ public class ARPPack implements IComFolder {
             BuildStatus.getInstance().recordError();
             logger.error("cannot found Rets");
         }
-        dbInfo.getDbHelper().close();
-        dbInfo=null;
-        if (nameAndVers.size() <= 0) return null;
+
         return nameAndVers;
     }
 
-    public Boolean execSQLs(final String sourcePath,final List<String> sqlFileNames,final String excludeFileFilters) {
+    public static Boolean execSQLs(final String dbFullName,final String sourcePath,final List<String> sqlFileNames,final String excludeFileFilters) {
         Boolean flag = true;
         if (Helper.isEmptyList(sqlFileNames)) {
             //means testudo.json doesn't provide sqlFiles.
@@ -196,14 +184,14 @@ public class ARPPack implements IComFolder {
             logger.error("error: sqlFiles are invalid files or filters.");
             return false;//illegal, no invalid files need to execute if it set sqlFiles
         }
-        DBInfo dbInfo = DBInfoSingle.INSTANCE.getDbInfo();
+        DBInfo dbInfo = new DBInfo(new DatabaseServer("accessdb", "", dbFullName, "", ""));
         dbInfo.getDbHelper().connect();
         Boolean status;
         for (String fileFullPath : realFullPaths) {
             logger.info("sql statements in file: " + fileFullPath);
             String fileContent = FileUtil.getSQLContent(fileFullPath);
             if (fileContent.contains(";")) {
-                flag=executeSQLs(dbInfo,fileContent);
+                flag=execSQLs(dbInfo,fileContent);
             } else if (StringUtils.isNotBlank(fileContent)) {
                 logger.info("execute sql:" + fileContent);
                 status = dbInfo.executeSQL(fileContent.trim());
@@ -220,11 +208,10 @@ public class ARPPack implements IComFolder {
             }
         }
         dbInfo.getDbHelper().close();
-        dbInfo=null;
         return flag;
     }
 
-    private Boolean executeSQLs(final DBInfo dbInfo,final String fileContent){
+    private static Boolean execSQLs(final DBInfo dbInfo,final String fileContent){
         Boolean status=true;
         String[] sqlStatements = fileContent.split(";");
         for (String sql : sqlStatements) {
@@ -242,26 +229,65 @@ public class ARPPack implements IComFolder {
         }
         return status;
     }
-    /**
-     * @param sourcePath    should follow AR for product's folder structure
-     * @param zipSet
-     * @param propFullPath  the full path of package.properties, it should be get value from <I>json file</I>->"zipSettings"-> "productProperties"
-     * @param zipPath       the path of package(.zip, .lrm)
-     * @param buildType     blank(null) represents it is internal build, true represents it is release build
-     * @return
-     */
-    public Boolean packageARProduct(String sourcePath, ZipSettings zipSet, String propFullPath, String zipPath, String buildType) {
-        if (StringUtils.isBlank(sourcePath)) {
-            return false;
-        }
-        logger.info("================= package files =================");
-        //get all packaged files
-        //String productPrefix=FileUtil.getFileNameWithSuffix(Helper.getParentPath(sourcePath)).toUpperCase().replaceAll("\\(\\d+\\)", "");
+    private static String getProductPrefix(final String sourcePath){
         String productPrefix = Dom4jUtil.updateElement(sourcePath + MANIFEST_FILE, PREFIX, null);
         if (StringUtils.isBlank(productPrefix)) {
             productPrefix = FileUtil.getFileNameWithSuffix(Helper.getParentPath(sourcePath))
                     .toUpperCase().replaceAll("\\(\\d+\\)", BLANK);
         }
+        return productPrefix;
+    }
+    private static String getBuildNumber(final String buildType){
+        String arpbuild = null;
+        if (StringUtils.isBlank(buildType)) {//not provided -Drelease
+            arpbuild = String.valueOf(System.currentTimeMillis());
+        } else {//provided -Drelease
+            if (!buildType.equals("true")) {//provided like -Drelease=b7, true means only a flag -Drelease
+                arpbuild = buildType;
+            }
+        }
+        return arpbuild;
+    }
+    private static void getPathsInManifest(final String sourcePath,final List<String> realFullPaths){
+        List<String> pathsInManifest = Dom4jUtil.getPathFromElement(sourcePath + MANIFEST_FILE, sourcePath);
+        if (!Helper.isEmptyList(pathsInManifest)) {
+            for (String pathtmp : pathsInManifest) {
+                if (!realFullPaths.contains(pathtmp)) {
+                    realFullPaths.add(pathtmp);
+                }
+            }
+        }
+    }
+
+    private static void renameLRM(final Boolean flag, final String zipFullPathWithoutSuffix){
+        if (flag) {
+            logger.info("package named: " + zipFullPathWithoutSuffix + PACKAGE_SUFFIX);
+            if (new File(zipFullPathWithoutSuffix + PACKAGE_LRM_SIGN_SUFFIX).isFile()) {
+                logger.info("package named: " + zipFullPathWithoutSuffix + PACKAGE_LRM_SUFFIX);
+                FileUtil.renameTo(zipFullPathWithoutSuffix + PACKAGE_LRM_SIGN_SUFFIX, zipFullPathWithoutSuffix + PACKAGE_LRM_SUFFIX);
+            } else {
+                logger.info("only generate .zip package.");
+            }
+            logger.info("package successfully.");
+        } else {
+            BuildStatus.getInstance().recordError();
+            logger.error("error: package with failures.");
+        }
+    }
+    /**
+     * @param sourcePath    should follow AR for product's folder structure
+     * @param zipSet
+     * @param buildType     blank(null) represents it is internal build, true represents it is release build
+     * @return
+     */
+    public static Boolean packageARProduct(String sourcePath, ZipSettings zipSet, String buildType) {
+        if (StringUtils.isBlank(sourcePath)) {
+            return false;
+        }
+        logger.info("================= package files =================");
+        //get all packaged files
+        String productPrefix = getProductPrefix(sourcePath);
+
         Boolean flag = true;
         List<String> packFileNames = zipSet.getZipFiles();
         long begin=System.currentTimeMillis();
@@ -273,31 +299,22 @@ public class ARPPack implements IComFolder {
             logger.error("error: zipFiles are invalid files or filters.");
             return false;
         }
-        String arpbuild = null;
-        if (StringUtils.isBlank(buildType)) {//not provided -Drelease
-            arpbuild = String.valueOf(System.currentTimeMillis());
-        } else {//provided -Drelease
-            if (!buildType.equals("true")) {//provided like -Drelease=b7, true means only a flag -Drelease
-                arpbuild = buildType;
-            }
-        }
-        List<String> pathsInManifest = Dom4jUtil.getPathFromElement(sourcePath + MANIFEST_FILE, sourcePath);
-        if (!Helper.isEmptyList(pathsInManifest)) {
-            for (String pathtmp : pathsInManifest) {
-                if (!realFullPaths.contains(pathtmp)) {
-                    realFullPaths.add(pathtmp);
-                }
-            }
-        }
+        String arpbuild = getBuildNumber(buildType);
+
+        getPathsInManifest(sourcePath,realFullPaths);
+
         //modify implementationVersion in manifest.xml
         String packageVersion = Dom4jUtil.updateElement(sourcePath + MANIFEST_FILE, IMP_VERSION, arpbuild);
 
+        //the full path of package.properties, it should be get value from <I>json file</I>->"zipSettings"-> "productProperties"
+        String propFullPath=zipSet.getProductProperties();
         if (FileUtil.exists(propFullPath)) {
             PropHelper.loading(propFullPath);
         } else {
             logger.warn("warn: cannot found file [" + propFullPath + "]");
         }
 
+        String zipPath=Helper.getParentPath(sourcePath);//the path of package(.zip, .lrm)
         //zipped and lrm product
         String packageNamePrefix = PropHelper.getProperty(PACKAGE_NAME_PREFIX);
         packageNamePrefix = StringUtils.isBlank(packageNamePrefix) ? productPrefix + UNDERLINE_1 : packageNamePrefix + productPrefix + UNDERLINE_1;
@@ -319,19 +336,7 @@ public class ARPPack implements IComFolder {
             flag = false;
         }
 
-        if (flag) {
-            logger.info("package named: " + zipFullPathWithoutSuffix + PACKAGE_SUFFIX);
-            if (new File(zipFullPathWithoutSuffix + PACKAGE_LRM_SIGN_SUFFIX).isFile()) {
-                logger.info("package named: " + zipFullPathWithoutSuffix + PACKAGE_LRM_SUFFIX);
-                FileUtil.renameTo(zipFullPathWithoutSuffix + PACKAGE_LRM_SIGN_SUFFIX, zipFullPathWithoutSuffix + PACKAGE_LRM_SUFFIX);
-            } else {
-                logger.info("only generate .zip package.");
-            }
-            logger.info("package successfully.");
-        } else {
-            BuildStatus.getInstance().recordError();
-            logger.error("error: package with failures.");
-        }
+        renameLRM(flag, zipFullPathWithoutSuffix);
         Runtime.getRuntime().gc();
         return flag;
     }
@@ -343,7 +348,8 @@ public class ARPPack implements IComFolder {
      * @param filters
      * @return if get nothing or arguments contains blank argument, return null.
      */
-    public List<String> getFileFullPaths(final String sourcePath,final List<String> filters,final String excludeFilters,final Boolean keepDirStructure) {
+    public static List<String> getFileFullPaths(final String sourcePath,final List<String> filters,
+                                                final String excludeFilters,final Boolean keepDirStructure) {
         Helper.removeDuplicatedElements(filters);
         if (Helper.isEmptyList(filters) || StringUtils.isBlank(sourcePath)) {
             return null;
@@ -375,7 +381,7 @@ public class ARPPack implements IComFolder {
         return realFilePaths;
     }
 
-    private String getTableFromMetaName(final String pathTmp2,final String folderRegex){
+    private static String getTableFromMetaName(final String pathTmp2,final String folderRegex){
         String name_returnId="";
         String tableNameWithDB = FileUtil.getFileNameWithoutSuffix(pathTmp2);
         logger.debug("1 table name with DB {}", tableNameWithDB);

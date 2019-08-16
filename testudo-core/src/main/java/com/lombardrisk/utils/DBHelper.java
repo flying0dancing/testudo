@@ -9,6 +9,7 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.util.ImportUtil;
 import com.healthmarketscience.jackcess.util.ImportUtil.Builder;
+import com.healthmarketscience.jackcess.util.SimpleImportFilter;
 import com.lombardrisk.pojo.DatabaseServer;
 import com.lombardrisk.pojo.TableProps;
 import com.lombardrisk.status.BuildStatus;
@@ -57,6 +58,7 @@ public class DBHelper {
             "((\\d+[\\-\\\\/]\\d+[\\-\\\\/]\\d+)(?: \\d+\\:\\d+\\:\\d+)?(?:\\.\\d+)?)";//re=",((\d+[\-\\\/]\d+[\-\\\/]\d+)(?: \d+\:\d+\:\d+)?)," match format of date time
     private DBHelper.AccessdbHelper accdb;
     private static final String CharacterSet="UTF-8";
+    private static final float MILLISECONDS_PER_SECOND = 1000.00F;
     public DBHelper(DatabaseServer databaseServer) {
         this.databaseServer = databaseServer;
 
@@ -110,15 +112,17 @@ public class DBHelper {
             dbmsDriver = "net.ucanaccess.jdbc.UcanaccessDriver";
             if (StringUtils.isBlank(this.databaseServer.getUrl())) {
                 this.databaseServer.setUrl(String.format(
-                        "jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY;",
+                        "jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY;"
+                                + "immediatelyReleaseResources=true;newDatabaseVersion=V2010;",
                         this.databaseServer.getSchema()));
                 String dbSchema=this.databaseServer.getSchema();
                 File dbSchemaHD=new File(dbSchema);
                 if(dbSchemaHD.exists()){
                     long dbSchemaSize=dbSchemaHD.length();
                     if(dbSchemaSize>104857600){//100MB
+                        //jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY
                         this.databaseServer.setUrl(String.format(
-                                "jdbc:ucanaccess://%s;memory=false;sysSchema=TRUE;columnOrder=DISPLAY;mirrorFolder=java.io.tmpdir;",//jdbc:ucanaccess://%s;memory=true;sysSchema=TRUE;columnOrder=DISPLAY
+                                "jdbc:ucanaccess://%s;memory=false;sysSchema=TRUE;columnOrder=DISPLAY;mirrorFolder=java.io.tmpdir;",
                                 this.databaseServer.getSchema()));
                     }
                 }
@@ -547,6 +551,8 @@ public class DBHelper {
         private final static String DATETIME_STR="DATETIME";
         private final static String NUMERIC_STR="NUMERIC";
         private final static String DECIMAL_STR="DECIMAL";
+		private final static String SELECT_STR="SELECT * FROM [";
+        private final static String SELECT_STR2="]";
         /***
          * existence of access table
          * @param tableName
@@ -1076,6 +1082,40 @@ public class DBHelper {
             }
             return flag;
         }
+
+		public void copyAccessDBTables(List<String> tableNames,String destinationPath){
+            long begin=System.currentTimeMillis();
+            if(getConn() == null){
+                return;
+            }
+            try{
+                if(!tableNames.isEmpty() && StringUtils.isNotBlank(destinationPath)){
+
+                    try (Database dbTarget = new DatabaseBuilder().setAutoSync(false).open(new File(destinationPath));
+                         Statement statement = getConn().createStatement()) {
+
+                        logger.info("copy external project's tables...");
+                        for(String tableName:tableNames){
+                            try (ResultSet rs = statement.executeQuery(SELECT_STR + tableName + SELECT_STR2)) {
+                                JackcessUtil.importResultSet(rs, dbTarget, tableName,SimpleImportFilter.INSTANCE,true);  // create new table
+                                ImportUtil.importResultSet(rs, dbTarget, tableName,SimpleImportFilter.INSTANCE,true);
+                            } catch (IOException e) {
+                                BuildStatus.getInstance().recordError();
+                                logger.error(e.getMessage(), e);
+                            }
+                        }
+                        logger.info("used time(sec):"+(System.currentTimeMillis()-begin)/MILLISECONDS_PER_SECOND);
+                    }
+                }
+            } catch (SQLException e) {
+                BuildStatus.getInstance().recordError();
+                logger.error(e.getMessage(), e);
+            } catch (IOException e) {
+                BuildStatus.getInstance().recordError();
+                logger.error(e.getMessage(), e);
+            }
+        }
+
 
         private int convertTypeStrToIntForAccessDB(String type) {
             if (StringUtils.isNotBlank(type)) {

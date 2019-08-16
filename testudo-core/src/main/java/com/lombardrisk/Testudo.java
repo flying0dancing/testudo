@@ -2,8 +2,10 @@ package com.lombardrisk;
 
 import com.lombardrisk.pojo.ARPCISetting;
 import com.lombardrisk.pojo.DBAndTables;
+import com.lombardrisk.pojo.ZipSettings;
 import com.lombardrisk.status.BuildStatus;
 import com.lombardrisk.utils.DBInfo;
+import com.lombardrisk.utils.ExternalProjectUtil;
 import com.lombardrisk.utils.FileUtil;
 import com.lombardrisk.utils.Helper;
 import org.apache.commons.lang3.StringUtils;
@@ -90,8 +92,8 @@ public class Testudo implements IComFolder {
         } else if (proc.equals("2")) {
             packMetadataAndFiles(arSetting);
         } else if (proc.equalsIgnoreCase("all")) {
-
             readDBToMetadata(arSetting);
+            logger.info("====================================================");
             packMetadataAndFiles(arSetting);
         } else {
             BuildStatus.getInstance().recordError();
@@ -145,30 +147,21 @@ public class Testudo implements IComFolder {
     }
 
     private static void packMetadataAndFiles(ARPCISetting arSetting) {
+        String targetSrcPath=arSetting.getTargetSrcPath();
+        ZipSettings zipSet=arSetting.getZipSettings();
+        ExternalProjectUtil.copyExternalProject(zipSet.getExternalProjects(),targetSrcPath);
         String iniFullName =
                 Helper.reviseFilePath(arSetting.getMetadataPath() + FILE_SEPARATOR + arSetting.getMetadataStruct());
-        ARPPack azipFile = new ARPPack();
-        Boolean flag = azipFile.createNewDpm(arSetting.getZipSettings().getDpmFullPath());
-        if (!flag) {
-            BuildStatus.getInstance().recordError();
-            logger.error("error: create access database unsuccessful.");
-            return;
-        }
-        List<String> requiredMetadata=arSetting.getZipSettings().getRequiredMetadata();
-        List<String> metadataPaths = azipFile.importMetadataToDpm(arSetting.getMetadataPath(),
-                requiredMetadata, iniFullName);
+
+        List<String> metadataPaths = ARPPack.importMetadataToDpm(arSetting.getMetadataPath(),
+                iniFullName,zipSet);
         if (metadataPaths != null) {
-            if(!requiredMetadata.contains("*.csv")){
-                List<String> returnNameVers = azipFile.getReturnNameAndVersions(metadataPaths);
-                if (returnNameVers != null) {
-                    arSetting.getZipSettings().getZipFiles().addAll(returnNameVers);
-                }
-            }
-            Boolean status = azipFile.execSQLs(arSetting.getTargetSrcPath(),
-                    arSetting.getZipSettings().getSqlFiles(), arSetting.getZipSettings().getExcludeFileFilters());
+            
+            String dbFullName=zipSet.getDpmFullPath();
+            Boolean status = ARPPack.execSQLs(dbFullName,targetSrcPath,
+                    zipSet.getSqlFiles(), zipSet.getExcludeFileFilters());
             if (status) {
-                azipFile.packageARProduct(arSetting.getTargetSrcPath(), arSetting.getZipSettings(), arSetting.getZipSettings().getProductProperties(),
-                        Helper.getParentPath(arSetting.getTargetSrcPath()), System.getProperty(CMDL_ARPBUILDTYPE));
+                ARPPack.packageARProduct(targetSrcPath, zipSet,System.getProperty(CMDL_ARPBUILDTYPE));
             }
         }else{
             BuildStatus.getInstance().recordError();

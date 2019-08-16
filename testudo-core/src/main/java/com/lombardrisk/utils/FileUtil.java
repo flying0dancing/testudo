@@ -70,7 +70,7 @@ public final class FileUtil {
         boolean flag = true;
         byte[] buf = new byte[1024];
         try {
-            logger.info("start compressing");
+            logger.info("start compressing...");
             long begin=System.currentTimeMillis();
             int lastSlash = zipFullName.lastIndexOf("\\") == -1 ? zipFullName.lastIndexOf("/") : zipFullName.lastIndexOf("\\");
             String zipsPath = zipFullName.substring(0, lastSlash);//get zip's path
@@ -128,7 +128,7 @@ public final class FileUtil {
     private static List<String> un7z1(File file, String destDir) throws IOException {
         List<String> fileNames = new ArrayList<>();
         try (SevenZFile sevenZFile = new SevenZFile(file)) {
-            logger.info(file.getName()+"\textracting");
+            logger.info(file.getName()+"\textracting...");
             SevenZArchiveEntry entry;
 
             long begin=System.currentTimeMillis();
